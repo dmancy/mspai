@@ -54,6 +54,9 @@ Matrix<T>::Matrix(MPI_Comm world_m)
     next_col            = 0;
     max_nnz             = 0;
     symmetric           = false;
+    block_size          = 0;
+    max_block_size      = 0;
+    block_sizes         = NULL;
 }
 
 
@@ -71,6 +74,7 @@ Matrix<T>::~Matrix()
     if (remote_col_buf)         delete [] remote_col_buf;
     if (remote_col_idcs_buf)    delete [] remote_col_idcs_buf;
     if (remote_row_idcs_buf)    delete [] remote_row_idcs_buf;
+    if (block_sizes)            delete [] block_sizes;
 }
 
 

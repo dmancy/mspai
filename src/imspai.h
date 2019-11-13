@@ -40,7 +40,7 @@ class PC_MSPAI
 		PetscErrorCode PCSetPattern(const int& pattern);
 		PetscErrorCode PCSetUpPattern(const int& up_pattern);
 		PetscErrorCode PCSetHashParam(const int& hash_param);
-                PetscErrorCode PCSetQR(const int& qr_pc);
+    PetscErrorCode PCSetQR(const int& qr_pc);
 		PetscErrorCode PCSetPreK(const int& pre_k);
 		PetscErrorCode PCSetProbCe(const int& prob_Ce);
 		PetscErrorCode PCSetTarget(const int& target);
@@ -56,6 +56,7 @@ class PC_MSPAI
 		PetscErrorCode PCSetLp(const int& lp);
 		PetscErrorCode PCSetVerbose(const int& vb);
 		PetscErrorCode PCSetWriteParam(const int& wp);
+    PetscErrorCode PCSetBSParam(const int& bs);
 
 		PetscErrorCode PCSetCeVecs(Vec** vec, const int nb);
 		~PC_MSPAI();
@@ -99,6 +100,7 @@ class PC_MSPAI
 				    target_param,
 				    use_schur,
 				    nb_pwrs,
+            block_size,
 				    verbose;
 				    
 		 bool               use_mean,

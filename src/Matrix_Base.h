@@ -107,6 +107,15 @@ class Matrix_Base
         /// Whether the matrix is symmetric 
         /// or not
         bool    symmetric;
+
+        /// Block size of the matrix
+        int     block_size;
+
+        /// Largest block size
+        int     max_block_size;
+
+        /// Size of evrery diagonal block
+        int     *block_sizes;
 };
 
 #endif

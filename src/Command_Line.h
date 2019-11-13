@@ -163,9 +163,10 @@ class Command_Line
                             int     &tp,
                             double  &rho,
                             int     &us,
-			    int     &np,
-			    bool    &lp,
-			    int	    &vb,
+                            int     &np,
+                            bool    &lp,
+                            int	    &vb,
+                            int     &bs,
                             char   *&output_file);
         
         

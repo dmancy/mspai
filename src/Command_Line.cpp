@@ -182,9 +182,10 @@ Command_Line::Parameters(int    argc,
                          int    &tp,
                          double &rho,
                          int    &us,
-			 int	&np,
-			 bool   &lp,
-			 int	&vb,
+                         int	  &np,
+                         bool   &lp,
+                         int	  &vb,
+                         int    &bs,
                          char   *&output_file)
 {
     
@@ -220,6 +221,7 @@ Command_Line::Parameters(int    argc,
     us = 0;
     np = 1;
     lp = 1;
+    bs = 1;
     vb = 0;
     output_file = (char*)"precond.mtx";  
 

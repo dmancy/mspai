@@ -48,9 +48,10 @@ PC_MSPAI::PC_MSPAI()
                             target_param,
                             rho_param,
                             use_schur,
-			    nb_pwrs,
-			    left_prec,
-			    verbose,
+                            nb_pwrs,
+                            left_prec,
+                            verbose,
+                            block_size,
                             output_file); 
 }
 
@@ -99,7 +100,7 @@ PetscErrorCode PC_MSPAI::Apply_MSPAI(Vec xx, Vec yy)
 PetscErrorCode PC_MSPAI::PCSetFromOptions_SPAI(PetscOptionItems *PetscOptionsObject)
 {
 	PetscErrorCode ierr;
-	int mn, ns, wp, hs, cs, qr_2, pk, pm, pp, up, us, um, tp, pr, nb_p = -1, ch = 0, lp, vb;
+	int mn, ns, wp, hs, cs, qr_2, pk, pm, pp, up, us, um, tp, pr, nb_p = -1, ch = 0, lp, bs, vb;
 	double ep, fg, rho;
 
 
@@ -233,6 +234,12 @@ PetscErrorCode PC_MSPAI::PCSetFromOptions_SPAI(PetscOptionItems *PetscOptionsObj
 	if (flg) {
 		      ierr = PCSetWriteParam(wp);CHKERRQ(ierr);
 	}
+
+	ierr = PetscOptionsGetInt(NULL, NULL, "-bs", &bs, &flg);
+	if (flg) {
+		      ierr = PCSetBSParam(bs);CHKERRQ(ierr);
+	}
+
 
 	mn = maxnew_param; 
 	ep = epsilon_param;
@@ -680,6 +687,12 @@ PetscErrorCode PC_MSPAI::PCSetVerbose(const int& vb)
 PetscErrorCode PC_MSPAI::PCSetWriteParam(const int& wp)
 {
 	write_param = wp;
+	return 0;
+}
+
+PetscErrorCode PC_MSPAI::PCSetBSParam(const int& bs)
+{
+	block_size = bs;
 	return 0;
 }
 
