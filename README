@@ -1,0 +1,131 @@
+                           =========================================
+			   =========================================
+			   ==                                     ==
+                           == Modified SParse Appoximate Inverses ==
+			   ==          MSPAI Version 1.2          ==
+			   ==                                     ==
+                           =========================================
+			   =========================================
+
+
+Table of Contents     
+-----------------
+
+1) Web Resources
+2) Installation of MSPAI
+3) Usage of MSPAI
+4) License
+5) Contact
+
+
+==============================
+== 1)     Web Resources     ==
+==============================
+
+MSPAI's home page with the latest version is at:
+
+    http://www5.in.tum.de/wiki/index.php/MSPAI
+
+Please be sure to visit this site for information, documentation,
+news, etc.  All things concerning MSPAI are available from there.
+
+
+
+==============================
+== 2) Installation of MSPAI ==
+==============================
+
+Unfortunately, there is no common configure script and no common 
+installation package at the moment. As soon as there will be any 
+user-friendly installation process this will be changed immediately.
+
+There is a stand-alone serial as well as parallel version of the 
+MSPAI 1.2, each in a seperate directory called 'mspai-1.2-parallel' 
+for the parallel version and 'mspai-1.2-serial' for the serial version. 
+
+
+1) MSPAI uses the following libraries/standards:
+	- CSparse ( http://www.cise.ufl.edu/research/sparse/CSparse/ )
+	- LAPACK  ( http://www.netlib.org/lapack/ )
+	- MPI for the parallel version ( http://www-unix.mcs.anl.gov/mpi/  )
+2) Decide which version you want to use (serial or parallel).
+3) Enter the directory.
+4) Adapt the 'Makefile' in the directory 'src':
+	- Adapt the library specifications (e.g. lapack)
+5) Type 'make' in the 'src' directory.
+6) The 'mspai' executable  will appear in the 'bin' directory.
+
+
+You can find more information about MSPAI 1.2 in the MSPAI documentation
+in the 'doc' directory.
+
+
+
+==============================
+== 3)    Usage of MSPAI     ==
+==============================
+
+Please refer to section 2.2 'How to run MSPAI 1.2' of the MSPAI 
+documentation 'mspai-1.2.pdf' in the 'doc' directory. 
+
+
+
+==============================
+== 4)    License            ==
+==============================
+
+MSPAI: Modified Sparse Approximate Inverses
+Copyright © 2007, 2008, 2009 Matous Sedlacek
+                       	     Chair of Scientific Computing - Informatics V
+                       	     Technische Universität München
+
+MSPAI is free software: you can redistribute it and/or modify 
+it under the terms of the GNU Lesser General Public License as published 
+by the Free Software Foundation, either version 3 of the License, or 
+(at your option) any later version.
+
+MSPAI is distributed in the hope that it will be useful, but WITHOUT 
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more 
+details.
+
+You should have received a copy of the GNU Lesser General Public License along 
+with MSPAI. If not, see http://www.gnu.org/licenses/.
+
+If you obtain any results with MSPAI we would appreciate that you refer to 
+MSPAI. 
+
+See the COPYING and COPYING.LESSER files in this directory.
+
+
+
+==============================
+== 5)       Contact         ==
+==============================
+
+If you think you found a bug in the current 
+version feel free to get in touch with us:
+
+
+Thomas Huckle:
+
+    Department of Computer Science - Chair V
+    Technische Universität München
+    Boltzmannstr. 3
+    85748 Garching bei München
+    Germany
+
+    Mail:   huckle@informatik.tu-muenchen.de
+    www:    http://www5.in.tum.de/wiki/index.php/Univ.-Prof._Dr._Thomas_Huckle
+
+
+Matous Sedlacek:
+
+    Department of Computer Science - Chair V
+    Technische Universität München
+    Boltzmannstr. 3
+    85748 Garching bei München
+    Germany
+
+    Mail:   sedlacek@in.tum.de
+    www:    http://www5.in.tum.de/wiki/index.php/Matous_Sedlacek

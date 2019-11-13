@@ -1,0 +1,128 @@
+2009-08-25  Sedlacek Matous <sedlacek@in.tum.de>
+
+	* Made 1.2.0 release
+
+
+2009-06-26  Sedlacek Matous <sedlacek@in.tum.de>
+
+	* src/Cache.*: Optimized caching algorithm, 
+	less data copies and LRU update mechanism 
+	is provided internally.
+
+	* src/Spai_SD.*: Added subalgorithm for
+	sparse decompositions, can be invoked using
+	option -qr 5 and runs bugfree and a bit 
+	faster instead of old version in 
+	qrupdates.cpp.
+
+	* src/Spai_Sub.*: Optimized runtime of many 
+	algorithm parts: Eliminated bottlenecks due
+	to memset() function. For large matrices of
+	dimension > 100k the memsets slowed down the
+	algorithm heavily on various architectures. 
+	Additionally avoiding memset for small size 
+	of indices and nnz in specific column when
+	using pattern updates. For small products 
+	first experiments showed that this is much 
+	faster. 
+
+	* src/Spai_Sub.*: Removed Bugs which lead
+	to Lapack and thus MSPAI crashes due 
+	to wrong minimum bounds for the Lapack 
+	routines.
+
+	* src/Read_mm_Matrix.*: Removed Bug for
+	symmetric matrices. Only half of the matrix
+	was generated and thus MSPAI computed wrong
+	output and/or chrashed for empty index sets 
+	and submatrices. Mathematically MSPAI does not
+	preserve symmetry but technically it now
+	works correct. An extra warning in case of 
+	symmetric input	is streamed to shell.
+
+	* src/Read_mm_Matrix.*: For hermitian
+	matrices the read procedure now correctly
+	expand the conjugate complex part of the 
+	input system. 
+
+	* src/Pattern.*: Removed bug for 
+	symmetric patterns which were given as 
+	file in MatrixMarket format only half 
+	of the pattern was generated.   
+
+	* src/Command_Line.*: Additional optional
+	parameter available "-out". With this
+	parameter one can specify the output file
+	where to store the preconditioner. Default
+	value is still "precond.mtx" in the current
+	working directory.
+
+	* src/Matrix.*, src/Pattern_Switch.*: 
+	Optimized IO for generating Pattern data. 
+	If user requests Pattern of the input system
+	P(A) there is no longer a second pass through
+	the input matrix to generate the pattern. 
+	Instead the Pattern is generated internally
+	from the created Matrix object. This becomes 
+	especially noticable for large matrices beyond 
+	a size of 10^5 where the matrix is no longer
+	read twice.
+
+	* src/Spai.imp, src/Command_Line.*: 
+	Adjusted shell output stream: Now the 
+	shell output is clear that a MSPAI is 
+	being computed. This was a bit misleading: 
+	one could think of a kind of suspension 
+	because no information was displayed when 
+	computing the MSPAI. Furthermore a Copyright
+	and a short License reference message is 
+	displayed at the startup.
+	Added some basic colours to improve the 
+	readability of the output.
+	For symmetric matrices a short warning
+	is displayed.
+
+	* src/Read_mm_Matrix.*: Program crashed
+	in LAPACK routines when using singular 
+	matrices. Added singularity check of 
+	input data for controlled abort of 
+	the program with shell message.
+
+	* src/main.cpp: In case of bad memory
+	allocation an additional notice is 
+	streamed to shell. Using a diagonal
+	start pattern or reduced dynamic 
+	parameters the program will possibly 
+	not run into a lack of memory. 
+	Customized other shell output.
+
+
+2008-10-15  Sedlacek Matous  <sedlacek@in.tum.de>
+
+	* Made 1.1.0 release.
+
+
+2008-10-15  Sedlacek Matous  <sedlacek@in.tum.de>
+
+	* src/Hash.*: Created new class for hashing option 
+	  -ch. 
+	
+	* src/Command_Line.cpp: Hashing option (-ch) added.
+
+	* src/Cache.*: Modified LRU mechanism.
+
+	* src/Spai_Caching.imp: Enhanced handling in case of 
+	  key collisions.
+
+	* src/Spai_Hashing.imp: Enhanced handling in case of
+	  key collisions.
+
+	* src/*: Modifications in [doxygen] comments
+
+	* .: README, AUTHORS, LICENCE, ChangeLog, COPYING 
+	  file created
+
+
+2008-01-15 Matous Sedlacek <sedlacek@in.tum.de>
+
+	* Made 1.0.0 release

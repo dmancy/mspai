@@ -1,0 +1,75 @@
+                           =========================================
+			   =========================================
+			   ==                                     ==
+			   == Modified SParse Appoximate Inverses ==
+			   ==               (MSPAI)               ==
+			   ==                                     ==
+			   =========================================
+                           =========================================
+
+
+==========================================
+==              Contact                 ==
+==========================================
+
+If you think you found a bug in the current
+version or if you have other questions 
+feel free to get in touch with us:
+
+
+Thomas Huckle:
+
+    Department of Computer Science - Chair V
+    Technische Universität München
+    Boltzmannstr. 3
+    85748 Garching bei München
+    Germany
+
+    Mail:   huckle@informatik.tu-muenchen.de
+    www:    http://www5.in.tum.de/wiki/index.php/Univ.-Prof._Dr._Thomas_Huckle
+
+
+Matous Sedlacek:
+
+    Department of Computer Science - Chair V
+    Technische Universität München
+    Boltzmannstr. 3
+    85748 Garching bei München
+    Germany
+
+    Mail:   sedlacek@in.tum.de
+    www:    http://www5.in.tum.de/wiki/index.php/Matous_Sedlacek
+
+
+
+
+============================================
+== The following people contributed/built ==
+== theoretical background to/of MSPAI     == 
+============================================
+  Thomas Huckle
+  Alexander Kallischko
+  Tobias Weinzierl
+
+
+============================================
+== MSPAI was originally written by        ==
+============================================
+  Matous Sedlacek
+
+
+============================================
+== The following people have contributed  ==
+== code to MSPAI                          ==
+============================================
+  Andreas Roy
+
+
+============================================
+== The following people have helped to    ==   
+== document MSPAI                         ==
+============================================
+  Thomas Huckle
+  Alexander Kallischko
+  Andreas Roy
+  Matous Sedlacek
