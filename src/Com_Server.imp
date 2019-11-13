@@ -1,0 +1,844 @@
+/*
+    ======================================================================
+    ======================================================================
+    ==                                                                  ==
+    ==  MSPAI:  Modified SPAI algorithm to comupte SParse Approximate   ==
+    ==          Invers matrices.                                        ==
+    ==                                                                  ==
+    ==  Copyright (C)  2007, 2008, 2009 by                              ==
+    ==                 Matous Sedlacek <sedlacek@in.tum.de>             ==
+    ==                 Chair of Scientific Computing -- Informatics V   ==
+    ==                 Technische Universität München                   ==
+    ==                                                                  ==
+    ==  This file is part of MSPAI.                                     ==
+    ==                                                                  ==
+    ==  MSPAI is free software: you can redistribute it and/or          ==
+    ==  modify it under the terms of the GNU Lesser General Public      ==
+    ==  License as published by the Free Software Foundation, either    ==
+    ==  version 3 of the License, or (at your option) any later version.==
+    ==                                                                  ==
+    ==  MSPAI is distributed in the hope that it will be useful,        ==
+    ==  but WITHOUT ANY WARRANTY; without even the implied warranty of  ==
+    ==  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the   ==
+    ==  GNU Lesser General Public License for more details.             ==
+    ==                                                                  ==
+    ==  You should have received a copy of the GNU Lesser General       ==
+    ==  Public License along with MSPAI.                                ==
+    ==  If not, see <http://www.gnu.org/licenses/>.                     ==
+    ==                                                                  ==
+    ======================================================================
+    ======================================================================
+*/
+
+
+template<class T>   int 
+Com_Server<T>::nbr_done = 0;
+
+
+template<class T>   bool 
+Com_Server<T>::first = true;
+
+
+template<class T>   void 
+Com_Server<T>::Init()
+{
+    all_done = false;
+}
+
+
+
+
+template<class T>   bool 
+Com_Server<T>::Get_all_done()
+{
+    return all_done;
+}
+
+
+
+template<class T>   void 
+Com_Server<T>::Communicate( Matrix<T> *A, 
+                            Matrix<T> *&M,
+                            Matrix<T> *B,
+                            Pattern   *P,
+                            Pattern   *UP)
+{
+    int         tag,
+                flag,
+                requestor,
+                ierr;
+                
+    MPI_Status  status;
+
+
+    do 
+    {
+        // testing for incoming messages from any 
+        // source and and tag and thus switching 
+        // to handle method
+        ierr = MPI_Iprobe(  MPI_ANY_SOURCE, 
+                            MPI_ANY_TAG, 
+                            A->world, 
+                            &flag, 
+                            &status);
+        
+        if (ierr) 
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Communicate\" by MPI_Iprobe.\n");
+        
+        
+        if (flag) 
+        {
+            requestor   = status.MPI_SOURCE;
+            tag         = status.MPI_TAG;
+
+            switch (tag) 
+            {
+                // These handles will be invoked by pe (e.g. a remote pe) 
+                // to send data these pe's want to receive.
+                // The initiators of requests will receive the data.
+
+                case get_rc_tag:        // requesting a column remotely 
+                {
+                    if (A) 
+                        Handle_Get_Col(A, requestor); 
+                    break;
+                }
+                
+                case get_Bc_tag:        // requesting a target column remotely 
+                {
+                    if (B) 
+                        Handle_Get_Target_Col(B, requestor); 
+                    break;
+                }
+                
+                case request_Mcol_tag:  // requesting a remote column of M
+                {
+                    if (A) 
+                        Handle_Get_M_Col(P, requestor); 
+                    break;
+                }
+                
+                case get_p_tag:         // requesting a column of P
+                {
+                    if (A)
+                        Handle_Get_P_Col(A, P, requestor);
+                    break;  
+                }
+                
+                case get_up_tag:         // requesting a column of UP
+                {
+                    if (A)
+                        Handle_Get_UP_Col(A, UP, requestor);
+                    break;  
+                }
+    
+                case put_Mcol_tag:      //Someone's storing a line of M
+                {
+                    if (M) 
+                        Handle_Insert_Row_Solution(M, requestor); 
+                    break;
+                }
+
+                case im_done_tag:       // A PE is done.  PE 0 counts it 
+                {
+                    if (A) 
+                        Handle_Im_Done(A, requestor); 
+                    break;
+                }
+    
+                case done_signal_tag:   //Everyone is done 
+                {
+                    if (A) 
+                        Handle_Done_Signal(A, requestor); 
+                    break;
+                }
+    
+                case exit_tag:          // error exit
+                    throw std::runtime_error(
+                        "\n\tERROR in method \"Com_Server::"
+                        "Communicate\" by case exit.\n");   
+            }
+        }
+    }
+    while (flag && (tag < 10));
+
+    Check_Done(P);
+}
+
+
+
+template<class T>   void 
+Com_Server<T>::Handle_Im_Done(  Matrix<T> *A, 
+                                int requestor)
+{   
+    int         tmp;
+    MPI_Status  status;
+
+    
+    // Master pe 0 counts how many cluster nodes already
+    // finished their work.
+    if (MPI_Recv(static_cast<void*> (&tmp), 1, MPI_INT, 
+        requestor, im_done_tag, A->world, &status))
+        throw std::runtime_error(
+            "\n\tERROR in method \"Com_Server::"
+            "Handle_Im_Done\" by MPI_Recv.\n");
+    
+    nbr_done++;
+}
+
+
+
+template<class T>   void 
+Com_Server<T>::Handle_Done_Signal(Matrix<T> *A, 
+                               int requestor)
+{
+    int         tmp;
+    MPI_Status  status;
+
+    // pe = 0 receives from a remote pe that he 
+    // finished
+    if (MPI_Recv(static_cast<void*> (&tmp), 1, MPI_INT, 
+        0, done_signal_tag, A->world, &status))
+        throw std::runtime_error(
+            "\n\tERROR in method \"Com_Server::"
+            "Handle_Done_Signal\" by MPI_Recv.\n");
+    all_done = true;
+}
+
+
+
+template<class T>   void 
+Com_Server<T>::Say_Im_Done( Matrix<T> *A, 
+                            Matrix<T> *&M,
+                            Matrix<T> *B,
+                            Pattern   *P,
+                            Pattern   *UP)
+{
+    int         one = 1,
+                flag;
+                
+    MPI_Request request;
+    MPI_Status  status;
+
+
+    if (P->my_id == 0) nbr_done++;
+    else 
+    {
+        // Send to master pe = 0 that I'm done
+        if (MPI_Isend(static_cast<void*> (&one), 1, MPI_INT, 
+            0, im_done_tag, A->world, &request))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Say_Im_Done\" by MPI_Isend.\n");
+        
+        // Check if my message arrived
+        do 
+        {
+            Communicate(A, M, B, P, UP);
+            if (MPI_Test(&request, &flag, &status))
+                throw std::runtime_error(
+                    "\n\tERROR in method \"Com_Server::"
+                    "Say_Im_Done\" by MPI_Test.\n");
+        }
+        while (! flag);
+    }
+}
+
+
+
+template<class T>   void 
+Com_Server<T>::Check_Done(Pattern *P)
+{
+    int     one = 1;
+    
+    MPI_Request request;
+
+    if (P->my_id == 0)
+        if ((!all_done) && (nbr_done == P->num_procs))
+        {
+            for (int i = 1; i < P->num_procs; i++) 
+            {
+                if (MPI_Isend(static_cast<void*> (&one), 1, MPI_INT, 
+                    i, done_signal_tag, P->world, &request))
+                    throw std::runtime_error(
+                        "\n\tERROR in method \"Com_Server::"
+                        "Check_Done\" by MPI_Isest.\n");
+            }
+            all_done = true;
+        }
+}
+
+
+
+template <class T>  void 
+Com_Server<T>::Handle_Get_M_Col(Pattern   *P,
+                                int         requestor)
+{    
+    MPI_Status  status;
+    
+    int         failure = -1,
+                index;       
+        
+    MPI_Comm    world;    
+        
+        
+    world = P->world;
+    
+    if (MPI_Recv(static_cast<void *>(&index), 1, MPI_INT, 
+        requestor, request_Mcol_tag, world, &status))
+        throw std::runtime_error(
+            "\n\tERROR in method \"Com_Server::"
+            "Handle_Get_M_Col\" by MPI_Recv.\n");
+      
+    if (P->next_col < P->my_nbr_cols)
+    {
+        if (MPI_Send(static_cast<int *>(&P->next_col), 1, MPI_INT, 
+            requestor, send_Mcol_tag, world))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Handle_Get_M_Col\" by MPI_Send.\n");
+        
+        P->next_col++;
+    }
+    else // No unfinished lines remaining
+    {
+        if (MPI_Send(static_cast<int *>(&failure), 1, MPI_INT, 
+            requestor, send_Mcol_tag, world))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Handle_Get_M_Col\" by MPI_Send.\n");
+    }
+}
+
+
+
+template <class T>  bool 
+Com_Server<T>::Get_M_Col(Matrix<T>   *A, 
+                         Matrix<T>   *M,
+                         Matrix<T>   *B,
+                         Pattern     *P,
+                         Pattern     *UP,
+                         const int   pe, 
+                         int&        index)
+{
+    int         flag,
+                one = 1;
+    
+    MPI_Status  status;
+    
+    MPI_Request recv_request, 
+                send_request;
+        
+    MPI_Comm    world;
+    
+    
+    world = A->world;    
+      
+    if(MPI_Irecv(static_cast<void *>(&index), 1, MPI_INT, 
+       pe, send_Mcol_tag, world, &recv_request))
+        throw std::runtime_error(
+            "\n\tERROR in method \"Com_Server::"
+            "Get_M_Col\" by MPI_Irecv.\n");  
+        
+    
+    // Sending the request
+    
+    if(MPI_Isend(static_cast<void *>(&one), 1, MPI_INT, 
+       pe, request_Mcol_tag,world, &send_request))
+        throw std::runtime_error(
+            "\n\tERROR in method \"Com_Server::"
+            "Get_M_Col\" by MPI_Isend.\n");
+
+
+    // Service requests until the data comes back.
+    do 
+    {
+        Communicate(A, M, B, P, UP);
+        if (MPI_Test(&recv_request, &flag, &status))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Get_M_Col\" by MPI_Test.\n");
+    }
+    while (!flag);
+    
+    
+    if (index >= 0)
+        return true;
+    else 
+        return false;
+}
+
+
+
+template<class T>  void 
+Com_Server<T>::Handle_Get_P_Col(const Matrix<T> *A, 
+                                const Pattern   *P,
+                                const int       requestor)
+{
+    int         idx;    
+        
+    MPI_Comm    world;
+    
+    MPI_Status  status;
+        
+    Index_Set*  p_set = NULL;
+      
+    
+    world = A->world;
+    
+    // Local pe is receiving column index of the
+    // start pattern column which another pe is 
+    // requesting remotely.
+    if (MPI_Recv(static_cast<void*> (&idx), 1, MPI_INT, 
+        requestor, get_p_tag, world, &status))
+        throw std::runtime_error(
+            "\n\tERROR in method \"Com_Server::"
+            "Handle_Get_P_Col\" by MPI_Recv.\n");
+            
+    p_set = P->j_sets[idx];
+    
+    // Sending the start pattern indices
+    if (MPI_Send(static_cast<int*> (p_set->idcs), p_set->len, MPI_INT, 
+        requestor, send_pcol_tag, world))
+        throw std::runtime_error(
+            "\n\tERROR in method \"Com_Server::"
+            "Handle_Get_P_Col\" by MPI_Send.\n"); 
+    
+    
+    // Sending the start pattern length
+    if (MPI_Send(static_cast<void*> (&p_set->len), 1, MPI_INT, 
+        requestor, send_plen_tag, world))
+        throw std::runtime_error(
+            "\n\tERROR in method \"Com_Server::"
+            "Handle_Get_P_Col\" by MPI_Send.\n"); 
+}
+
+
+
+template <class T>  void 
+Com_Server<T>::Get_P_Col(Matrix<T>   *A, 
+                         Matrix<T>   *M,
+                         Matrix<T>   *B,
+                         Pattern     *P,
+                         Pattern     *UP,
+                         const int   col,
+                         Index_Set*& J)
+{
+    int             pe,
+                    idx,
+                    send_flag,
+                    pcol_flag,
+                    plen_flag;    
+        
+    MPI_Status      send_status,
+                    pcol_status,
+                    plen_status;
+                    
+    MPI_Request     get_pcol_request,
+                    send_request,
+                    get_plen_request;
+        
+    MPI_Comm        world;
+    
+    Index_Set       *J_pattern = NULL;
+        
+    
+    pe = P->pe[col];
+    idx = col - P->start_indices[pe];    
+    
+    if (pe == P->my_id) // Is pattern column local?
+    {
+        J_pattern = P->j_sets[idx]; 
+        
+        // Copy the vlues into the big working Index_Set J
+        memcpy(J->idcs, 
+               J_pattern->idcs, 
+               J_pattern->len * sizeof(int));
+        
+        J->len = J_pattern->len;
+    }
+    else                // No, request it remote
+    {
+        world = P->world;    
+                
+        // Receiving the column indices of the column
+        if (MPI_Irecv(static_cast<void*>(J->idcs), 
+                P->max_nnz, MPI_INT, pe, send_pcol_tag, 
+                world, &get_pcol_request))
+                throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Get_P_Col\" by MPI_Irecv.\n");
+        
+        
+        // Receiving the column length of the p-column
+        if (MPI_Irecv(static_cast<void*>(&J->len), 
+                1, MPI_INT, pe, send_plen_tag, 
+                world, &get_plen_request))
+                throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Get_P_Col\" by MPI_Irecv.\n");
+                
+                
+        // Send the column index which is requested from the 
+        // remote pe
+        if (MPI_Isend(static_cast<void*>(&idx), 1, MPI_INT, 
+                pe, get_p_tag, world, &send_request))
+                throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Get_P_Col\" by MPI_Isend.\n");
+        
+        
+        // Check if remote pe got requested index
+        do 
+        {
+            Communicate(A, M, B, P, UP);
+            if (MPI_Test(&send_request, &send_flag, &send_status))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Get_Col\" by MPI_Test.\n");
+        }
+        while (!send_flag);
+        
+        
+        // Wait until got p-column indices from remote pe. 
+        do 
+        {
+            Communicate(A, M, B, P, UP);
+            if (MPI_Test(&get_pcol_request, &pcol_flag, &pcol_status))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Get_Col\" by MPI_Test.\n");
+        }
+        while (!pcol_flag); 
+                
+        
+        // Wait until got length of p from remote pe. 
+        do 
+        {
+            Communicate(A, M, B, P, UP);
+            if (MPI_Test(&get_plen_request, &plen_flag, &plen_status))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Get_Col\" by MPI_Test.\n");
+        }
+        while (!plen_flag); 
+    }
+}
+
+
+
+template<class T>  void 
+Com_Server<T>::Handle_Get_UP_Col(const Matrix<T> *A, 
+                                 const Pattern   *UP,
+                                 const int       requestor)
+{
+    int         idx;    
+        
+    MPI_Comm    world;
+    
+    MPI_Status  status;
+        
+    Index_Set*  up_set = NULL;
+      
+    
+    world = A->world;
+    
+    // Local pe is receiving column index of the
+    // upper pattern column which another pe is 
+    // requesting remotely.
+    if (MPI_Recv(static_cast<void*> (&idx), 1, MPI_INT, 
+        requestor, get_up_tag, world, &status))
+        throw std::runtime_error(
+            "\n\tERROR in method \"Com_Server::"
+            "Handle_Get_UP_Col\" by MPI_Recv.\n");
+            
+    up_set = UP->j_sets[idx];
+    
+    // Sending the upper pattern indices
+    if (MPI_Send(static_cast<int*> (up_set->idcs), up_set->len, MPI_INT, 
+        requestor, send_upcol_tag, world))
+        throw std::runtime_error(
+            "\n\tERROR in method \"Com_Server::"
+            "Handle_Get_UP_Col\" by MPI_Send.\n"); 
+    
+    
+    // Sending the start pattern length
+    if (MPI_Send(static_cast<void*> (&up_set->len), 1, MPI_INT, 
+        requestor, send_uplen_tag, world))
+        throw std::runtime_error(
+            "\n\tERROR in method \"Com_Server::"
+            "Handle_Get_UP_Col\" by MPI_Send.\n"); 
+}
+
+
+
+template <class T>  void 
+Com_Server<T>::Get_UP_Col(Matrix<T>   *A, 
+                          Matrix<T>   *M,
+                          Matrix<T>   *B,
+                          Pattern     *P,
+                          Pattern     *UP,
+                          const int   pe,
+                          int         idx,
+                          Index_Set*& U)
+{
+    int             send_flag,
+                    upcol_flag,
+                    uplen_flag;    
+        
+    MPI_Status      send_status,
+                    upcol_status,
+                    uplen_status;
+                    
+    MPI_Request     get_upcol_request,
+                    send_request,
+                    get_uplen_request;
+        
+    MPI_Comm        world;
+        
+
+    world = A->world;    
+
+    // Receiving the column indices of the column
+    if (MPI_Irecv(static_cast<void*>(U->idcs), 
+        UP->max_nnz, MPI_INT, pe, send_upcol_tag, 
+        world, &get_upcol_request))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Get_UP_Col\" by MPI_Irecv.\n");
+
+
+    // Receiving the column length of the up-column
+    if (MPI_Irecv(static_cast<void*>(&U->len), 
+        1, MPI_INT, pe, send_uplen_tag, 
+        world, &get_uplen_request))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Get_UP_Col\" by MPI_Irecv.\n");
+        
+        
+    // Send the column index which is requested from the 
+    // remote pe
+    if (MPI_Isend(static_cast<void*>(&idx), 1, MPI_INT, 
+        pe, get_up_tag, world, &send_request))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Get_UP_Col\" by MPI_Isend.\n");
+
+
+    // Check if remote pe got requested index
+    do 
+    {
+        Communicate(A, M, B, P, UP);
+        if (MPI_Test(&send_request, &send_flag, &send_status))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Get_UP_Col\" by MPI_Test.\n");
+    }
+    while (!send_flag);
+
+
+    // Wait until got up-column indices from remote pe. 
+    do 
+    {
+        Communicate(A, M, B, P, UP);
+        if (MPI_Test(&get_upcol_request, &upcol_flag, &upcol_status))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Get_UP_Col\" by MPI_Test.\n");
+    }
+    while (!upcol_flag); 
+        
+
+    // Wait until got length of p from remote pe. 
+    do 
+    {
+        Communicate(A, M, B, P, UP);
+        if (MPI_Test(&get_uplen_request, &uplen_flag, &uplen_status))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Get_UP_Col\" by MPI_Test.\n");
+    }
+    while (!uplen_flag); 
+}
+
+
+
+template <class T>  void
+Com_Server<T>::Get_Col( Matrix<T>       *A, 
+                        Matrix<T>       *&M,
+                        Matrix<T>       *B,
+                        Pattern         *P,
+                        Pattern         *UP,
+                        Index_Set*      U_UP,
+                        int             col,
+                        int&            col_len,
+                        int&            row_len, 
+                        int*&           col_idcs_buf, 
+                        int*&           row_idcs_buf,
+                        T*&             col_buf,
+                        Hash_Table<T>   *&ht,
+                        const int&      pre_k_param,
+                        const bool      use_pre,
+                        const int       pre_max_param)
+{
+    int idx = 0,
+        pcol,
+        loc,
+        pe,
+        begin,
+        end,
+        col_in_UUP;
+    
+    
+    //Check if user wants to prerequest something or
+    if(U_UP && pre_k_param > 0 && use_pre && first) 
+    {              
+        //columns to request are definitly
+        //inside upper pattern column because
+        //start pattern is subset of upper pattern
+                
+        col_in_UUP = U_UP->Get_El_Idx(U_UP, col);
+        
+        begin = col_in_UUP - pre_k_param;
+        
+        if (begin < 0) begin = 0;
+            
+        end = col_in_UUP + pre_k_param;
+        if (end > (U_UP->len - 1)) end = U_UP->len - 1;
+                
+        //prerequest columns -k ... col-1
+        for ( int i = begin; i < col_in_UUP; i++)
+        {
+            pcol = U_UP->idcs[i];
+            pe = A->pe[pcol];
+            if (pe != A->my_id)
+            {
+                if (ht->Get_Location(pcol) < 0)
+                {
+                    idx = pcol - A->start_indices[pe];
+                    Get_Remote_Col( A, M, B, P, UP, pcol, col_len, 
+                                    row_len, col_idcs_buf, 
+                                    row_idcs_buf, col_buf, 
+                                    ht, pe, idx);
+                }    
+            }
+        }        
+                
+        //prerequest columns col+1 ... k
+        for ( int i = col_in_UUP + 1; i <= end; i++)
+        {
+            pcol = U_UP->idcs[i];
+            pe = A->pe[pcol];
+            if (pe != A->my_id)
+            {
+                if (ht->Get_Location(pcol) < 0)
+                {
+                    idx = pcol - A->start_indices[pe];
+                    Get_Remote_Col( A, M, B, P, UP,pcol, col_len, 
+                                    row_len, col_idcs_buf, 
+                                    row_idcs_buf, col_buf, 
+                                    ht, pe, idx);
+                }   
+            }
+        }
+        // if user want only prerequesting once - make this
+        // subcode inaccessible
+        if (pre_max_param) first = false;
+    }
+     
+    
+    // Now get the needed column data and proceed further
+    // in computation
+    pe = A->pe[col];
+    idx = col - A->start_indices[pe];
+    
+    if (pe == A->my_id)
+        Get_Local_Col(  A, col_len, row_len, 
+                        col_idcs_buf, row_idcs_buf, 
+                        col_buf, idx);
+    else
+    {
+        loc = ht->Get_Location(col);
+        
+        if (loc < 0)
+        {
+            Get_Remote_Col( A, M, B, P, UP, col, col_len, 
+                            row_len, col_idcs_buf, 
+                            row_idcs_buf, col_buf, 
+                            ht, pe, idx);
+        }
+        else
+        {
+            ht->Look_Up(col, 
+                        col_idcs_buf,
+                        row_idcs_buf, 
+                        col_buf, 
+                        col_len, 
+                        row_len,
+                        loc);      
+        }
+    }
+}
+
+
+
+template <class T>  void
+Com_Server<T>::Get_Target_Col(  Matrix<T>       *A,
+                                Matrix<T>       *&M,
+                                Matrix<T>       *B, 
+                                Pattern         *P,
+                                Pattern         *UP,
+                                int             col,
+                                int&            col_len,
+                                int*&           col_idcs_buf, 
+                                T*&             col_buf)
+{
+    int idx           = 0,
+        row_len       = 0,
+        *row_idcs_buf = NULL,
+        pe;
+ 
+    // Now get the needed column data and proceed further
+    // in computation
+    pe = B->pe[col];
+    idx = col - B->start_indices[pe];
+    
+    if (pe == B->my_id)
+        Get_Local_Col(B, col_len, row_len, 
+                      col_idcs_buf, row_idcs_buf, 
+                      col_buf, idx);
+    else
+        Get_Remote_Target_Col(A, M, B, P, UP, col, 
+                              col_len, col_idcs_buf, 
+                              col_buf, pe, idx);
+}
+
+
+
+template <class T>  void
+Com_Server<T>::Get_Local_Col(Matrix<T>       *A, 
+                             int&            col_len,
+                             int&            row_len, 
+                             int*&           col_idcs_buf, 
+                             int*&           row_idcs_buf,
+                             T*&             col_buf,
+                             const int&      idx)
+{
+    col_len             = A->c_lines->len_cols[idx];
+    col_idcs_buf        = A->c_lines->col_idcs[idx];
+    col_buf             = A->c_lines->A[idx];
+
+    if (A->c_lines->row_idcs)   //unsymmetric matrix
+    {
+        row_len         = A->c_lines->len_rows[idx];
+        row_idcs_buf    = A->c_lines->row_idcs[idx];    
+    }
+    else                        //symmetric matrix
+    {
+        row_len         = col_len;
+        row_idcs_buf    = A->c_lines->col_idcs[idx];
+    }   
+}

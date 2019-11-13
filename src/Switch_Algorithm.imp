@@ -1,0 +1,127 @@
+/*
+    ======================================================================
+    ======================================================================
+    ==                                                                  ==
+    ==  MSPAI:  Modified SPAI algorithm to comupte SParse Approximate   ==
+    ==          Invers matrices.                                        ==
+    ==                                                                  ==
+    ==  Copyright (C)  2007, 2008, 2009 by                              ==
+    ==                 Matous Sedlacek <sedlacek@in.tum.de>             ==
+    ==                 Chair of Scientific Computing -- Informatics V   ==
+    ==                 Technische Universität München                   ==
+    ==                                                                  ==
+    ==  This file is part of MSPAI.                                     ==
+    ==                                                                  ==
+    ==  MSPAI is free software: you can redistribute it and/or          ==
+    ==  modify it under the terms of the GNU Lesser General Public      ==
+    ==  License as published by the Free Software Foundation, either    ==
+    ==  version 3 of the License, or (at your option) any later version.==
+    ==                                                                  ==
+    ==  MSPAI is distributed in the hope that it will be useful,        ==
+    ==  but WITHOUT ANY WARRANTY; without even the implied warranty of  ==
+    ==  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the   ==
+    ==  GNU Lesser General Public License for more details.             ==
+    ==                                                                  ==
+    ==  You should have received a copy of the GNU Lesser General       ==
+    ==  Public License along with MSPAI.                                ==
+    ==  If not, see <http://www.gnu.org/licenses/>.                     ==
+    ==                                                                  ==
+    ======================================================================
+    ======================================================================
+*/
+
+
+// file includings
+#include "Macros.h"
+
+
+template <class T>  Spai<T>*
+Switch_Algorithm<T>::Get_Algorithm( const int my_id,
+                                    const int opt_level, 
+                                    const int cache_param,
+                                    const int qr_level,
+                                    const double fillgrade_param,
+				    const int& verbose)
+{
+    if (verbose)
+    {
+	    if (my_id == 0)
+		std::cout << "\t    Optimizations:\n";
+    }
+
+    switch(opt_level)
+    {
+        case no_opt:
+            // no cache for optimization in SPAI
+	    if (verbose)
+	    {
+		    if (my_id == 0)
+		    {
+			std::cout << "\t    CACHE:\t";
+			std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+			std::cout << "\t    HASH:\t";
+			std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+			std::cout << "\t    QR-UPDATES:\t";
+			std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+			std::cout << "\t    QR-DECOMP.:\t";
+			std::cout << COLOR_RED << "dense\n" << COLOR_NORMAL << std::endl;
+		    }
+	    }
+            return new Spai_Unrestrained<T>();
+            
+        case caching:
+            // use cache for runtime optimization within SPAI
+            if (verbose)
+	    {
+		    if (my_id == 0)
+		    {
+			std::cout << "\t    CACHE:\t";
+			std::cout << COLOR_GREEN << "yes  (size: ";
+			std::cout << cache_param << ")" << COLOR_NORMAL << std::endl;
+			std::cout << "\t    HASH:\t";
+			std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+			std::cout << "\t    QR-UPDATES:\t";
+			std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+			std::cout << "\t    QR-DECOMP.:\t";
+			std::cout << COLOR_RED << "dense\n" << COLOR_NORMAL << std::endl;
+		    }
+            }
+            return new Spai_Caching<T>(cache_param);
+
+        case hashing:
+            // use cache for runtime optimization within SPAI
+	    if (verbose)
+            {
+		    if (my_id == 0)
+		    {
+			std::cout << "\t    CACHE:\t";
+			std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+			std::cout << "\t    HASH:\t";
+			std::cout << COLOR_GREEN << "yes" << COLOR_NORMAL << std::endl;     
+			std::cout << "\t    QR-UPDATES:\t";
+			std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+			std::cout << "\t    QR-DECOMP.:\t";
+			std::cout << COLOR_RED << "dense\n" << COLOR_NORMAL << std::endl;
+		    }
+            }
+            return new Spai_Hashing<T>();    
+            
+        case qr_updates:
+            // use qr_updates for runtime optimization within SPAI
+            // Template specification necessary because derived class
+            // Spai_QRUpdate is only usuable for double values due to
+            // qrupdates.c
+            Spai<T>* QR_Templ_Spec = NULL;
+            Set_QR_Spec(QR_Templ_Spec, my_id, qr_level, fillgrade_param);
+            return QR_Templ_Spec;
+            
+        // no default case
+    }
+    //dirty - suppress annoying Warning message
+    return NULL;
+}
+
+
+
+
+

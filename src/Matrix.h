@@ -1,0 +1,395 @@
+/*
+    ======================================================================
+    ======================================================================
+    ==                                                                  ==
+    ==  MSPAI:  Modified SPAI algorithm to comupte SParse Approximate   ==
+    ==          Invers matrices.                                        ==
+    ==                                                                  ==
+    ==  Copyright (C)  2007, 2008, 2009 by                              ==
+    ==                 Matous Sedlacek <sedlacek@in.tum.de>             ==
+    ==                 Chair of Scientific Computing -- Informatics V   ==
+    ==                 Technische Universität München                   ==
+    ==                                                                  ==
+    ==  This file is part of MSPAI.                                     ==
+    ==                                                                  ==
+    ==  MSPAI is free software: you can redistribute it and/or          ==
+    ==  modify it under the terms of the GNU Lesser General Public      ==
+    ==  License as published by the Free Software Foundation, either    ==
+    ==  version 3 of the License, or (at your option) any later version.==
+    ==                                                                  ==
+    ==  MSPAI is distributed in the hope that it will be useful,        ==
+    ==  but WITHOUT ANY WARRANTY; without even the implied warranty of  ==
+    ==  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the   ==
+    ==  GNU Lesser General Public License for more details.             ==
+    ==                                                                  ==
+    ==  You should have received a copy of the GNU Lesser General       ==
+    ==  Public License along with MSPAI.                                ==
+    ==  If not, see <http://www.gnu.org/licenses/>.                     ==
+    ==                                                                  ==
+    ======================================================================
+    ======================================================================
+*/
+
+
+#ifndef GUARD_MATRIX_H
+#define GUARD_MATRIX_H
+
+
+//file includings
+#include "Compressed_Lines.h"
+#include "Matrix_Base.h"
+#include "Timer.h"
+#include "Pattern.h"
+
+
+//C++ includings
+#include <mpi.h>
+#include <stdlib.h>
+#include <cmath>
+
+
+//PETSc includings
+#include <petscmat.h>
+#include <petscksp.h>
+
+
+//////////////////////////////////////////
+///     \brief Simple structure representing
+///            a complex number
+//////////////////////////////////////////
+struct COMPLEX
+{
+    /// real part of complex number
+    double real;
+
+    /// imaginary part of complex number
+    double imag;
+};
+
+//////////////////////////////////////////
+struct Row_sparsify
+{
+  int col;
+  double val;
+};
+
+
+
+
+/// Operator overloading for "*" between
+/// complex numbers
+inline const COMPLEX
+operator*(const COMPLEX& a, const COMPLEX& b)
+{
+    COMPLEX out;
+    out.real = a.real * b.real - a.imag * b.imag;
+    out.imag = a.real * b.imag + a.imag * b.real;
+    return out;
+}
+
+
+/// Operator overloading for "+" between
+/// complex numbers
+inline const COMPLEX
+operator+(const COMPLEX& a, const COMPLEX& b)
+{
+    COMPLEX out;
+    out.real = a.real + b.real;
+    out.imag = a.imag + b.imag;
+    return out;
+}
+
+
+/// Operator overloading for "-" between
+/// complex numbers
+inline const COMPLEX
+operator-(const COMPLEX& a, const COMPLEX& b)
+{
+    COMPLEX out;
+    out.real = a.real - b.real;
+    out.imag = a.imag - b.imag;
+    return out;
+}
+
+
+/// Operator overloading for "/" between
+/// complex numbers
+inline const COMPLEX
+operator/(const COMPLEX& a, const double& b)
+{
+    COMPLEX out;
+    out.real = a.real / b;
+    out.imag = a.imag / b;
+    return out;
+}
+
+
+/// absolute value for complex numbers
+/// complex numbers
+inline double 
+abs_complex(const COMPLEX& a)
+{
+    double out;
+    out = sqrt(a.real * a.real + a.imag * a.imag);
+    
+    return out;
+}
+
+
+/// absolute value for real numbers
+/// complex numbers
+inline double 
+abs_complex(const double& a)
+{
+    return a;
+}
+
+inline int comp (const void * elem1, const void * elem2);
+
+inline void kLargest(Row_sparsify arr[], int n, int k);
+
+
+
+//////////////////////////////////////////
+///     \class Matrix
+///     \brief The Matrix datastructure
+///
+///     Every pe has its own local chunk
+///     of matrix data he is processing
+///     on. If a pe needs data which his
+///     matrix does not contain, he has
+///     to request it from the remote pe.
+///     The matrix consists mainly of the
+///     compressed lines which store the
+///     matrix relevant data.
+//////////////////////////////////////////
+template <class T>
+class Matrix : public Matrix_Base
+{
+
+    public:
+
+        /// Empty Constructor
+        Matrix<T>() { };
+
+        /// Constructor
+        Matrix<T>(MPI_Comm world);
+
+
+        /// Destructor
+        ~Matrix<T>();
+
+
+        //Member variables
+
+        /// Compressed column storage (CCS)
+        /// This datastructure contains the
+        /// matrix relevant data on this pe
+        Compressed_Lines<T> *c_lines;
+
+        /// Remote buffer for transferring
+        /// Values between the pe's
+        T                   *remote_col_buf;
+
+
+        //Methods
+        //================================================================
+        //========== Template specifications for double matrices =========
+        //================================================================
+
+        /////////////////////////////////////////////////////////
+        ///     \brief  Printing all matrix data
+        ///
+        ///     This method prints all data in shortest
+        ///     screen output.
+        ///
+        ///     \param  matrix The matrix to be printed
+        /////////////////////////////////////////////////////////
+        void        Print_Matrix_Data(Matrix<double> *matrix);
+
+
+        /////////////////////////////////////////////////////////
+        ///     \brief  Printing the matrix values in
+        ///             human readable format
+        ///
+        ///     This method prints only the matrix values
+        ///     in human readable format.
+        ///
+        ///     \param  matrix The matrix to be printed
+        ///     \param n n-dimension of the matrix (columns)
+        ///     \param m m-dimension of the matrix (rows)
+        /////////////////////////////////////////////////////////
+        void        Print_Matrix_Human_Readable(const Matrix<double>    *matrix,
+                                                const int               n,
+                                                const int               m);
+
+
+        /////////////////////////////////////////////////////////
+        ///     \brief  Printing the real matrix values
+        ///             in matrix market format into a
+        ///             file.
+        ///
+        ///     This method prints only the matrix values
+        ///     into a file in matrix market format.
+        ///     This format is a simple row-column-value
+        ///     format (e.g.:) 2 1 9.003
+        ///
+        ///     \param  matrix The matrix to be printed
+        ///                    to file
+        ///     \param file The file where the matrix
+        ///                 should be printed to
+        /////////////////////////////////////////////////////////
+        void        Write_Matrix_To_File(   Matrix<double>  *matrix,
+                                            char            *file);
+
+
+        //================================================================
+        //========== Template specifications for COMPLEX matrices ========
+        //================================================================
+
+        /////////////////////////////////////////////////////////
+        ///     \brief  Printing all matrix data
+        ///
+        ///     This method prints all data in shortest
+        ///     screen output.
+        ///
+        ///     \param  matrix The matrix to be printed
+        /////////////////////////////////////////////////////////
+        void        Print_Matrix_Data(Matrix<COMPLEX> *matrix);
+
+
+        /////////////////////////////////////////////////////////
+        ///     \brief  Printing the matrix values in
+        ///             human readable format
+        ///
+        ///     This method prints only the matrix values
+        ///     in human readable format.
+        ///
+        ///     \param  matrix The matrix to be printed
+        ///     \param n n-dimension of the matrix (columns)
+        ///     \param m m-dimension of the matrix (rows)
+        /////////////////////////////////////////////////////////
+        void        Print_Matrix_Human_Readable(const Matrix<COMPLEX>   *matrix,
+                                                const int               n,
+                                                const int               m);
+
+
+        /////////////////////////////////////////////////////////
+        ///     \brief  Printing the complex matrix
+        ///             values in matrix market format
+        ///             into a file.
+        ///
+        ///     This method prints only the matrix values
+        ///     into a file in matrix market format.
+        ///     This format is a simple row-column-value
+        ///     format (e.g.:) 2 1 9.003 9.884
+        ///
+        ///     \param  matrix The matrix to be printed
+        ///                    to file
+        ///     \param file The file where the matrix
+        ///                 should be printed to
+        /////////////////////////////////////////////////////////
+        void        Write_Matrix_To_File(   Matrix<COMPLEX>     *matrix,
+                                            char                *file);
+
+        //===============================================================
+        //============== Template methods - see Matrix.imp ==============
+        //===============================================================
+
+        /////////////////////////////////////////////////////////
+        ///     \brief  Initializing preconditioner with
+        ///             default values
+        ///
+        ///     \param  M The preconditioner to be
+        ///               intialized
+        ///     \param m_dim Number of rows of preconditioner
+        ///     \param n_dim Number of columns of preconditioner
+        /////////////////////////////////////////////////////////
+        void        Init_Preconditioner(Matrix<T> *&M,
+                                        const int m_dim,
+                                        const int n_dim);
+
+
+        /////////////////////////////////////////////////////////
+        ///     \brief  Generating Pattern out of Matrix
+        ///
+        ///     \param  mtx The matrix from which the pattern
+        ///                 will be generated from
+        ///     \param use_prob Whether probing is requested or
+        ///                     not.
+        ///     \return Generated Pattern from Matrix
+        /////////////////////////////////////////////////////////
+        Pattern*        To_Pattern(Matrix<T> *mtx, const bool use_prob);
+
+
+        /////////////////////////////////////////////////////////
+        ///     \brief  Generating Pattern out of  powers of Matrix
+        ///
+        ///     \param  mtx The matrix from which the pattern
+        ///                 will be generated from
+        ///     \param nb_pw number of powers
+        ///     \return Generated Pattern from Matrix
+        /////////////////////////////////////////////////////////
+        Pattern*        To_Pattern_Powers(Matrix<double> *mtx, const int nb_pw, const bool use_prob);
+
+
+
+
+
+
+        /////////////////////////////////////////////////////////
+        ///     \brief  Sparsify a matrix
+        ///
+        ///     \param  mtx The matrix which will be sparsified
+        ///     \param  List_lfill list conaining the nnz entries for each columns
+        ///                 size = n
+        /////////////////////////////////////////////////////////
+        void       Sparsify(Matrix<T> **mtx, const int *List_lfill);
+
+
+
+
+
+        /////////////////////////////////////////////////////////
+        ///     \brief  Convert from a MSPAI matrix B to a PETSc matrix PB
+	///             MSPAI matrix is stored in CSC format while PETSc matrix in CSR
+	///             PETSc matrix PB is actually the transpose of B
+        ///
+        ///     \param  comm Communicator
+        ///     \param  B MSPAI matrix
+	///	\param  PB PETSc matrix
+        ///                 
+        /////////////////////////////////////////////////////////
+        static PetscErrorCode       Convert_Matrix_to_Mat(MPI_Comm comm, Matrix<double> *B, Mat **PB);
+
+
+
+
+        /////////////////////////////////////////////////////////
+        ///     \brief  Convert from a PETSc matrix PB to a MSPAI matrix B
+	///             MSPAI matrix is stored in CSC format while PETSc matrix in CSR
+	///             PETSc matrix PB is actually the transpose of B
+        ///
+        ///     \param  comm Communicator
+        ///     \param  B MSPAI matrix
+	///	\param  PB PETSc matrix
+        ///                 
+        /////////////////////////////////////////////////////////
+        static PetscErrorCode       Convert_Mat_to_Matrix(MPI_Comm comm, Matrix<double> **B, Mat *PB);
+
+
+        static PetscErrorCode       Convert_Mat_to_Matrix(MPI_Comm comm, Matrix<double> **B, Mat *A, Vec **prob_Ce, int prob_Ce_N);
+
+    private:
+
+        /////////////////////////////////////////////////////////
+        ///     \brief  Counting the nnz elements of
+        ///             this matrix
+        ///     \return Number of nnz within this matrix
+        /////////////////////////////////////////////////////////
+        int         Count_NNZ();
+};
+
+#include "Matrix.imp"
+
+#endif

@@ -1,0 +1,106 @@
+/*
+    ======================================================================
+    ======================================================================
+    ==                                                                  ==
+    ==  MSPAI:  Modified SPAI algorithm to comupte SParse Approximate   ==
+    ==          Invers matrices.                                        ==
+    ==                                                                  ==
+    ==  Copyright (C)  2007, 2008, 2009 by                              ==
+    ==                 Matous Sedlacek <sedlacek@in.tum.de>             ==
+    ==                 Chair of Scientific Computing -- Informatics V   ==
+    ==                 Technische Universität München                   ==
+    ==                                                                  ==
+    ==  This file is part of MSPAI.                                     ==
+    ==                                                                  ==
+    ==  MSPAI is free software: you can redistribute it and/or          ==
+    ==  modify it under the terms of the GNU Lesser General Public      ==
+    ==  License as published by the Free Software Foundation, either    ==
+    ==  version 3 of the License, or (at your option) any later version.==
+    ==                                                                  ==
+    ==  MSPAI is distributed in the hope that it will be useful,        ==
+    ==  but WITHOUT ANY WARRANTY; without even the implied warranty of  ==
+    ==  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the   ==
+    ==  GNU Lesser General Public License for more details.             ==
+    ==                                                                  ==
+    ==  You should have received a copy of the GNU Lesser General       ==
+    ==  Public License along with MSPAI.                                ==
+    ==  If not, see <http://www.gnu.org/licenses/>.                     ==
+    ==                                                                  ==
+    ======================================================================
+    ======================================================================
+*/
+#include <cstring>
+
+
+template <class T> 
+Compressed_Lines<T>::Compressed_Lines(int nbr_cols_m, 
+                                      const bool symmetric)
+{   
+    A               = NULL;
+    col_buf         = NULL;
+    row_idcs        = NULL;
+    row_idcs_buf    = NULL; 
+    col_idcs        = NULL;
+    col_idcs_buf    = NULL; 
+    len_cols        = NULL;
+    len_rows        = NULL;
+    nbr_cols        = nbr_cols_m;
+    
+    
+    A = new T*[nbr_cols];
+    for (int i = 0; i < nbr_cols; i++)
+        A[i] = NULL;
+    
+    col_idcs = new int*[nbr_cols];
+    for (int i = 0; i < nbr_cols; i++)
+        col_idcs[i] = NULL;
+    
+    if (!symmetric)
+    {
+        row_idcs = new int*[nbr_cols];
+        for (int i = 0; i < nbr_cols; i++)
+            row_idcs[i] = NULL;
+    }
+    
+    len_cols    = new int[nbr_cols];
+    memset(len_cols, 0, nbr_cols * sizeof(int));    
+    
+    len_rows    = new int[nbr_cols];
+    memset(len_rows, 0, nbr_cols * sizeof(int));
+}
+        
+    
+        
+template <class T>
+Compressed_Lines<T>::~Compressed_Lines()
+{       
+    if (col_buf)    
+        delete [] col_buf;
+    else
+        for (int i = 0; i < nbr_cols; i++)
+            if (A[i])   
+                delete [] A[i];
+    
+    if (col_idcs_buf)   
+        delete [] col_idcs_buf;
+    else
+        for (int i = 0; i < nbr_cols; i++)
+            if (col_idcs[i])    
+                delete [] col_idcs[i];
+    
+    if (row_idcs)
+    {
+        if (row_idcs_buf)   
+            delete [] row_idcs_buf;
+        else
+            for (int i = 0; i < nbr_cols; i++)
+                if (row_idcs[i])    
+                    delete [] row_idcs[i];
+    }
+    
+    if (A)          delete [] A; 
+    if (col_idcs)   delete [] col_idcs;
+    if (row_idcs)   delete [] row_idcs;
+    if (len_cols)   delete [] len_cols;
+    if (len_rows)   delete [] len_rows;
+}

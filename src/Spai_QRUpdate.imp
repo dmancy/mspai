@@ -1,0 +1,721 @@
+/*
+    ======================================================================
+    ======================================================================
+    ==                                                                  ==
+    ==  MSPAI:  Modified SPAI algorithm to comupte SParse Approximate   ==
+    ==          Invers matrices.                                        ==
+    ==                                                                  ==
+    ==  Copyright (C)  2007, 2008, 2009 by                              ==
+    ==                 Matous Sedlacek <sedlacek@in.tum.de>             ==
+    ==                 Chair of Scientific Computing -- Informatics V   ==
+    ==                 Technische Universität München                   ==
+    ==                                                                  ==
+    ==  This file is part of MSPAI.                                     ==
+    ==                                                                  ==
+    ==  MSPAI is free software: you can redistribute it and/or          ==
+    ==  modify it under the terms of the GNU Lesser General Public      ==
+    ==  License as published by the Free Software Foundation, either    ==
+    ==  version 3 of the License, or (at your option) any later version.==
+    ==                                                                  ==
+    ==  MSPAI is distributed in the hope that it will be useful,        ==
+    ==  but WITHOUT ANY WARRANTY; without even the implied warranty of  ==
+    ==  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the   ==
+    ==  GNU Lesser General Public License for more details.             ==
+    ==                                                                  ==
+    ==  You should have received a copy of the GNU Lesser General       ==
+    ==  Public License along with MSPAI.                                ==
+    ==  If not, see <http://www.gnu.org/licenses/>.                     ==
+    ==                                                                  ==
+    ======================================================================
+    ======================================================================
+*/
+
+
+template <class T>  void
+Spai_QRUpdate<T>::SPAI_Column(Matrix<T> *A,
+                            Matrix<T>   *&M,
+                            Matrix<T>   *B,
+                            Pattern     *P,
+                            Pattern     *UP,
+                            Index_Set   *U_UP,
+                            const int   col,
+                            const double epsilon_param,
+                            const int   maxnew_param,
+                            const int   max_impr_steps,
+                            Hash_Table<T>   *ht,
+                            const int   use_mean,
+                            int         pre_k_param,
+                            const int   pre_max_param,
+                            unsigned int *&bitvec,
+                            unsigned int *&reset_vec)
+{
+        
+    int             m = 0, // y dimension of A_hat
+                    n = 0, // x dimension of A_hat
+                    unit_idx = -1,
+                    nnz = 0; //number of nnz within A_Hat
+                
+    double          residual_norm = 1.0e+50; // appr. infinity
+                            
+    T               *A_Hat          = NULL,
+                    *A_Hat_QR       = NULL,
+                    *mk_Hat         = NULL,
+                    *mk             = NULL,
+                    *ek_Hat         = NULL,
+                    *residual_vals  = NULL,
+                    *aug_cols       = NULL;
+        
+    Spai_Sub<T>     o_sub;
+        
+    Com_Server<T>   o_comm; 
+                                            
+    Index_Set       *J              = NULL, 
+                    *I              = NULL,
+                    *I_aug          = NULL,
+                    *J_aug          = NULL,
+                    *I_old          = NULL,
+                    *J_old          = NULL;
+                
+    QR_Struktur     *QRS            = NULL;
+    
+    QR_Struktur_sparse *QRSS        = NULL;
+
+    
+    // J will be filled with the
+    // new J values from pattern
+    // and will be updated each augmenting 
+    // step.
+    J = new Index_Set(A->n); 
+       
+    // Extract pattern from pattern matrix  
+    // Create the Index Set J
+    o_comm.Get_P_Col(A, M, B, P, UP, col, J);
+   
+    // Drive on communication between pes   
+    o_comm.Communicate(A, M, B, P, UP);
+    
+    // Get those row indices where at least one nnz
+    // is available in row. Create Index Set I
+    I = o_sub.Get_I_Set(J, A, M, B, P, 
+                        UP, U_UP, ht, 
+                        pre_k_param, 
+                        pre_max_param, 
+                        bitvec, reset_vec);   
+    
+    // Create the unit vector
+    // Notice that the name is the solution name 
+    // already:
+    mk = o_sub.Create_ek(A->n, col);
+
+    // Copy the unit vector. This is used for 
+    // computing the residual vector later 
+    ek_Hat =  o_sub.Create_ek_Hat(I, I->len, col, unit_idx);
+    
+    // Create the submatrix A_Hat = A(I;J) and update the 
+    // The index of the unit vector
+    A_Hat = o_sub.Create_Submatrix_AHat(
+                            A, M, B, P, UP, U_UP,
+                            J, I, m, n, ht, nnz,
+                            pre_k_param, pre_max_param);
+
+    //Copy A_Hat because QRZerlegungLapack() changes it
+    A_Hat_QR = o_sub.Copy_Vector(A_Hat, m * n);
+    
+    // Computing solution m_k which is stored within
+    // mk_Hat.
+    QR_Decomposition(       QRS, QRSS, A_Hat_QR, 
+                            mk, m, n, 
+                            nnz, A->n, A->n, 
+                            I->idcs, J->idcs, 
+                            max_impr_steps, maxnew_param);
+
+    
+    //Extract the solution values from the solution vector mk   
+    mk_Hat = o_sub.Get_Solution_Vals(mk, J);
+    
+    // Computing the residual vector
+    // and the frobenius norm of it
+    residual_norm = o_sub.Residual_Norm(
+                            A_Hat, m, n, 
+                            mk_Hat, ek_Hat, 
+                            residual_vals);
+    
+    
+    //step is -1 because the first improvement step is 
+    // only the static SPAI
+    for (int step = 0; 
+        (step < max_impr_steps) && (residual_norm > epsilon_param); 
+         step++)
+    {       
+        J_old = J_old->Copy_Index_Set(J);
+        I_old = I;  
+        
+        //Solution is not good enough - augmenting 
+        //Finish augmenting if no new candidates found
+        if (!o_sub.Augment_Sparsity(A, M, B, P, I, 
+                                    J, UP, U_UP, col, 
+                                    residual_norm, 
+                                    residual_vals, 
+                                    maxnew_param, 
+                                    ht, use_mean,
+                                    pre_k_param,
+                                    pre_max_param,
+                                    bitvec, reset_vec))
+        {
+            delete J_old;
+            break;
+        }
+        
+        delete [] mk_Hat;
+        delete [] A_Hat;
+        delete [] ek_Hat;
+        delete I_aug;
+        delete J_aug;
+
+        // Drive on communication between pes 
+        o_comm.Communicate(A, M, B, P, UP);
+        
+        // Get those row indices where at least one nnz
+        // is available in row. Create Index Set I
+        I = o_sub.Get_I_Set(J, A, M, B, P, UP, 
+                            U_UP, ht, pre_k_param, 
+                            pre_max_param, bitvec, 
+                            reset_vec);   
+
+        // Create the submatrix A_Hat = A(I;J) and update the 
+        // The index of the unit vector
+        A_Hat = o_sub.Create_Submatrix_AHat(
+                            A, M, B, P, UP, U_UP,
+                            J, I, m, n, ht, nnz,
+                            pre_k_param, pre_max_param);
+        
+        // Create the unit vector
+        // Notice that the name is the solution name 
+        // already:
+        mk = o_sub.Create_ek(A->n, col);    
+    
+        // Copy the unit vector. This is used for 
+        // computing the residual vector later 
+        ek_Hat =  o_sub.Create_ek_Hat(I, I->len, col, unit_idx);
+        
+
+        // Get the index set I_aug which contains only the
+        // new augmenting i indices.
+        I_aug = I_aug->Set_Difference(I, I_old);
+        delete I_old;
+        
+        //Get the index set J_aug which contains only the 
+        // new augmenting j indices
+        J_aug = J_aug->Set_Difference(J, J_old);
+        delete J_old;
+
+        // QR-Update 
+        QR_Update(A, M, B, P, UP, U_UP, ht, QRS, QRSS, aug_cols,  
+                  mk, J_aug, I_aug, A_Hat, m, n, nnz, A->n,  
+                  A->n, I, J, max_impr_steps, maxnew_param, 
+                  pre_k_param, pre_max_param);
+        
+        // Extract the solution values
+        mk_Hat = o_sub.Get_Solution_Vals(mk, J);
+        
+        // Computing the residual vector
+        // and the frobenius norm of it
+        residual_norm = o_sub.Residual_Norm(
+                            A_Hat, m, n, 
+                            mk_Hat, ek_Hat, 
+                            residual_vals);
+        
+        //Finishing conditions
+        if (step == (max_impr_steps - 1)) // Don't delete solution,no augment sparsity
+            break;  
+    }
+    
+    // Inserting solution row into preconditioner
+    o_comm.Insert_Row_Solution(  A, M, B, P, UP,
+                                 col, mk_Hat, J);
+    
+    // Free heap storage last time
+    delete [] mk_Hat;
+    delete [] ek_Hat;
+    delete [] A_Hat;
+    delete [] A_Hat_QR;
+    delete J;
+    delete I;
+    delete J_aug;
+    delete I_aug;
+    if (QRS) free_QR(QRS);
+    if (QRSS) free_qrs_sparse(QRSS);
+}
+
+
+
+
+
+//======================================================================
+//=========== Template implementation for automatic QR-Updates =========
+//======================================================================
+
+template <class T>
+Spai_QRUpdate_Auto<T>::Spai_QRUpdate_Auto(const double fillgrade_m)
+{
+    fillgrade = fillgrade_m;
+}
+        
+        
+        
+template <class T>  void
+Spai_QRUpdate_Auto<T>::QR_Decomposition(QR_Struktur*&           QRS, 
+                                        QR_Struktur_sparse*&    QRSS, 
+                                        T*&                     A_Hat_QR, 
+                                        T*&                     mk, 
+                                        const int&              m, 
+                                        const int&              n,  
+                                        const int&              nnz,
+                                        const int&              dimAz, 
+                                        const int&              dimAs, 
+                                        int*                    i_idcs, 
+                                        int*                    j_idcs, 
+                                        const int&              max_impr_steps, 
+                                        const int&              maxnew_param)
+{   
+    Spai_Sub<T> o_sub;
+    
+    // Checking if percentage of nnz within A_Hat is smaller
+    // of greater than user bound "fillgrade".
+    // If so, make hybrid QR updates. If not, do dense QR 
+    // updates
+    if (o_sub.Compute_Fillgrade(nnz, m, n) < fillgrade)
+    {   
+        cs* A_Hat_cs = o_sub.Convert_Matrix_toCS(A_Hat_QR, m ,n , nnz);
+
+        QRSS = QRZerlegung_cs(  A_Hat_cs, mk, m, n, nnz, 
+                                dimAz, dimAs, i_idcs, j_idcs, 
+                                max_impr_steps, maxnew_param);
+    
+        cs_free(A_Hat_cs);
+    }
+    else    // percentage of nnz is greater than fillgrade
+    {
+        QRS = QRZerlegungLapack(A_Hat_QR, mk, m, n,  
+                                dimAz, dimAs, i_idcs, j_idcs, 
+                                max_impr_steps, maxnew_param);
+    }
+}
+
+
+
+template <class T>  void
+Spai_QRUpdate_Auto<T>::QR_Update(Matrix<T>*              A,
+                                 Matrix<T>*&             M,
+                                 Matrix<T>*              B,
+                                 Pattern*                P,
+                                 Pattern*                UP,
+                                 Index_Set*              U_UP,
+                                 Hash_Table<T>*          ht,
+                                 QR_Struktur*&           QRS, 
+                                 QR_Struktur_sparse*&    QRSS, 
+                                 T*&                     aug_cols, 
+                                 T*&                     mk, 
+                                 Index_Set*              J_aug,
+                                 Index_Set*              I_aug,
+                                 T*                      A_Hat_orig,
+                                 const int&              m,
+                                 const int&              n,
+                                 const int&              nnz,
+                                 const int&              mDim_A,
+                                 const int&              nDim_A,
+                                 Index_Set*              I,
+                                 Index_Set*              J,
+                                 const int&              max_impr_steps,
+                                 const int&              maxnew_param,
+                                 const int&              pre_k_param,
+                                 const int               pre_max_param)
+{  
+    Spai_Sub<T> o_sub;
+    
+    T*  A_Hat = o_sub.Copy_Vector(A_Hat_orig, m * n);
+
+    if (o_sub.Compute_Fillgrade(nnz, m, n) < fillgrade)
+    {
+        if (QRSS) free_qrs_sparse(QRSS);
+           
+        cs* A_Hat_cs = o_sub.Convert_Matrix_toCS(A_Hat, m ,n , nnz);
+ 
+        QRSS = QRZerlegung_cs(  A_Hat_cs, mk, m, n, nnz, 
+                                mDim_A, nDim_A, I->idcs, J->idcs, 
+                                max_impr_steps, maxnew_param);
+    
+        cs_free(A_Hat_cs);
+    }
+    else    // percentage of nnz is greater than fillgrade
+    {
+        if(QRS) free_QR(QRS);
+            
+        QRS = QRZerlegungLapack(A_Hat, mk, m, n,  
+                               mDim_A, nDim_A, I->idcs, J->idcs, 
+                               max_impr_steps, maxnew_param);   
+    }
+    
+    delete [] A_Hat;
+}
+
+
+//======================================================================
+//============= Template implementation for dense QR-Updates ===========
+//======================================================================
+
+template <class T>  void
+Spai_QRUpdate_Dense<T>::QR_Decomposition(QR_Struktur*&           QRS, 
+                                         QR_Struktur_sparse*&    QRSS, 
+                                         T*&                     A_Hat_QR, 
+                                         T*&                     mk, 
+                                         const int&              m, 
+                                         const int&              n,  
+                                         const int&              nnz,
+                                         const int&              dimAz, 
+                                         const int&              dimAs, 
+                                         int*                    i_idcs, 
+                                         int*                    j_idcs, 
+                                         const int&              max_impr_steps, 
+                                         const int&              maxnew_param)
+{
+    QRS = QRZerlegungLapack(A_Hat_QR, mk, m, n,  
+                            dimAz, dimAs, i_idcs, j_idcs, 
+                            max_impr_steps, maxnew_param);
+        
+}
+
+
+
+template <class T>  void
+Spai_QRUpdate_Dense<T>::QR_Update(Matrix<T>*              A,
+                                  Matrix<T>*&             M,
+                                  Matrix<T>*              B,
+                                  Pattern*                P,
+                                  Pattern*                UP,
+                                  Index_Set*              U_UP,
+                                  Hash_Table<T>*          ht,
+                                  QR_Struktur*&           QRS, 
+                                  QR_Struktur_sparse*&    QRSS, 
+                                  T*&                     aug_cols, 
+                                  T*&                     mk, 
+                                  Index_Set*              J_aug,
+                                  Index_Set*              I_aug,
+                                  T*                      A_Hat_orig,
+                                  const int&              m,
+                                  const int&              n,
+                                  const int&              nnz,
+                                  const int&              mDim_A,
+                                  const int&              nDim_A,
+                                  Index_Set*              I,
+                                  Index_Set*              J,
+                                  const int&              max_impr_steps,
+                                  const int&              maxnew_param,
+                                  const int&              pre_k_param,
+                                  const int               pre_max_param)
+{
+    Spai_Sub<T> o_sub;
+    
+    //Creating new vector containing the new columns
+    aug_cols = o_sub.Create_Augmenting_Columns(J_aug, A, M, B, P, UP, U_UP, ht,
+                                               pre_k_param, pre_max_param);
+    
+    QRS = qrupdate_voll(QRS, aug_cols, mk, J_aug->len, 
+                        I_aug->len, J_aug->idcs, I_aug->idcs);
+    
+    delete [] aug_cols;
+}
+
+
+
+
+
+
+//======================================================================
+//============ Template implementation for sparse QR-Updates ===========
+//======================================================================
+
+template <class T>  void
+Spai_QRUpdate_Sparse<T>::QR_Decomposition(QR_Struktur*&           QRS, 
+                                          QR_Struktur_sparse*&    QRSS, 
+                                          T*&                     A_Hat_QR, 
+                                          T*&                     mk, 
+                                          const int&              m, 
+                                          const int&              n,  
+                                          const int&              nnz,
+                                          const int&              dimAz, 
+                                          const int&              dimAs, 
+                                          int*                    i_idcs, 
+                                          int*                    j_idcs, 
+                                          const int&              max_impr_steps, 
+                                          const int&              maxnew_param)
+{   
+    Spai_Sub<T>     o_sub;
+    
+    cs* A_Hat_cs = o_sub.Convert_Matrix_toCS(A_Hat_QR, m ,n , nnz);
+
+    QRSS = QRZerlegung_cs(  A_Hat_cs, mk, m, n, nnz, 
+                            dimAz, dimAs, i_idcs, j_idcs, 
+                            max_impr_steps, maxnew_param);
+    
+    cs_free(A_Hat_cs);  
+}
+
+
+
+template <class T>  void
+Spai_QRUpdate_Sparse<T>::QR_Update(Matrix<T>*              A,
+                                   Matrix<T>*&             M,
+                                   Matrix<T>*              B,
+                                   Pattern*                P,
+                                   Pattern*                UP,
+                                   Index_Set*              U_UP,
+                                   Hash_Table<T>*          ht,
+                                   QR_Struktur*&           QRS, 
+                                   QR_Struktur_sparse*&    QRSS, 
+                                   T*&                     aug_cols, 
+                                   T*&                     mk, 
+                                   Index_Set*              J_aug,
+                                   Index_Set*              I_aug,
+                                   T*                      A_Hat_orig,
+                                   const int&              m,
+                                   const int&              n,
+                                   const int&              nnz,
+                                   const int&              mDim_A,
+                                   const int&              nDim_A,
+                                   Index_Set*              I,
+                                   Index_Set*              J,
+                                   const int&              max_impr_steps,
+                                   const int&              maxnew_param,
+                                   const int&              pre_k_param,
+                                   const int               pre_max_param)
+{
+    Spai_Sub<T> o_sub;
+        
+    //Creating new vector containing the new columns
+    aug_cols = o_sub.Create_Augmenting_Columns(J_aug, A, M, B, P, UP, U_UP, ht,
+                                               pre_k_param, pre_max_param);
+        
+    QRSS = qrupdate_duenn(QRSS, aug_cols, mk, J_aug->len, 
+                          I_aug->len, J_aug->idcs, I_aug->idcs);
+    
+    delete [] aug_cols;
+}
+
+
+
+//======================================================================
+//============ Template implementation for hybrid QR-Updates ===========
+//======================================================================
+
+template <class T>  void
+Spai_QRUpdate_Hybrid<T>::QR_Decomposition(QR_Struktur*&           QRS, 
+                                          QR_Struktur_sparse*&    QRSS, 
+                                          T*&                     A_Hat_QR, 
+                                          T*&                     mk, 
+                                          const int&              m, 
+                                          const int&              n,  
+                                          const int&              nnz,
+                                          const int&              dimAz, 
+                                          const int&              dimAs, 
+                                          int*                    i_idcs, 
+                                          int*                    j_idcs, 
+                                          const int&              max_impr_steps, 
+                                          const int&              maxnew_param)
+{
+    Spai_Sub<T>     o_sub;
+    
+    cs* A_Hat_cs = o_sub.Convert_Matrix_toCS(A_Hat_QR, m ,n , nnz);
+
+    QRSS = QRZerlegung_cs(  A_Hat_cs, mk, m, n, nnz, 
+                            dimAz, dimAs, i_idcs, j_idcs, 
+                            max_impr_steps, maxnew_param);
+    
+    cs_free(A_Hat_cs);
+}
+
+
+
+template <class T>  void
+Spai_QRUpdate_Hybrid<T>::QR_Update(Matrix<T>*              A,
+                                   Matrix<T>*&             M,
+                                   Matrix<T>*              B,
+                                   Pattern*                P,
+                                   Pattern*                UP,
+                                   Index_Set*              U_UP,
+                                   Hash_Table<T>*          ht,
+                                   QR_Struktur*&           QRS, 
+                                   QR_Struktur_sparse*&    QRSS, 
+                                   T*&                     aug_cols, 
+                                   T*&                     mk, 
+                                   Index_Set*              J_aug,
+                                   Index_Set*              I_aug,
+                                   T*                      A_Hat_orig,
+                                   const int&              m,
+                                   const int&              n,
+                                   const int&              nnz,
+                                   const int&              mDim_A,
+                                   const int&              nDim_A,
+                                   Index_Set*              I,
+                                   Index_Set*              J,
+                                   const int&              max_impr_steps,
+                                   const int&              maxnew_param,
+                                   const int&              pre_k_param,
+                                   const int               pre_max_param)
+{
+    Spai_Sub<T>     o_sub;
+        
+    //Creating new vector containing the new columns
+    aug_cols = o_sub.Create_Augmenting_Columns(J_aug, A, M, B, P, UP,U_UP, ht,
+                                               pre_k_param, pre_max_param);
+        
+    QRSS = qrupdate_cs_lapack(QRSS, aug_cols, mk, J_aug->len,
+                             I_aug->len, J_aug->idcs, I_aug->idcs);
+    
+    delete [] aug_cols;
+}
+
+
+
+//======================================================================
+//====== Template class for dense decompositions without updates =======
+//======================================================================
+
+template <class T>  void
+Spai_Dense_Decomposotion<T>::QR_Decomposition(QR_Struktur*&           QRS, 
+                                              QR_Struktur_sparse*&    QRSS, 
+                                              T*&                     A_Hat_QR, 
+                                              T*&                     mk, 
+                                              const int&              m, 
+                                              const int&              n,  
+                                              const int&              nnz,
+                                              const int&              dimAz, 
+                                              const int&              dimAs, 
+                                              int*                    i_idcs, 
+                                              int*                    j_idcs, 
+                                              const int&              max_impr_steps, 
+                                              const int&              maxnew_param)
+{
+    QRS = QRZerlegungLapack(A_Hat_QR, mk, m, n,  
+                            dimAz, dimAs, i_idcs, j_idcs, 
+                            max_impr_steps, maxnew_param);
+}
+
+
+
+template <class T>  void
+Spai_Dense_Decomposotion<T>::QR_Update(Matrix<T>*              A,
+                                       Matrix<T>*&             M,
+                                       Matrix<T>*              B,
+                                       Pattern*                P,
+                                       Pattern*                UP,
+                                       Index_Set*              U_UP,
+                                       Hash_Table<T>*          ht,
+                                       QR_Struktur*&           QRS, 
+                                       QR_Struktur_sparse*&    QRSS, 
+                                       T*&                     aug_cols, 
+                                       T*&                     mk, 
+                                       Index_Set*              J_aug,
+                                       Index_Set*              I_aug,
+                                       T*                      A_Hat_orig,
+                                       const int&              m,
+                                       const int&              n,
+                                       const int&              nnz,
+                                       const int&              mDim_A,
+                                       const int&              nDim_A,
+                                       Index_Set*              I,
+                                       Index_Set*              J,
+                                       const int&              max_impr_steps,
+                                       const int&              maxnew_param,
+                                       const int&              pre_k_param,
+                                       const int               pre_max_param)
+{
+    Spai_Sub<T> o_sub;
+    
+    T*  A_Hat = o_sub.Copy_Vector(A_Hat_orig, m * n);
+    
+    if (QRS) free_QR(QRS);
+    
+    QRS = QRZerlegungLapack(A_Hat, mk, m, n,  
+                            mDim_A, nDim_A, I->idcs, J->idcs, 
+                            max_impr_steps, maxnew_param);
+    
+    delete [] A_Hat;
+}
+
+
+
+//======================================================================
+//====== Template class for sparse decompositions without updates ======
+//======================================================================
+
+template <class T>  void
+Spai_Sparse_Decomposotion<T>::QR_Decomposition( QR_Struktur*&           QRS, 
+                                                QR_Struktur_sparse*&    QRSS, 
+                                                T*&                     A_Hat_QR, 
+                                                T*&                     mk, 
+                                                const int&              m, 
+                                                const int&              n,  
+                                                const int&              nnz,
+                                                const int&              dimAz, 
+                                                const int&              dimAs, 
+                                                int*                    i_idcs, 
+                                                int*                    j_idcs, 
+                                                const int&              max_impr_steps, 
+                                                const int&              maxnew_param)
+{
+    Spai_Sub<T>     o_sub;
+    
+    cs* A_Hat_cs = o_sub.Convert_Matrix_toCS(A_Hat_QR, m ,n , nnz);
+
+    QRSS = QRZerlegung_cs(  A_Hat_cs, mk, m, n, nnz, 
+                            dimAz, dimAs, i_idcs, j_idcs, 
+                            max_impr_steps, maxnew_param);
+    
+    cs_free(A_Hat_cs);
+}
+
+
+
+template <class T>  void
+Spai_Sparse_Decomposotion<T>::QR_Update(Matrix<T>*              A,
+                                        Matrix<T>*&             M,
+                                        Matrix<T>*              B,
+                                        Pattern*                P,
+                                        Pattern*                UP,
+                                        Index_Set*              U_UP,
+                                        Hash_Table<T>*          ht,
+                                        QR_Struktur*&           QRS, 
+                                        QR_Struktur_sparse*&    QRSS, 
+                                        T*&                     aug_cols, 
+                                        T*&                     mk, 
+                                        Index_Set*              J_aug,
+                                        Index_Set*              I_aug,
+                                        T*                      A_Hat_orig,
+                                        const int&              m,
+                                        const int&              n,
+                                        const int&              nnz,
+                                        const int&              mDim_A,
+                                        const int&              nDim_A,
+                                        Index_Set*              I,
+                                        Index_Set*              J,
+                                        const int&              max_impr_steps,
+                                        const int&              maxnew_param,
+                                        const int&              pre_k_param,
+                                        const int               pre_max_param)
+{
+    Spai_Sub<T>     o_sub;
+    
+    T*  A_Hat = o_sub.Copy_Vector(A_Hat_orig, m * n);
+    
+    cs* A_Hat_cs = o_sub.Convert_Matrix_toCS(A_Hat, m ,n , nnz);
+
+    if (QRSS) free_qrs_sparse(QRSS);
+    
+    QRSS = QRZerlegung_cs(  A_Hat_cs, mk, m, n, nnz, 
+                            mDim_A, nDim_A, I->idcs, J->idcs, 
+                            max_impr_steps, maxnew_param);
+    
+    delete [] A_Hat;
+    cs_free(A_Hat_cs);
+}
