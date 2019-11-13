@@ -1,13 +1,4 @@
 *.o
 *.d
 bin/
-AUTHORS
-ChangeLog
-COPYING
-COPYING.LESSER
-CSparse/
-doc/
-LANG
-LICENSE
-README
 tags
