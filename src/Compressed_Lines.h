@@ -101,6 +101,9 @@ class Compressed_Lines
         
         /// Number of nonzeros in each row
         int *len_rows;
+
+        /// Scalar length of the columns
+        int *len_scalar;
         
                 
     private:

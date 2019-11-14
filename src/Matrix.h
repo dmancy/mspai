@@ -352,12 +352,12 @@ class Matrix : public Matrix_Base
 
         /////////////////////////////////////////////////////////
         ///     \brief  Convert from a MSPAI matrix B to a PETSc matrix PB
-	///             MSPAI matrix is stored in CSC format while PETSc matrix in CSR
-	///             PETSc matrix PB is actually the transpose of B
+	      ///             MSPAI matrix is stored in CSC format while PETSc matrix in CSR
+	      ///             PETSc matrix PB is actually the transpose of B
         ///
         ///     \param  comm Communicator
         ///     \param  B MSPAI matrix
-	///	\param  PB PETSc matrix
+	      ///	    \param  PB PETSc matrix
         ///                 
         /////////////////////////////////////////////////////////
         static PetscErrorCode       Convert_Matrix_to_Mat(MPI_Comm comm, Matrix<double> *B, Mat **PB);
@@ -367,12 +367,12 @@ class Matrix : public Matrix_Base
 
         /////////////////////////////////////////////////////////
         ///     \brief  Convert from a PETSc matrix PB to a MSPAI matrix B
-	///             MSPAI matrix is stored in CSC format while PETSc matrix in CSR
-	///             PETSc matrix PB is actually the transpose of B
+	      ///             MSPAI matrix is stored in CSC format while PETSc matrix in CSR
+	      ///             PETSc matrix PB is actually the transpose of B
         ///
         ///     \param  comm Communicator
         ///     \param  B MSPAI matrix
-	///	\param  PB PETSc matrix
+	      ///	    \param  PB PETSc matrix
         ///                 
         /////////////////////////////////////////////////////////
         static PetscErrorCode       Convert_Mat_to_Matrix(MPI_Comm comm, Matrix<double> **B, Mat *PB);
@@ -380,7 +380,25 @@ class Matrix : public Matrix_Base
 
         static PetscErrorCode       Convert_Mat_to_Matrix(MPI_Comm comm, Matrix<double> **B, Mat *A, Vec **prob_Ce, int prob_Ce_N);
 
-    private:
+        /////////////////////////////////////////////////////////
+        ///     \brief Convert a Scalar Marix into a Block Matrix 
+        ///
+        ///     \param  Matrix A
+        ///     \param  int bs
+	      ///	    \param  int upper_bs_limit
+        ///     \param  int verbose
+        ///                 
+        /////////////////////////////////////////////////////////
+
+        static Matrix<T>* Convert_Block_Matrix(Matrix<T> *A, int bs, int upper_bs_limit, int verbose);
+
+        static Matrix<T>* Constant_Block_Matrix(Matrix<T> *A, int bs);
+
+
+        static void Find_Constant_Blocks(Matrix<T> *A, int block_size, int* &block_sizes, int& nblocks);
+
+
+    //private:
 
         /////////////////////////////////////////////////////////
         ///     \brief  Counting the nnz elements of

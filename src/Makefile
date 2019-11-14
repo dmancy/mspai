@@ -9,15 +9,15 @@ EXT      := cpp
 TARGET   := ../bin/mspai-1.2
 SOURCES  := $(wildcard *.$(EXT))
 OBJECTS  := $(patsubst %.$(EXT), %.o, $(SOURCES))
+IMP      := $(wildcard *.imp)
 DEP			 := $(OBJECTS:.o=.d)	#one dependency file for each source
 
 
--include $(DEP)
 
 .PHONY: all
 all: $(TARGET)
 
-$(TARGET): $(OBJECTS)
+$(TARGET): $(DEP) $(OBJECTS) 
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJECTS) $(LIBS) ${PETSC_VEC_LIB}
 
 $(OBJECTS): %.o: %.$(EXT)
@@ -25,12 +25,14 @@ $(OBJECTS): %.o: %.$(EXT)
 
 .PHONY: clean
 clean:
-	rm -rf *.o $(TARGET)
+	rm -rf *.o $(TARGET) *.d
 
 %.d: %.$(EXT)
-	$(CXX) $(CXXFLAGS) $< -MM -MT $(@:.d=.o) >$@
+	$(CXX) $(CXXFLAGS) $< -MM -MT $(@:.d=.o) > $@
 
 .PHONY: cleandep
 cleandep:
-	rm -rf $(DEP)
+	rm -rf *.d
 
+.PHONY: dep
+dep: $(DEP)

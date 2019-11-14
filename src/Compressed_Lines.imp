@@ -67,6 +67,10 @@ Compressed_Lines<T>::Compressed_Lines(int nbr_cols_m,
     
     len_rows    = new int[nbr_cols];
     memset(len_rows, 0, nbr_cols * sizeof(int));
+
+    len_scalar  = new int[nbr_cols];
+    memset(len_scalar, 0, nbr_cols * sizeof(int));    
+    
 }
         
     

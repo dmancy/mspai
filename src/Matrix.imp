@@ -30,6 +30,7 @@
     ======================================================================
 */
 
+#include "Block.h"
 
 template <class T>
 Matrix<T>::Matrix(MPI_Comm world_m)
@@ -1105,6 +1106,63 @@ PetscErrorCode Matrix<T>::Convert_Mat_to_Matrix(MPI_Comm comm, Matrix<double> **
 	return ierr;
 
 }	
+
+
+
+template <class T> 
+Matrix<T>* Matrix<T>::Convert_Block_Matrix(Matrix<T> *A, int bs, int upper_bs_limit, int verbose)
+{
+    Matrix<T>* B;
+
+    if (bs)
+      B = Constant_Block_Matrix(A,bs);
+    /*
+    else
+      B = Variable_Block_Matrix(A,upper_bs_limit);
+    */
+
+    return (B);
+}
+
+template <class T> 
+Matrix<T>* Matrix<T>::Constant_Block_Matrix(Matrix<T> *A, int bs)
+{
+    Matrix<T> *V;
+    int nblocks, *block_sizes;
+
+    Find_Constant_Blocks(A, bs, block_sizes, nblocks);
+
+    V = Convert_To_Block_Matrix(A, nblocks, block_sizes);
+
+    V->block_size = bs;
+
+    delete [] block_sizes;
+
+    return V;
+}
+
+template <class T> 
+void Matrix<T>::Find_Constant_Blocks(Matrix<T> *A, int block_size, int* &block_sizes, int& nblocks)
+{
+    int odd_block;
+
+    nblocks = (A->my_nbr_cols)/block_size; 
+    odd_block = (A->my_nbr_cols) % block_size;
+
+    if (odd_block)
+      nblocks++;
+
+    block_sizes = new int[nblocks];
+
+    for (int i=0; i<nblocks; i++)
+      block_sizes[i] = block_size;
+
+    if (odd_block)
+      block_sizes[nblocks-1] = odd_block;
+
+}
+
+
 
 inline int comp (const void * elem1, const void * elem2)
 {

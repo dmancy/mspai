@@ -274,7 +274,11 @@ int bspai(PC_MSPAI* mspai)
     
     MPI_Barrier(MPI_COMM_WORLD);
 
+    Matrix<double> *B;
+		mspai->A_REAL->Write_Matrix_To_File(mspai->A_REAL, "A.mtx");
+    B = Matrix<double>::Convert_Block_Matrix(mspai->A_REAL, 1, 10000,0);
 
+		B->Write_Matrix_To_File(B, "B.mtx");
   if (mspai->A_REAL)
   {
 	  delete mspai->A_REAL;
