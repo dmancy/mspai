@@ -48,6 +48,7 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
     B->n += B->all_nbr_cols[i];
   }
 
+
   /* B is square */
   B->m = B->n;
 
@@ -151,6 +152,7 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
         }
       }
 
+
       /* Install block column jb */
       B->c_lines->col_idcs[jb] = new int[count];
       B->c_lines->A[jb] = new double[total_height * n];
@@ -253,7 +255,6 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
       row_buf_size += B->c_lines->len_rows[j];
     A_buf_size += (B->block_sizes[idx] * B->c_lines->len_scalar[j]);
   }
-  printf("col_buf_size : %d\n", col_buf_size);
 
   MPI_Barrier(A->world);
   MPI_Allreduce(static_cast<void *>(&col_buf_size), static_cast<void *>(&max_col_buf_size), 1,
@@ -321,3 +322,24 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
 
 
 
+void write_block(FILE *fptr, double *a, int m, int n)
+{
+  double val;
+  static int count = 0;
+  const char *str;
+  for (int i=0; i<m; i++)
+  {
+    for (int j=0; j<n; j++)
+    {
+      val = a[i+m*j];
+      if (val < 0.0) 
+          str = " ";
+      else
+          str = "  ";
+
+      fprintf(fptr, "%s%.13e", str, val);
+      count += 1;
+    }
+    fprintf(fptr, "\n");
+  }
+}

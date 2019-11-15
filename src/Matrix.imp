@@ -55,7 +55,7 @@ Matrix<T>::Matrix(MPI_Comm world_m)
     next_col            = 0;
     max_nnz             = 0;
     symmetric           = false;
-    block_size          = 0;
+    block_size          = 1;
     max_block_size      = 0;
     block_sizes         = NULL;
 }
@@ -1131,7 +1131,6 @@ Matrix<T>* Matrix<T>::Constant_Block_Matrix(Matrix<T> *A, int bs)
     int nblocks, *block_sizes;
 
     Find_Constant_Blocks(A, bs, block_sizes, nblocks);
-
     V = Convert_To_Block_Matrix(A, nblocks, block_sizes);
 
     V->block_size = bs;

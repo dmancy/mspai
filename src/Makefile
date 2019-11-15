@@ -25,7 +25,7 @@ $(OBJECTS): %.o: %.$(EXT)
 
 .PHONY: clean
 clean:
-	rm -rf *.o $(TARGET) *.d
+	rm -rf *.o $(TARGET)
 
 %.d: %.$(EXT)
 	$(CXX) $(CXXFLAGS) $< -MM -MT $(@:.d=.o) > $@

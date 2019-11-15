@@ -188,6 +188,7 @@ Matrix<double>::Write_Matrix_To_File( Matrix<double> *matrix,
                 cat_cmd[1024],
                 rm_cmd[1024];
                 
+    int next;
     
     Timer       o_timer;
     
@@ -228,6 +229,7 @@ Matrix<double>::Write_Matrix_To_File( Matrix<double> *matrix,
 
     for (int j = 0; j < my_nbr_cols; j++) 
     {
+        next = 0;
         for (int i = 0; i < c_lines->len_cols[j]; i++) 
         {
             row = c_lines->col_idcs[j][i] + 1;
@@ -239,12 +241,26 @@ Matrix<double>::Write_Matrix_To_File( Matrix<double> *matrix,
             else
                 str = "  ";
             
-            fprintf(f,
-                    "%d %d%s%.13e\n", 
-                    row,    //row
-                    col,    //column
-                    str,    //whitespace
-                    val);   //value
+            if (block_size == 1)
+            {
+              fprintf(f,
+                      "%d %d%s%.13e\n", 
+                      row,    //row
+                      col,    //column
+                      str,    //whitespace
+                      val);   //value
+            }
+            else {
+              fprintf(f,
+                      "%d %d", 
+                      row,
+                      col);
+              write_block(f, &(c_lines->A[j][next]),
+                          block_sizes[row-1],
+                          block_sizes[col-1]);
+             next += (block_sizes[row-1] * block_sizes[col-1]);
+            }
+            
         }
     }
 
