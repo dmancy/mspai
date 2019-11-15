@@ -36,3 +36,7 @@ cleandep:
 
 .PHONY: dep
 dep: $(DEP)
+
+.PHONY: init
+init:
+	rm -rf bspai.o imspai.o Matrix.o

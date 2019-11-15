@@ -398,6 +398,13 @@ class Matrix : public Matrix_Base
         static void Find_Constant_Blocks(Matrix<T> *A, int block_size, int* &block_sizes, int& nblocks);
 
 
+        static Matrix<T>* Variable_Block_Matrix(Matrix<T> *A, int bs);
+        static void Find_Diagonal_Blocks(Matrix<T> *A, int upper_bs_limit, int* &block_sizes, int& nblocks); 
+        static int Find_Diagonal_Block( Matrix<T> *A, int i, int upper_bs_limit);
+        static int Initial_Run_Length(Matrix<T> *A, int i);
+        static int Check_Next_Run(Matrix<T> *A, int i, int i_next, int bs);
+
+
     //private:
 
         /////////////////////////////////////////////////////////

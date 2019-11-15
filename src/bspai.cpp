@@ -59,19 +59,6 @@ int bspai(PC_MSPAI* mspai)
 
    bool symmetric_system = mspai->A_REAL->symmetric;
 
-
-
-
-    /*MatView(*A,PETSC_VIEWER_STDOUT_WORLD);*/
-     
-
-
-
-
-   PetscPrintf(PETSC_COMM_WORLD, "debut MSPAI\n");
-
-   // try     //new will throw its own exception
-   // {       // just make one catch at all
    
 
    if (mspai->verbose)
@@ -277,7 +264,7 @@ int bspai(PC_MSPAI* mspai)
     Matrix<double> *B;
    
 		mspai->A_REAL->Write_Matrix_To_File(mspai->A_REAL, "A.mtx");
-    B = Matrix<double>::Convert_Block_Matrix(mspai->A_REAL, 2, 10000,0);
+    B = Matrix<double>::Convert_Block_Matrix(mspai->A_REAL, 0, 10000,0);
 
 		B->Write_Matrix_To_File(B, "B.mtx");
   if (mspai->A_REAL)

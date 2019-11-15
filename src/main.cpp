@@ -51,10 +51,8 @@ int main(int argc,char **args)
   PetscBool      user_defined_pc = PETSC_FALSE;
   PetscOptionItems opt;
 
-  ierr = mkl_disable_fast_mm();
+//  ierr = mkl_disable_fast_mm();
   
-  if (ierr)
-    printf("ierr = %d\n", ierr );
 
     
   ierr = PetscInitialize(&argc,&args,(char*)0,help);if (ierr) return ierr;

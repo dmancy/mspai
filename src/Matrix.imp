@@ -1116,10 +1116,10 @@ Matrix<T>* Matrix<T>::Convert_Block_Matrix(Matrix<T> *A, int bs, int upper_bs_li
 
     if (bs)
       B = Constant_Block_Matrix(A,bs);
-    /*
+    
     else
       B = Variable_Block_Matrix(A,upper_bs_limit);
-    */
+    
 
     return (B);
 }
@@ -1160,6 +1160,178 @@ void Matrix<T>::Find_Constant_Blocks(Matrix<T> *A, int block_size, int* &block_s
       block_sizes[nblocks-1] = odd_block;
 
 }
+
+template <class T> 
+Matrix<T>* Matrix<T>::Variable_Block_Matrix(Matrix<T> *A, int upper_bs_limit)
+{
+    Matrix<T> *V;
+    int nblocks, *block_sizes;
+
+    Find_Diagonal_Blocks(A, upper_bs_limit, block_sizes, nblocks);
+    V = Convert_To_Block_Matrix(A, nblocks, block_sizes);
+
+    V->block_size = 0;
+
+    delete [] block_sizes;
+
+    return V;
+}
+
+template <class T> 
+void Matrix<T>::Find_Diagonal_Blocks(Matrix<T> *A, int upper_bs_limit, int* &block_sizes, int& nblocks)
+{
+  int *block_numbers;
+  int iend, i;
+
+  /* block numbers : map scalar column to block column */
+  block_numbers = new int[A->my_nbr_cols];
+  nblocks = 0;
+  i = 0;
+
+  do {
+    iend = Find_Diagonal_Block(A, i, upper_bs_limit);
+    for (int ii = i; ii<=iend; ii++)
+      block_numbers[ii] = nblocks;
+    nblocks++;
+    i = iend + 1;
+  }
+  while (i<A->my_nbr_cols);
+
+  block_sizes = new int[nblocks];
+  for (int i=0; i<nblocks; i++)
+    block_sizes[i] = 0;
+
+  for (int i=0; i<A->my_nbr_cols; i++)
+    block_sizes[block_numbers[i]]++;
+
+  delete [] block_numbers;
+}
+
+template <class T>
+int Matrix<T>::Find_Diagonal_Block( Matrix<T> *A, int i, int upper_bs_limit)
+{
+  int bs, max_bs;
+
+  max_bs = Initial_Run_Length(A,i);
+  bs = max_bs;
+
+  if (max_bs == 1)
+    return i;
+
+  if (upper_bs_limit)
+    if (max_bs > upper_bs_limit)
+      bs = max_bs = upper_bs_limit;
+
+  for (int k=0; k<max_bs; k++)
+  {
+    if ((k>0) && (i+k)==A->my_nbr_cols)
+      return (i+k-1);
+
+    bs = Check_Next_Run(A, i, i+k, bs);
+    if (!bs)
+      return (i+k-1);
+  }
+
+  return (i+max_bs-1);
+}
+
+template <class T>
+int Matrix<T>::Initial_Run_Length(Matrix<T> *A, int i)
+{
+  int index, row_index;
+  int bs, ii;
+
+  index = -1;
+  /*Find the index of the diagonal entry, if any */
+  for (int k=0; k<(A->c_lines->len_cols[i]); k++)
+      {
+        row_index = A->c_lines->col_idcs[i][k]; //row of k-th entry in scalar column i
+        if ((A->pe[row_index] == A->my_id) && ((row_index - A->my_start_idx) == i))
+        {
+          index = k;
+          break;
+        }
+      }
+
+  /* No diagonal entry */
+  if (index < 0)
+    return 1;
+
+  bs = 1;
+  /* Count consecutive entries in scalar column i */
+  ii = i+1;
+  for (int k=index+1; k<(A->c_lines->len_cols[i]); k++)
+  {
+    row_index = A->c_lines->col_idcs[i][k];
+    if ((A->pe[row_index] == A->my_id) && ((row_index - A->my_start_idx) == ii))
+    {
+      bs++;
+      ii++;
+    }
+    else
+    {
+      return bs;
+    }
+  }
+  return bs;
+
+}
+
+template <class T>
+int Matrix<T>::Check_Next_Run(Matrix<T> *A, int i, int i_next, int bs)
+{
+  /*Check if block size is fine for block i_next*/
+  int index, new_bs, ii;
+  int row_index;
+
+  index = -1;
+  for (int k=0; k<(A->c_lines->len_cols[i_next]); k++)
+      {
+        row_index = A->c_lines->col_idcs[i_next][k]; //row of k-th entry in scalar column i_next
+        if ((A->pe[row_index] == A->my_id) && ((row_index - A->my_start_idx) == i))
+        {
+          index = k;
+          break;
+        }
+      }
+
+  /* return 0 if it doesn't exist */
+  if (index < 0)
+    return 0;
+
+  /*Count consecutive entries */
+  new_bs = 1;
+  ii = i+1;
+  for (int k=index+1; k<(A->c_lines->len_cols[i_next]); k++)
+  {
+    row_index = A->c_lines->col_idcs[i_next][k];
+    if ((A->pe[row_index] == A->my_id) && ((row_index - A->my_start_idx) == ii))
+    {
+      new_bs++;
+      ii++;
+    }
+    else
+      break;
+  }
+
+  /*Does the run include the diagonal entry of i_next?*/
+  if (new_bs > i_next-i)
+  {
+    /*Yes it does*/
+    if (new_bs>bs)
+      return bs;
+    else
+      return new_bs;
+  }
+
+  return 0;
+}
+  
+
+
+
+
+
 
 
 

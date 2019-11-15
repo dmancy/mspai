@@ -123,7 +123,9 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
 
   /* Fill the columns */
   //Sweep sub block columns in a processor
-  for (int startj=0, jb=0; jb<max_block_columns; startj += block_sizes_local[jb], jb++)
+  //
+  jb = 0;
+  for (int startj=0; jb<max_block_columns; startj += block_sizes_local[jb], jb++)
   {
     if (jb < B->my_nbr_cols)
     {
@@ -161,7 +163,9 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
       B->c_lines->len_scalar[jb] = total_height;
 
       /*Sweep Block rows of B in block column jb*/
-      for (ib=0, k=0, next=0; ib < B->n; ib++)
+      k = 0;
+      next = 0;
+      for (ib=0; ib < B->n; ib++)
       {
         /*if this block row is present */
         if (block_bitvec[ib])
@@ -197,7 +201,8 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
   if (A->c_lines->row_idcs_buf)
   {
     B->c_lines->row_idcs = new int*[B->my_nbr_cols];
-    for (int startj=0, jb=0; jb<max_block_columns; startj += block_sizes_local[jb], jb++)
+    jb = 0;
+    for (int startj=0; jb<max_block_columns; startj += block_sizes_local[jb], jb++)
     {
       if (jb < B->my_nbr_cols)
       {
@@ -227,7 +232,9 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
        /*Install block row structure*/
        B->c_lines->row_idcs[jb] = new int[count];
        B->c_lines->len_rows[jb] = count;
-       for (ib=0, k=0, next=0; ib<B->n; ib++)
+       k = 0;
+       next = 0;
+       for (ib=0; ib<B->n; ib++)
        {
          if (block_bitvec[ib])
          {
@@ -248,7 +255,8 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
   row_buf_size = 0;
   A_buf_size = 0;
 
-  for (int j=0, idx=B->my_start_idx; j<B->my_nbr_cols; j++, idx++)
+  idx = B->my_start_idx;
+  for (int j=0; j<B->my_nbr_cols; j++, idx++)
   {
     col_buf_size += B->c_lines->len_cols[j];
     if (B->c_lines->row_idcs)
@@ -275,8 +283,13 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
   ptr_adr = (B->c_lines->col_idcs_buf);
   rptr_adr = (B->c_lines->row_idcs_buf);
   A_adr = (B->c_lines->col_buf);
+  idx = B->my_start_idx; 
 
-  for (int j=0, idx = B->my_start_idx, next_ptr = next_rptr = next_Aptr = 0;
+  next_ptr  = 0;
+  next_rptr = 0;
+  next_Aptr = 0;
+
+  for (int j=0;
       j<B->my_nbr_cols;
       j++, idx++)
   {
