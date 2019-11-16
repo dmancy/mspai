@@ -122,6 +122,7 @@ Spai_Sub<T>::Get_I_Set( Index_Set     *J,
                         true,
                         pre_max_param);
 
+        /*Sweep entries in column col*/
         for (int idx = 0; idx < col_len; idx++)
         { 
             //Get the row index value 
@@ -145,6 +146,7 @@ Spai_Sub<T>::Get_I_Set( Index_Set     *J,
     // too expensive for large matrices. Just
     // reset the used positions.
     Reset_bitvec(bitvec, reset_len, reset_vec);
+
     
     return I;
 }
@@ -321,8 +323,16 @@ Spai_Sub<T>::Create_Submatrix_AHat( Matrix<T>       *A,
                     i_len = I->len,
                     nnz_idx,
                     set_idx = 0,
+                    nnz_scalar_idx,
                     nbr_nnz_in_col,
                     nbr_nnz_in_row,
+                    A_Hat_size = 0,
+                    index_column,
+                    index_row,
+                    block_width,
+                    block_height,
+                    scalar_width = 0, //number of scalar columns in A_Hat
+                    scalar_height = 0, //number of scalr rows in A_Hat
                     *col_idcs_buf = NULL,
                     *row_idcs_buf = NULL;
 
@@ -332,9 +342,19 @@ Spai_Sub<T>::Create_Submatrix_AHat( Matrix<T>       *A,
     
     Com_Server<T>   o_comm;
     
+    for (int j = 0; j < J->len; j++)
+    {
+      index_column = J->idcs[j];
+      for (int i = 0; i< I->len; i++)
+      {
+        index_row = I->idcs[i];
+        A_Hat_size += (A->block_sizes[i] * A->block_sizes[j]);
+      }
+    }
             
-    A_Hat = new T[j_len * i_len];
-    memset(A_Hat, 0, j_len * i_len * sizeof(T));
+    //printf("A_hat : %d, previous : %d\n", A_Hat_size, j_len * i_len);
+    A_Hat = new T[A_Hat_size];
+    memset(A_Hat, 0, A_Hat_size * sizeof(T));
     
     nnz_cnt = 0;
     
@@ -342,9 +362,17 @@ Spai_Sub<T>::Create_Submatrix_AHat( Matrix<T>       *A,
     //Second loop: Iterating over i - idcs of I
     //If row-index of nnz in column is equal: Set at position idx in A_hat
     //If not: don't set but increment idx and goto next i-index of I
+
+    for (int i = 0; i < i_len; i++)
+      scalar_height += A->block_sizes[I->idcs[i]];
+
     for (int j = 0; j < j_len; j++)
     {
+      //printf("j: %d, j_len : %d\n", j, j_len);
+        block_width = A->block_sizes[J->idcs[j]];
+        scalar_width += block_width;
         nnz_idx = 0; 
+        nnz_scalar_idx = 0;
     
         o_comm.Get_Col( A, 
                         M, 
@@ -353,7 +381,7 @@ Spai_Sub<T>::Create_Submatrix_AHat( Matrix<T>       *A,
                         UP,
                         U_UP,
                         J->idcs[j], 
-                        nbr_nnz_in_col,
+                        nbr_nnz_in_col, //Number of non-zeros in the column
                         nbr_nnz_in_row,
                         col_idcs_buf,
                         row_idcs_buf,
@@ -362,25 +390,58 @@ Spai_Sub<T>::Create_Submatrix_AHat( Matrix<T>       *A,
                         pre_k_param,
                         true,
                         pre_max_param);
-                
-        for (int i = 0; i < i_len; i++, set_idx++)
+        
+        /*
+        printf("col : %d, nbr_nnz_in_col :%d\n", J->idcs[j], nbr_nnz_in_col);
+        for (int i=0; i < 30; i++)
+          printf("A[%d] = %f, col_idcs_buf[%d] = %d\n", i, col_buf[i], i, col_idcs_buf[i]);
+          */      
+        for (int i = 0; i < i_len; i++)
         {
+         // printf("row : %d, i_len : %d\n", I->idcs[i], i_len);
+            //If all the column entries have been added then the rest are 0s
             if (nnz_idx == nbr_nnz_in_col)
             {
-                set_idx += (i_len - i); //add remaining 0 entries
-                break;
+                for (int ii = i; ii < i_len; ii++)
+                {
+                    set_idx += (block_width * A->block_sizes[I->idcs[ii]]); //add remaining 0 entries
+       //             printf("set_idx : %d\n", set_idx);
+                    if (j==0)
+                      scalar_height += A->block_sizes[I->idcs[ii]];
+                }
+                    break;
             }
             
+            if (j==0)
+              scalar_height += A->block_sizes[I->idcs[i]];
+            //If element nnz_idx in col belongs to I
             if ( I->idcs[i] == col_idcs_buf[nnz_idx])
             {
-                A_Hat[set_idx] = col_buf[nnz_idx];
+                block_height = A->block_sizes[I->idcs[i]];
+                for (int jj = 0; jj < block_width; jj++)
+                {
+                  for (int ii = 0; ii < block_height; ii++)
+                  {
+     //               printf("A[%d], index : %d, val : %f\n",set_idx + ii + block_width * jj, nnz_scalar_idx + ii + block_width * jj,  col_buf[nnz_scalar_idx + ii + block_width * jj]);
+                      A_Hat[set_idx + ii + block_width * jj] = col_buf[nnz_scalar_idx + ii + block_width * jj]; 
+                  }
+                }
+
+                nnz_scalar_idx += block_width * block_height;
+                nnz_cnt += block_width * block_height;
                 nnz_idx++;
-                nnz_cnt++;
+
             }
+            set_idx += block_width * block_height;
+
         }
     }
-    n = J->len;
-    m = I->len;
+    n = scalar_width;
+    m = scalar_height;
+    I->slen = m;
+    J->slen = n;
+
+    //printf("n = %d, new n = %d, m = %d, new m = %d\n", J->len, scalar_width, I->len, scalar_height);
     return A_Hat;
 }
     
@@ -560,7 +621,8 @@ Spai_Sub<T>::Create_ek_Hat( const Index_Set*    I,
 {
     T       *ek_Hat = NULL;
                             
-    int     i_val;
+    int     i_val,
+            k = 0;
                         
     bool    found = false;
     
@@ -568,7 +630,8 @@ Spai_Sub<T>::Create_ek_Hat( const Index_Set*    I,
     ek_Hat = new T[len];
     memset(ek_Hat, 0, len * sizeof(T));
             
-    for (int i = 0; i < len; i++)
+    /*Sweep block rows */
+    for (int i = 0; i < I->len; i++)
     {
         i_val = I->idcs[i];
         if (i_val > col)
@@ -580,13 +643,62 @@ Spai_Sub<T>::Create_ek_Hat( const Index_Set*    I,
             break;
         }
     }
+    
                 
     if (found)
         Set_Unit_Idx(ek_Hat, unit_idx);
-            
+      
     return ek_Hat;
 }
 
+
+template<class T>   T*
+Spai_Sub<T>::Create_ek_Hat_Block( const Index_Set*    I, 
+                            const Matrix<T>*    A,
+                            const int           len,
+                            const int           col,
+                            int&                unit_idx)
+{
+    T       *ek_Hat = NULL;
+                            
+    int     i_val,
+            k = 0;
+                        
+    bool    found = false;
+    
+                
+    ek_Hat = new T[len];
+    memset(ek_Hat, 0, len * sizeof(T));
+            
+    /*Sweep block rows */
+    for (int i = 0; i < I->len; i++)
+    {
+        i_val = I->idcs[i];
+        if (i_val > col)
+            break;
+        if ( i_val == col )
+        {
+          /*Block diagonal : i_val , col */
+            found = true;
+            unit_idx = i;
+            while (k<A->block_sizes[col])
+            {
+              //printf("k:%d, i: %d, bs : %d\n", k, i, A->block_sizes[col]);
+              ek_Hat[k + i*A->block_sizes[col]] = 1;
+              k++;
+              i++;
+            }
+
+            break;
+        }
+    }
+    /*
+                
+    if (found)
+        Set_Unit_Idx(ek_Hat, unit_idx);
+      */      
+    return ek_Hat;
+}
 
 
 template<class T>   T*
