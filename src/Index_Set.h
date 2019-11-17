@@ -64,6 +64,8 @@ class Index_Set
         /// Lenght of the index set
         int         len;
 
+        /// Scalar Length of the index set (only number of scalar indices)
+        int         slen;
         
         //Methods           
             

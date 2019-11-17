@@ -47,6 +47,7 @@ Index_Set::Index_Set(int len_a)
     idcs = NULL;
     len = len_a;
     idcs = new int[len];
+    slen = 0;
 }
 
 

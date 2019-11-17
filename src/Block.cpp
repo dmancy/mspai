@@ -321,8 +321,54 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
 
   }
 
+	/* Get length of all cols*/
+	B->len_all_cols = new int[B->n];
+	MPI_Barrier(B->world);
+	MPI_Allgatherv(static_cast<void *>(B->c_lines->len_cols), 
+	               B->my_nbr_cols, MPI_INT,
+	               static_cast<void *>(B->len_all_cols), 
+	               B->all_nbr_cols, B->start_indices, 
+	               MPI_INT, B->world);
+	
+	/* Get length of all rows */
+	B->len_all_rows = new int[B->n];
+	MPI_Barrier(B->world);
+	MPI_Allgatherv(static_cast<void *>(B->c_lines->len_rows), 
+                    B->my_nbr_cols, MPI_INT,
+                    static_cast<void *>(B->len_all_rows), 
+                    B->all_nbr_cols, B->start_indices, 
+                    MPI_INT, B->world);
 
-  B->Count_NNZ();
+  int max = 0;
+
+
+	/* Get the maximum number of nnz per column/row of all pes */
+	for (int i = 0; i < B->my_nbr_cols; i++)
+		if (B->c_lines->len_rows[i] > max)
+			max = B->c_lines->len_rows[i];
+
+	for (int i=0; i< B->my_nbr_cols; i++)
+		if (B->c_lines->len_cols[i] > max)
+			max = B->c_lines->len_cols[i];
+
+  B->my_nnz = max * B->max_block_size;
+
+	MPI_Barrier(B->world);
+	MPI_Allreduce(&max, &B->max_nnz, 1, MPI_INT, MPI_MAX, B->world);
+
+  B->max_nnz *= B->max_block_size;
+
+
+	/* Initialize the remote transfer buffer */
+	B->remote_col_buf = new double[B->max_nnz];
+	memset(B->remote_col_buf, 0, B->max_nnz * sizeof(double));
+
+	B->remote_col_idcs_buf = new int[B->max_nnz];
+	memset(B->remote_col_idcs_buf, 0, B->max_nnz * sizeof(int));
+
+	B->remote_row_idcs_buf = new int[B->max_nnz];
+	memset(B->remote_row_idcs_buf, 0, B->max_nnz * sizeof(int));
+
 
 
   delete [] fullcol;

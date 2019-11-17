@@ -302,9 +302,91 @@ Spai_Sub<T>::Reset_bitvec(unsigned int   *&bitvec,
 }
 
 
-
 template <class T>  T* 
 Spai_Sub<T>::Create_Submatrix_AHat( Matrix<T>       *A,
+                                    Matrix<T>       *&M,
+                                    Matrix<T>       *B,
+                                    Pattern         *P,
+                                    Pattern         *UP,
+                                    Index_Set       *U_UP,
+                                    Index_Set       *J, 
+                                    Index_Set       *I,
+                                    int&            m,
+                                    int&            n,
+                                    Hash_Table<T>   *&ht,
+                                    int&            nnz_cnt,
+                                    const int&      pre_k_param,
+                                    const int       pre_max_param)
+{
+    int             j_len = J->len,
+                    i_len = I->len,
+                    nnz_idx,
+                    set_idx = 0,
+                    nbr_nnz_in_col,
+                    nbr_nnz_in_row,
+                    *col_idcs_buf = NULL,
+                    *row_idcs_buf = NULL;
+
+    T               *A_Hat;
+    
+    T               *col_buf;
+    
+    Com_Server<T>   o_comm;
+    
+            
+    A_Hat = new T[j_len * i_len];
+    memset(A_Hat, 0, j_len * i_len * sizeof(T));
+    
+    nnz_cnt = 0;
+    
+    //First loop: Iterating over j - idcs of J
+    //Second loop: Iterating over i - idcs of I
+    //If row-index of nnz in column is equal: Set at position idx in A_hat
+    //If not: don't set but increment idx and goto next i-index of I
+    for (int j = 0; j < j_len; j++)
+    {
+        nnz_idx = 0; 
+    
+        o_comm.Get_Col( A, 
+                        M, 
+                        B,
+                        P,
+                        UP,
+                        U_UP,
+                        J->idcs[j], 
+                        nbr_nnz_in_col,
+                        nbr_nnz_in_row,
+                        col_idcs_buf,
+                        row_idcs_buf,
+                        col_buf,
+                        ht,
+                        pre_k_param,
+                        true,
+                        pre_max_param);
+                
+        for (int i = 0; i < i_len; i++, set_idx++)
+        {
+            if (nnz_idx == nbr_nnz_in_col)
+            {
+                set_idx += (i_len - i); //add remaining 0 entries
+                break;
+            }
+            
+            if ( I->idcs[i] == col_idcs_buf[nnz_idx])
+            {
+                A_Hat[set_idx] = col_buf[nnz_idx];
+                nnz_idx++;
+                nnz_cnt++;
+            }
+        }
+    }
+    n = J->len;
+    m = I->len;
+    return A_Hat;
+}
+
+template <class T>  T* 
+Spai_Sub<T>::Create_Submatrix_AHat_Block( Matrix<T>       *A,
                                     Matrix<T>       *&M,
                                     Matrix<T>       *B,
                                     Pattern         *P,

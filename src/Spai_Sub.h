@@ -269,8 +269,28 @@ class Spai_Sub
                                       int&          nnz_cnt,
                                       const int&    pre_k_param,
                                       const int     pre_max_param);
+
+        T*      Create_Submatrix_AHat_Block(Matrix<T>     * A,
+                                      Matrix<T>     *&M,
+                                      Matrix<T>     *B,
+                                      Pattern       *P,
+                                      Pattern       *UP,
+                                      Index_Set     *U_UP,
+                                      Index_Set     *J, 
+                                      Index_Set     *I,
+                                      int&          m,
+                                      int&          n,
+                                      Hash_Table<T> *&ht,
+                                      int&          nnz_cnt,
+                                      const int&    pre_k_param,
+                                      const int     pre_max_param);
         
         
+T * Create_ek_Hat_Block( const Index_Set*    I, 
+                            const Matrix<T>*    A,
+                            const int           len,
+                            const int           col,
+                            int&                unit_idx);
         //////////////////////////////////////////////////////////////
         ///     \brief Converting a matrix from double vector format
         ///            to coince sparse format using the coinse sparse
