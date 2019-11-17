@@ -447,14 +447,17 @@ Spai_Sub<T>::Create_Submatrix_AHat_Block( Matrix<T>       *A,
 
     for (int i = 0; i < i_len; i++)
       scalar_height += A->block_sizes[I->idcs[i]];
+    
 
     for (int j = 0; j < j_len; j++)
     {
+      
       //printf("j: %d, j_len : %d\n", j, j_len);
         block_width = A->block_sizes[J->idcs[j]];
         scalar_width += block_width;
         nnz_idx = 0; 
         nnz_scalar_idx = 0;
+        
     
         o_comm.Get_Col( A, 
                         M, 
@@ -473,29 +476,26 @@ Spai_Sub<T>::Create_Submatrix_AHat_Block( Matrix<T>       *A,
                         true,
                         pre_max_param);
         
-        /*
+       /* 
         printf("col : %d, nbr_nnz_in_col :%d\n", J->idcs[j], nbr_nnz_in_col);
         for (int i=0; i < 30; i++)
           printf("A[%d] = %f, col_idcs_buf[%d] = %d\n", i, col_buf[i], i, col_idcs_buf[i]);
-          */      
+          */
+                
         for (int i = 0; i < i_len; i++)
         {
-         // printf("row : %d, i_len : %d\n", I->idcs[i], i_len);
+     //     printf("row : %d, i_len : %d\n", I->idcs[i], i_len);
             //If all the column entries have been added then the rest are 0s
             if (nnz_idx == nbr_nnz_in_col)
             {
                 for (int ii = i; ii < i_len; ii++)
                 {
                     set_idx += (block_width * A->block_sizes[I->idcs[ii]]); //add remaining 0 entries
-       //             printf("set_idx : %d\n", set_idx);
-                    if (j==0)
-                      scalar_height += A->block_sizes[I->idcs[ii]];
+      //              printf("set_idx : %d\n", set_idx);
                 }
                     break;
             }
             
-            if (j==0)
-              scalar_height += A->block_sizes[I->idcs[i]];
             //If element nnz_idx in col belongs to I
             if ( I->idcs[i] == col_idcs_buf[nnz_idx])
             {
@@ -505,7 +505,7 @@ Spai_Sub<T>::Create_Submatrix_AHat_Block( Matrix<T>       *A,
                   for (int ii = 0; ii < block_height; ii++)
                   {
      //               printf("A[%d], index : %d, val : %f\n",set_idx + ii + block_width * jj, nnz_scalar_idx + ii + block_width * jj,  col_buf[nnz_scalar_idx + ii + block_width * jj]);
-                      A_Hat[set_idx + ii + block_width * jj] = col_buf[nnz_scalar_idx + ii + block_width * jj]; 
+                     // A_Hat[set_idx + ii + block_width * jj] = col_buf[nnz_scalar_idx + ii + block_width * jj]; 
                   }
                 }
 
@@ -529,6 +529,151 @@ Spai_Sub<T>::Create_Submatrix_AHat_Block( Matrix<T>       *A,
     
     
     
+template <class T>  T* 
+Spai_Sub<T>::Convert_block_AHat(T           *A_Hat,
+                                Matrix<T>       *A,
+                                Index_Set       *J, 
+                                Index_Set       *I)
+{
+  int A_Hat_size,
+      index = 0,
+      index2 = 0,
+      block_width,
+      block_height,
+      mj = 0,
+      *I_block_height = NULL,
+      *I_block_indices = NULL;
+
+  T*  new_A_Hat = NULL;
+
+  A_Hat_size = J->slen * I->slen;
+
+  new_A_Hat = new T[A_Hat_size];
+
+  /* Make I_block_height */
+  I_block_height = new int[I->len];
+
+  
+  for (int i = 0; i < I->len; i++)
+    I_block_height[i] = A->block_sizes[I->idcs[i]];
+
+  /*Make I_block_indices */
+  I_block_indices = new int[I->len*J->len];
+
+
+  memset(I_block_indices, 0, J->len * I->len * sizeof(int));
+
+  for (int j = 0; j < J->len; j++)
+  {
+    index++;
+    block_width = A->block_sizes[J->idcs[j]];
+    for (int i = 1; i < I->len; i++)
+    {
+      I_block_indices[index] = I_block_indices[index-1] + A->block_sizes[I->idcs[i-1]]*block_width;
+      index++;
+    }
+  }
+  
+
+  index = 0;
+
+  for (int j = 0; j < J->len; j++)
+  {
+    block_width = A->block_sizes[J->idcs[j]];
+    for (int jj = 0; jj < block_width; jj++)
+    {
+      for (int i = 0; i < I->len; i ++)
+      {
+        block_height = A->block_sizes[I->idcs[i]];
+        for (int ii = 0; ii < block_height; ii++)
+        {
+//          printf("index : %d, %d\n", j * I->len + i, i);
+          //printf("index : %d, %d\n", index, index2 + I_block_indices[j * I->len + i] + jj * I_block_height[i] + ii);
+          new_A_Hat[index] = A_Hat[index2 + I_block_indices[j * I->len + i] + jj * I_block_height[i] + ii];
+          index++;
+        }
+      }
+    }
+   index2 += I->slen * block_width;
+  }
+
+  delete [] I_block_height;
+  delete [] I_block_indices;
+
+ return new_A_Hat;
+
+} 
+
+
+template <class T>  T* 
+Spai_Sub<T>::Convert_block_mHat(T           *m_Hat,
+                                Matrix<T>       *A,
+                                int            col, 
+                                Index_Set       *I)
+{
+  int A_Hat_size,
+      index = 0,
+      index2 = 0,
+      block_width,
+      block_height,
+      mj = 0,
+      *I_block_height = NULL,
+      *I_block_indices = NULL;
+
+  T*  new_A_Hat = NULL;
+
+  A_Hat_size = A->block_sizes[col] * I->slen;
+
+  new_A_Hat = new T[A_Hat_size];
+
+  /* Make I_block_height */
+  I_block_height = new int[I->len];
+
+  
+  for (int i = 0; i < I->len; i++)
+    I_block_height[i] = A->block_sizes[I->idcs[i]];
+
+  /*Make I_block_indices */
+  I_block_indices = new int[I->len];
+
+
+  memset(I_block_indices, 0, I->len * sizeof(int));
+
+  index++;
+  block_width = A->block_sizes[col];
+  for (int i = 1; i < I->len; i++)
+  {
+      I_block_indices[index] = I_block_indices[index-1] + A->block_sizes[I->idcs[i-1]]*block_width;
+      index++;
+  }
+  
+  
+
+  index = 0;
+
+  
+  block_width = A->block_sizes[col];
+  for (int jj = 0; jj < block_width; jj++)
+  {
+    for (int i = 0; i < I->len; i ++)
+    {
+      block_height = A->block_sizes[I->idcs[i]];
+      for (int ii = 0; ii < block_height; ii++)
+      {
+        new_A_Hat[index] = m_Hat[index2 + I_block_indices[i] + jj * I_block_height[i] + ii];
+        index++;
+      }
+    }
+  }
+  
+
+  delete [] I_block_height;
+  delete [] I_block_indices;
+
+ return new_A_Hat;
+
+} 
+
 template <class T>  cs*
 Spai_Sub<T>::Convert_Matrix_toCS(T*& in_matrix, 
                                  const int m, 

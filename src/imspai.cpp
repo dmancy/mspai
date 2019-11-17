@@ -79,7 +79,7 @@ PetscErrorCode PC_MSPAI::PCSetUp_MSPAI(Mat A)
 
     Matrix<double> *B;
    
-    B = Matrix<double>::Convert_Block_Matrix(A_REAL, 1, 10000,0);
+    B = Matrix<double>::Convert_Block_Matrix(A_REAL, 2, 10000,0);
 
 		B->Write_Matrix_To_File(B, "B.mtx");
 

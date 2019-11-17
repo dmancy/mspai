@@ -291,6 +291,15 @@ T * Create_ek_Hat_Block( const Index_Set*    I,
                             const int           len,
                             const int           col,
                             int&                unit_idx);
+
+T* Convert_block_AHat(T           *A_Hat,
+                                Matrix<T>       *A,
+                                Index_Set       *J, 
+                                Index_Set       *I);
+T* Convert_block_mHat(T           *m_Hat,
+                                Matrix<T>       *A,
+                                int            col, 
+                                Index_Set       *I);
         //////////////////////////////////////////////////////////////
         ///     \brief Converting a matrix from double vector format
         ///            to coince sparse format using the coinse sparse
