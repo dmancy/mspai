@@ -65,6 +65,9 @@ Matrix<T>::Matrix(MPI_Comm world_m)
     mk_Hat              = NULL;
     mk_Hat_buffer       = NULL;
     bk_Hat              = NULL;
+    Tau_ptr             = NULL;
+    Work_qr_ptr         = NULL;
+    Work_qt_ptr         = NULL;
 }
 
 
@@ -90,6 +93,9 @@ Matrix<T>::~Matrix()
     if (mk_Hat)                 delete [] mk_Hat;
     if (mk_Hat_buffer)          delete [] mk_Hat_buffer;
     if (bk_Hat)                 delete [] bk_Hat;
+    if (Tau_ptr)                delete [] Tau_ptr;
+    if (Work_qt_ptr)            delete [] Work_qt_ptr;
+    if (Work_qr_ptr)            delete [] Work_qr_ptr;
 }
 
 
@@ -118,6 +124,9 @@ Matrix<T>::Init_Preconditioner(Matrix<T> *&M,
                                const int n_dim)
 {
     int max_arg = 5000;  //Length of buffers
+    int TAU_SIZE = 1000;
+    int QR_SIZE = 1000;
+    int QT_SIZE = 1000;
 
     M = new Matrix<T>(world);
 
@@ -165,6 +174,9 @@ Matrix<T>::Init_Preconditioner(Matrix<T> *&M,
     M->mk_Hat_buffer = new T[max_arg * max_block_size * max_block_size];
     M->bk_Hat = new T[max_arg * max_block_size * max_block_size];
 
+    M->Tau_ptr = new double[TAU_SIZE];
+    M->Work_qr_ptr = new double[QR_SIZE];
+    M->Work_qt_ptr = new double[QT_SIZE];
 
 }
 

@@ -207,6 +207,11 @@ class Matrix : public Matrix_Base
 
         T                   *bk_Hat;
 
+        /// Lapack buffers
+        double              *Tau_ptr;
+        double              *Work_qt_ptr;
+        double              *Work_qr_ptr;
+
 
         //Methods
         //================================================================

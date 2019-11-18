@@ -43,8 +43,8 @@ Spai_Sub<T>::Init_Lapack_Vals(const int   m,
     k       = std::min(m, n);
     lda     = std::max(m, 1);
     lwork   = std::max(1, lwork); 
-    *work   = new T[lwork];
-    *tau    = new T[k];
+//    *work   = new T[lwork];
+//    *tau    = new T[k];
     
     memset(*work, 0, lwork * sizeof(T));
     memset(*tau, 0, k * sizeof(T));

@@ -92,6 +92,7 @@ class Spai_Unrestrained : public Spai<T>
                                         const int   col); 
 void Approximative_Solution_Block( T*      A_Hat_orig, 
                                    T*      A_Hat,
+                                   Matrix<T>*   M,
                                               int&    m, 
                                               int&    n, 
                                               T*&     mk_Hat,

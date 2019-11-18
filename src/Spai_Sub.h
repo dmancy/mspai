@@ -288,6 +288,7 @@ class Spai_Sub
         
 T * Create_ek_Hat_Block( const Index_Set*    I, 
                             const Matrix<T>*    A,
+                            const Matrix<T>*    M,
                             const int           len,
                             const int           col,
                             int&                unit_idx);
@@ -302,7 +303,7 @@ T* Convert_block_mHat(T           *m_Hat,
                                 Index_Set       *I);
 
 
-T*  Get_Solution_Vals_Block(T* mk_Hat_in, const Matrix<T> *A, const int col, Index_Set* J, int Islen);
+void  Get_Solution_Vals_Block(T* mk_Hat_in, T* mk_Hat_out, const Matrix<T> *A, const int col, Index_Set* J, int Islen);
 
 
         //////////////////////////////////////////////////////////////
