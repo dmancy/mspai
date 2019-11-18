@@ -94,8 +94,8 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         I = o_sub.Get_I_Set(J, A, M, B, P, UP, U_UP, 
                             ht, pre_k_param, pre_max_param,
                             bitvec, reset_vec);   
-        J->Print_Index_Set("J");
-        I->Print_Index_Set("I");
+        //J->Print_Index_Set("J");
+        //I->Print_Index_Set("I");
 
         // Create the submatrix A_Hat = A(I;J) and update the 
         // The index of the unit vector
@@ -104,10 +104,11 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
                                 J, I, m, n, ht, nnz,
                                 pre_k_param, pre_max_param);
         
+        /*
         printf("col : %d, jslen : %d, islen : %d\n", col, J->slen, I->slen);
     for (int k = 0; k < J->slen * I->slen; k++)
       printf("A_hat[%d] = %f\n", k, A_Hat[k]);
-      
+      */
         //A_Hat = o_sub.Convert_block_AHat(A_Hat, A, J, I);
         
        
@@ -138,11 +139,11 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         
             
           mk_Hat = o_sub.Create_ek_Hat_Block(I, A, M, I->slen * A->block_sizes[col], col, unit_idx);             
-          
+        /*  
             printf("step 1 \n");
     for (int k = 0; k < I->slen * A->block_sizes[col]; k++)
       printf("ek_hat[%d] = %f\n", k, mk_Hat[k]);
-      
+      */
 
             //printf("len mk hat in : %d\n", I->slen * A->block_sizes[col]);
             
@@ -187,10 +188,11 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         //// A REMETTRE  changer la boucle dans la focntion ci dessous
         memcpy(M->mk_Hat_buffer, mk_Hat, I->slen * A->block_sizes[col] * sizeof(T));
 
-        o_sub.Get_Solution_Vals_Block(M->mk_Hat_buffer, mk_Hat, A, col, J, I->slen);
+        o_sub.Get_Solution_Vals_Block(M->mk_Hat_buffer, mk_Hat, M, A, col, J, I->slen);
+        /*
     for (int k = 0; k < J->slen * A->block_sizes[col]; k++)
       printf("solution[%d] = %.13e\n", k, mk_Hat[k]);
-                
+          */      
         // Computing the residual vector
         // and the frobenius norm of it
         /*

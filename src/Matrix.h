@@ -207,6 +207,8 @@ class Matrix : public Matrix_Base
 
         T                   *bk_Hat;
 
+        int                 *first_index_set;
+
         /// Lapack buffers
         double              *Tau_ptr;
         double              *Work_qt_ptr;

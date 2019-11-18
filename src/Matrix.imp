@@ -68,6 +68,7 @@ Matrix<T>::Matrix(MPI_Comm world_m)
     Tau_ptr             = NULL;
     Work_qr_ptr         = NULL;
     Work_qt_ptr         = NULL;
+    first_index_set     = NULL;
 }
 
 
@@ -96,6 +97,7 @@ Matrix<T>::~Matrix()
     if (Tau_ptr)                delete [] Tau_ptr;
     if (Work_qt_ptr)            delete [] Work_qt_ptr;
     if (Work_qr_ptr)            delete [] Work_qr_ptr;
+    if (first_index_set)        delete [] first_index_set;
 }
 
 
@@ -177,6 +179,8 @@ Matrix<T>::Init_Preconditioner(Matrix<T> *&M,
     M->Tau_ptr = new double[TAU_SIZE];
     M->Work_qr_ptr = new double[QR_SIZE];
     M->Work_qt_ptr = new double[QT_SIZE];
+
+    M->first_index_set = new int[n];
 
 }
 
