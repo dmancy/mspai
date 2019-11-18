@@ -74,8 +74,10 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
     // new J values from pattern
     // and will be updated each augmenting 
     // step.
-    J = new Index_Set(A->n);    
+    //J = new Index_Set(A->n);    
     
+    J = M->J_set;
+
     // Extract pattern from pattern matrix  
     // Create the Index Set J    
     o_comm.Get_P_Col(A, M, B, P, UP, col, J);
@@ -167,7 +169,7 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         /*
         printf("m : %d, n : %d\n", m, n);
         */
-        Approximative_Solution( A_Hat, m, n, 
+        Approximative_Solution_Block( A_Hat, M->A_Hat_buffer, m, n,
                                 mk_Hat, I, A->block_sizes[col]);
 
         // Extract solution values
@@ -186,11 +188,12 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
                 
         // Computing the residual vector
         // and the frobenius norm of it
+        /*
         residual_norm = o_sub.Residual_Norm(
                                 A_Hat, m, n, 
                                 mk_Hat, bk_Hat, 
                                 residual_vals);
-
+*/
         // Finishing conditions
         if ( (residual_norm <= epsilon_param)   //residual good enough
              || (step == (max_impr_steps - 1))  // Don't delete solution,
@@ -214,9 +217,9 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
 
         
         delete [] mk_Hat;
-        delete [] A_Hat;
+       // delete [] A_Hat;
         delete [] bk_Hat;
-        delete I;
+        //delete I;
     }
     
     //Inserting solution row into preconditioner
@@ -227,14 +230,15 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
     //Free heap storage last time
     if (mk_Hat)     delete [] mk_Hat;
     if (bk_Hat)     delete [] bk_Hat;
-    if (A_Hat)      delete [] A_Hat;
-    delete I;
-    delete J;
+    //if (A_Hat)      delete [] A_Hat;
+    //delete I;
+    //delete J;
 }
 
 
 template<class T>   void
-Spai_Unrestrained<T>::Approximative_Solution( T*      A_Hat_orig, 
+Spai_Unrestrained<T>::Approximative_Solution_Block( T*      A_Hat_orig, 
+                                              T*      A_Hat_of_M,
                                               int&    m, 
                                               int&    n, 
                                               T*&     mk_Hat,
@@ -264,7 +268,10 @@ Spai_Unrestrained<T>::Approximative_Solution( T*      A_Hat_orig,
                 
     // Copy A_Hat because lapack routines change input
     // and the original A_Hat is used later as well
-    A_Hat = o_sub.Copy_Vector(A_Hat_orig, m * n);
+    //A_Hat = o_sub.Copy_Vector(A_Hat_orig, m * n);
+
+    A_Hat = A_Hat_of_M; 
+    memcpy(A_Hat, A_Hat_orig, m * n * sizeof(T));
     
         
     //Preprocessing step:
@@ -324,6 +331,6 @@ Spai_Unrestrained<T>::Approximative_Solution( T*      A_Hat_orig,
     delete [] work_qr;
     delete [] work_qt;
     delete [] tau;
-    delete [] A_Hat;
+    //delete [] A_Hat;
 
 }

@@ -90,6 +90,13 @@ class Spai_Unrestrained : public Spai<T>
                                         T*&         mk_Hat,
                                         const Index_Set* I,
                                         const int   col); 
+void Approximative_Solution_Block( T*      A_Hat_orig, 
+                                   T*      A_Hat,
+                                              int&    m, 
+                                              int&    n, 
+                                              T*&     mk_Hat,
+                                              const   Index_Set* I,
+                                              const int block_size_col);
         
     protected:
         

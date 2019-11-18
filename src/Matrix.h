@@ -191,6 +191,16 @@ class Matrix : public Matrix_Base
         /// Values between the pe's
         T                   *remote_col_buf;
 
+        // Index set (to no recreate them for any column)
+
+        Index_Set           *I_set;
+                
+        Index_Set           *J_set;
+
+        T                   *A_Hat;
+
+        T                   *A_Hat_buffer;
+
 
         //Methods
         //================================================================
@@ -405,7 +415,7 @@ class Matrix : public Matrix_Base
         static int Check_Next_Run(Matrix<T> *A, int i, int i_next, int bs);
 
 
-    //private:
+    private:
 
         /////////////////////////////////////////////////////////
         ///     \brief  Counting the nnz elements of

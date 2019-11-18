@@ -101,7 +101,8 @@ Spai_Sub<T>::Get_I_Set( Index_Set     *J,
     Com_Server<T>   o_comm;
     
     
-    I = new Index_Set(A->m);
+    //I = new Index_Set(A->m);
+    I = M->I_set;
 
     for (int j = 0; j < J->len; j++)
     {           
@@ -440,7 +441,10 @@ Spai_Sub<T>::Create_Submatrix_AHat_Block(Matrix<T>       *A,
     }
             
     //printf("A_hat : %d, previous : %d\n", A_Hat_size, j_len * i_len);
-    A_Hat = new T[A_Hat_size];
+    //A_Hat = new T[A_Hat_size];
+    A_Hat = M->A_Hat;
+    
+    printf("a hat size : %d, len : %d\n", A_Hat_size,5000 * A->max_block_size * A->max_block_size); 
     memset(A_Hat, 0, A_Hat_size * sizeof(T));
     
     nnz_cnt = 0;

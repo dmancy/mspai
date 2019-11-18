@@ -58,6 +58,10 @@ Matrix<T>::Matrix(MPI_Comm world_m)
     block_size          = 1;
     max_block_size      = 0;
     block_sizes         = NULL;
+    I_set               = NULL;
+    J_set               = NULL;
+    A_Hat               = NULL;
+    A_Hat_buffer        = NULL;
 }
 
 
@@ -76,6 +80,10 @@ Matrix<T>::~Matrix()
     if (remote_col_idcs_buf)    delete [] remote_col_idcs_buf;
     if (remote_row_idcs_buf)    delete [] remote_row_idcs_buf;
     if (block_sizes)            delete [] block_sizes;
+    if (I_set)                  delete    I_set;
+    if (J_set)                  delete    J_set;
+    if (A_Hat)                  delete [] A_Hat;
+    if (A_Hat_buffer)           delete [] A_Hat_buffer;
 }
 
 
@@ -103,6 +111,8 @@ Matrix<T>::Init_Preconditioner(Matrix<T> *&M,
                                const int m_dim,
                                const int n_dim)
 {
+    int max_arg = 5000;  //Length of buffers
+
     M = new Matrix<T>(world);
 
     M->n = n_dim;
@@ -138,6 +148,12 @@ Matrix<T>::Init_Preconditioner(Matrix<T> *&M,
     M->block_sizes = new int[n];
 
     memcpy(M->block_sizes, block_sizes, n * sizeof(int));
+
+    M->I_set = new Index_Set(m);
+    M->J_set = new Index_Set(n);
+
+    M->A_Hat = new T[max_arg * max_block_size*max_block_size];
+    M->A_Hat_buffer = new T[max_arg * max_block_size*max_block_size];
 
 
 }
