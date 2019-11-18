@@ -300,6 +300,11 @@ T* Convert_block_mHat(T           *m_Hat,
                                 Matrix<T>       *A,
                                 int            col, 
                                 Index_Set       *I);
+
+
+T*  Get_Solution_Vals_Block(T* mk_Hat_in, const Matrix<T> *A, const int col, Index_Set* J, int Islen);
+
+
         //////////////////////////////////////////////////////////////
         ///     \brief Converting a matrix from double vector format
         ///            to coince sparse format using the coinse sparse

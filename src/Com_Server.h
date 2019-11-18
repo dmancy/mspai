@@ -537,6 +537,15 @@ class Com_Server
                                     const Index_Set     *J);
         
         
+        void    Insert_Row_Solution_Block(Matrix<double>      *A,
+                                    Matrix<double>      *&M,
+                                    Matrix<double>      *B,
+                                    Pattern             *P,
+                                    Pattern             *UP,
+                                    const int           col,
+                                    double              *mk_Hat, 
+                                    const Index_Set     *J);
+        
         //============================================================
         //======= Template specifications for COMPLEX matrices =======
         //============================================================

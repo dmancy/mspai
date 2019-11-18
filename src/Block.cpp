@@ -19,6 +19,7 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
   double *A_adr = NULL;
   int next_ptr, next_rptr, next_Aptr;
   int num;
+  int my_nnz = 0;
   
 
   Matrix<double> *B;
@@ -161,6 +162,8 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
 
       B->c_lines->len_cols[jb] = count;
       B->c_lines->len_scalar[jb] = total_height;
+
+      my_nnz += total_height;
 
       /*Sweep Block rows of B in block column jb*/
       k = 0;
@@ -351,7 +354,7 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
 		if (B->c_lines->len_cols[i] > max)
 			max = B->c_lines->len_cols[i];
 
-  B->my_nnz = max * B->max_block_size;
+  B->my_nnz = my_nnz;
 
 	MPI_Barrier(B->world);
 	MPI_Allreduce(&max, &B->max_nnz, 1, MPI_INT, MPI_MAX, B->world);

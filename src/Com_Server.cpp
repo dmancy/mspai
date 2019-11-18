@@ -494,7 +494,6 @@ Com_Server<double>::Get_Remote_Target_Col(  Matrix<double>      *A,
 }
 
 
-
 template<>  void 
 Com_Server<double>::Insert_Row_Solution(Matrix<double>  *A, 
                                         Matrix<double>  *&M, 
@@ -544,6 +543,115 @@ Com_Server<double>::Insert_Row_Solution(Matrix<double>  *A,
     }
     else                        // The line is remote.
     {
+        // This pe made the computation due to
+        // load balancing. Send the results to 
+        // remote pe which will store the solution
+        // within it's own local memory.
+        
+        nnz = J->len;
+        
+        idx_and_len[0] = idx;
+        idx_and_len[1] = nnz;
+        idx_and_len[2] = nnz;
+
+        // Prepare remote pe for index of column and length of data
+        // which will be sent. 
+        if (MPI_Isend(static_cast<void *> (idx_and_len), 3, MPI_INT, 
+            pe, put_Mcol_tag, A->world, &requests[0]))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Insert_Row_Solution\" by MPI_Isend.\n");
+    
+        // Send the data.
+        
+        if (MPI_Isend(static_cast<void *> (J->idcs), nnz, MPI_INT, 
+            pe, put_Mcol_inds_tag, A->world, &requests[1]))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Insert_Row_Solution\" by MPI_Isend.\n");
+        
+        if (MPI_Isend(static_cast<void *> (mk_Hat), nnz, MPI_DOUBLE, 
+            pe, put_Mcol_vals_tag, A->world, &requests[2]))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Insert_Row_Solution\" by MPI_Isend.\n");
+            
+        // Check if remote pe got the data
+        do 
+        {
+            Communicate(A, M, B, P, UP);
+            if (MPI_Testall(3, requests, &flag, statuses))
+                throw std::runtime_error(
+                    "\n\tERROR in method \"Com_Server::"
+                    "Insert_Row_Solution\" by MPI_Testall.\n"); 
+        }
+        while (! flag);
+    }
+}
+
+template<>  void 
+Com_Server<double>::Insert_Row_Solution_Block(Matrix<double>  *A, 
+                                        Matrix<double>  *&M, 
+                                        Matrix<double>  *B,
+                                        Pattern         *P,
+                                        Pattern         *UP,
+                                        const int       col,
+                                        double          *mk_Hat,
+                                        const Index_Set *J) 
+{
+    int         pe,
+                idx,
+                nnz,
+                scalar_nnz,   // number of scalar entries in the M column
+                *col_idcs_buf = NULL,
+                flag,
+                idx_and_len[3];
+            
+    double      *col_buf = NULL;
+    
+    MPI_Request requests[3];
+    
+    MPI_Status  statuses[3];
+
+    
+    pe = A->pe[col];
+    idx = col - A->start_indices[pe];
+
+    if (pe == A->my_id)         // The line is local.
+    {
+        // Just store it into local 
+        // preconditioner solution
+            
+        nnz = J->len; //number of non zeros blocks
+        M->c_lines->len_cols[idx] = nnz;
+
+        scalar_nnz = J->slen * A->block_sizes[col];
+            
+        col_buf         = new double[scalar_nnz];
+        col_idcs_buf    = new int[nnz];
+    
+        M->c_lines->A[idx]          = col_buf;
+        M->c_lines->col_idcs[idx]   = col_idcs_buf;
+
+        idx = 0;
+    
+        /*
+        for ( int i = 0; i < nnz; i++)
+        {
+            col_idcs_buf[i] = J->idcs[i];
+            for (int k = 0; k < A->block_sizes[J->idcs[i]]*A->block_sizes[col]; k++)
+            {
+              col_buf[idx] = mk_Hat[idx];
+              idx++;
+            }
+        }
+        */
+        memcpy(col_idcs_buf, J->idcs, nnz * sizeof(int));
+        memcpy(col_buf, mk_Hat, J->slen * A->block_sizes[col] *  sizeof(double));
+    }
+    else                        // The line is remote.
+    {
+      printf("bad!!!!!\n");
         // This pe made the computation due to
         // load balancing. Send the results to 
         // remote pe which will store the solution
