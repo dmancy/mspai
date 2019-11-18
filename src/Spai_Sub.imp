@@ -902,6 +902,7 @@ Spai_Sub<T>::Create_ek_Hat( const Index_Set*    I,
 template<class T>   T*
 Spai_Sub<T>::Create_ek_Hat_Block( const Index_Set*    I, 
                             const Matrix<T>*    A,
+                            const Matrix<T>*    M,
                             const int           len,
                             const int           col,
                             int&                unit_idx)
@@ -914,7 +915,8 @@ Spai_Sub<T>::Create_ek_Hat_Block( const Index_Set*    I,
     bool    found = false;
     
                 
-    ek_Hat = new T[len];
+    //ek_Hat = new T[len];
+    ek_Hat = M->mk_Hat;
     memset(ek_Hat, 0, len * sizeof(T));
 
     int *first_index_block = NULL;
@@ -1065,10 +1067,10 @@ Spai_Sub<T>::Get_Solution_Vals(T* mk_Hat_in, Index_Set* J)
 }
 
 
-template <class T>  T*
-Spai_Sub<T>::Get_Solution_Vals_Block(T* mk_Hat_in, const Matrix<T> *A, const int col, Index_Set* J, int Islen)
+template <class T>  void
+Spai_Sub<T>::Get_Solution_Vals_Block(T* mk_Hat_in, T* mk_Hat_out, const Matrix<T> *A, const int col, Index_Set* J, int Islen)
 {
-    T*  mk_Hat_out = NULL;
+    //T*  mk_Hat_out = NULL;
     int len = J->slen * A->block_sizes[col], index = 0;
     int index2 = 0;
 
@@ -1081,7 +1083,7 @@ Spai_Sub<T>::Get_Solution_Vals_Block(T* mk_Hat_in, const Matrix<T> *A, const int
       first_index_block[j] = first_index_block[j-1] + A->block_sizes[J->idcs[j-1]];
     }
 
-    mk_Hat_out = new T[len];
+    //mk_Hat_out = new T[len];
     memset(mk_Hat_out, 0, len * sizeof(T));
 
 
@@ -1108,9 +1110,9 @@ Spai_Sub<T>::Get_Solution_Vals_Block(T* mk_Hat_in, const Matrix<T> *A, const int
     }
 
   */  
-    delete [] mk_Hat_in;
+    //delete [] mk_Hat_in;
     delete [] first_index_block;
-    return mk_Hat_out;
+//    return mk_Hat_out;
     
 }
 

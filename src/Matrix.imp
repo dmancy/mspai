@@ -62,6 +62,9 @@ Matrix<T>::Matrix(MPI_Comm world_m)
     J_set               = NULL;
     A_Hat               = NULL;
     A_Hat_buffer        = NULL;
+    mk_Hat              = NULL;
+    mk_Hat_buffer       = NULL;
+    bk_Hat              = NULL;
 }
 
 
@@ -84,6 +87,9 @@ Matrix<T>::~Matrix()
     if (J_set)                  delete    J_set;
     if (A_Hat)                  delete [] A_Hat;
     if (A_Hat_buffer)           delete [] A_Hat_buffer;
+    if (mk_Hat)                 delete [] mk_Hat;
+    if (mk_Hat_buffer)          delete [] mk_Hat_buffer;
+    if (bk_Hat)                 delete [] bk_Hat;
 }
 
 
@@ -154,6 +160,10 @@ Matrix<T>::Init_Preconditioner(Matrix<T> *&M,
 
     M->A_Hat = new T[max_arg * max_block_size*max_block_size];
     M->A_Hat_buffer = new T[max_arg * max_block_size*max_block_size];
+
+    M->mk_Hat = new T[max_arg * max_block_size * max_block_size];
+    M->mk_Hat_buffer = new T[max_arg * max_block_size * max_block_size];
+    M->bk_Hat = new T[max_arg * max_block_size * max_block_size];
 
 
 }

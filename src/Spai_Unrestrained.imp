@@ -137,7 +137,7 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
  //           mk_Hat = o_sub.Create_ek_Hat(I, I->len, col, unit_idx);             
         
             
-          mk_Hat = o_sub.Create_ek_Hat_Block(I, A, I->slen * A->block_sizes[col], col, unit_idx);             
+          mk_Hat = o_sub.Create_ek_Hat_Block(I, A, M, I->slen * A->block_sizes[col], col, unit_idx);             
           
             printf("step 1 \n");
     for (int k = 0; k < I->slen * A->block_sizes[col]; k++)
@@ -161,7 +161,10 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
           */    
         // Copy the unit vector. This is used for 
         // computing the residual vector later 
-        bk_Hat = o_sub.Copy_Vector(mk_Hat, I->slen * A->block_sizes[col]);
+        //bk_Hat = o_sub.Copy_Vector(mk_Hat, I->slen * A->block_sizes[col]);
+        bk_Hat = M->bk_Hat;
+        memcpy(bk_Hat, mk_Hat, I->slen * A->block_sizes[col]);
+
        // bk_Hat = o_sub.Copy_Vector(mk_Hat, I->len);
         
         // Computing solution m_k which is stored within
@@ -182,7 +185,9 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
       */
         
         //// A REMETTRE  changer la boucle dans la focntion ci dessous
-        mk_Hat = o_sub.Get_Solution_Vals_Block(mk_Hat, A, col, J, I->slen);
+        memcpy(M->mk_Hat_buffer, mk_Hat, I->slen * A->block_sizes[col] * sizeof(T));
+
+        o_sub.Get_Solution_Vals_Block(M->mk_Hat_buffer, mk_Hat, A, col, J, I->slen);
     for (int k = 0; k < J->slen * A->block_sizes[col]; k++)
       printf("solution[%d] = %.13e\n", k, mk_Hat[k]);
                 
@@ -216,9 +221,9 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
             break;
 
         
-        delete [] mk_Hat;
+//        delete [] mk_Hat;
        // delete [] A_Hat;
-        delete [] bk_Hat;
+   //     delete [] bk_Hat;
         //delete I;
     }
     
@@ -228,8 +233,8 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
 
 
     //Free heap storage last time
-    if (mk_Hat)     delete [] mk_Hat;
-    if (bk_Hat)     delete [] bk_Hat;
+  //  if (mk_Hat)     delete [] mk_Hat;
+//    if (bk_Hat)     delete [] bk_Hat;
     //if (A_Hat)      delete [] A_Hat;
     //delete I;
     //delete J;

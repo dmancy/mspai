@@ -201,6 +201,12 @@ class Matrix : public Matrix_Base
 
         T                   *A_Hat_buffer;
 
+        T                   *mk_Hat;
+
+        T                   *mk_Hat_buffer;
+
+        T                   *bk_Hat;
+
 
         //Methods
         //================================================================
