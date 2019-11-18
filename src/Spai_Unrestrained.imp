@@ -92,6 +92,8 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         I = o_sub.Get_I_Set(J, A, M, B, P, UP, U_UP, 
                             ht, pre_k_param, pre_max_param,
                             bitvec, reset_vec);   
+        J->Print_Index_Set("J");
+        I->Print_Index_Set("I");
 
         // Create the submatrix A_Hat = A(I;J) and update the 
         // The index of the unit vector
@@ -99,7 +101,12 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
                                 A, M, B, P, UP, U_UP,
                                 J, I, m, n, ht, nnz,
                                 pre_k_param, pre_max_param);
-        A_Hat = o_sub.Convert_block_AHat(A_Hat, A, J, I);
+        
+        printf("col : %d, jslen : %d, islen : %d\n", col, J->slen, I->slen);
+    for (int k = 0; k < J->slen * I->slen; k++)
+      printf("A_hat[%d] = %f\n", k, A_Hat[k]);
+      
+        //A_Hat = o_sub.Convert_block_AHat(A_Hat, A, J, I);
         
        
        /* 
@@ -108,9 +115,9 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
                                 J, I, m, n, ht, nnz,
                                 pre_k_param, pre_max_param);
                                 */
-        /*
-    for (int k = 0; k < J->len * I->len; k++)
-      printf("A_hat[%d] = %f\n", k, A_Hat[k]);
+    /*
+    for (int k = 0; k < J->slen * I->slen; k++)
+      printf("A_hat_after[%d] = %f\n", k, A_Hat[k]);
       */
        /* 
     for (int k = 0; k < J->len * I->len; k++)
@@ -124,19 +131,21 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
                                          I, I->len, col);
         else
         */
-        //    mk_Hat = o_sub.Create_ek_Hat(I, I->len, col, unit_idx);             
+    //printf("len 1 : %d, len 2 : %d\n", I->len, I->slen * A->block_sizes[col]);
+ //           mk_Hat = o_sub.Create_ek_Hat(I, I->len, col, unit_idx);             
         
             
-            mk_Hat = o_sub.Create_ek_Hat_Block(I, A, I->slen * A->block_sizes[col], col, unit_idx);             
-           /* printf("step 1 \n");
-    for (int k = 0; k < J->slen * A->block_sizes[col]; k++)
-      printf("mk_hat[%d] = %f\n", k, mk_Hat[k]);
-      */
+          mk_Hat = o_sub.Create_ek_Hat_Block(I, A, I->slen * A->block_sizes[col], col, unit_idx);             
+          
+            printf("step 1 \n");
+    for (int k = 0; k < I->slen * A->block_sizes[col]; k++)
+      printf("ek_hat[%d] = %f\n", k, mk_Hat[k]);
+      
 
             //printf("len mk hat in : %d\n", I->slen * A->block_sizes[col]);
             
             
-        mk_Hat = o_sub.Convert_block_mHat(mk_Hat, A, col, I);
+     //   mk_Hat = o_sub.Convert_block_mHat(mk_Hat, A, col, I);
 
         /*
             printf("step 2 \n");
@@ -155,13 +164,25 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         
         // Computing solution m_k which is stored within
         // mk_Hat.
+        /*
+        printf("m : %d, n : %d\n", m, n);
+        */
         Approximative_Solution( A_Hat, m, n, 
-                                mk_Hat, I, col);
+                                mk_Hat, I, A->block_sizes[col]);
 
         // Extract solution values
-        //mk_Hat = o_sub.Get_Solution_Vals(mk_Hat, J);
+       // mk_Hat = o_sub.Get_Solution_Vals(mk_Hat, J);
 
+        /*
+            printf("step 2 \n");
+    for (int k = 0; k < I->slen * A->block_sizes[col]; k++)
+      printf("pre solution[%d] = %f\n", k, mk_Hat[k]);
+      */
+        
+        //// A REMETTRE  changer la boucle dans la focntion ci dessous
         mk_Hat = o_sub.Get_Solution_Vals_Block(mk_Hat, A, col, J, I->slen);
+    for (int k = 0; k < J->slen * A->block_sizes[col]; k++)
+      printf("solution[%d] = %.13e\n", k, mk_Hat[k]);
                 
         // Computing the residual vector
         // and the frobenius norm of it
@@ -218,14 +239,14 @@ Spai_Unrestrained<T>::Approximative_Solution( T*      A_Hat_orig,
                                               int&    n, 
                                               T*&     mk_Hat,
                                               const   Index_Set* I,
-                                              const int col)
+                                              const int block_size_col)
 {
     
     int         lda      = 0,
                 k        = 0,
                 info     = 0,
                 lwork    = 0,
-                one      = 1;
+                one      = block_size_col;
                             
     T           *A_Hat   = NULL,
                 *tau     = NULL,
@@ -296,8 +317,8 @@ Spai_Unrestrained<T>::Approximative_Solution( T*      A_Hat_orig,
         
     // Solving the triangular system:
     // Computing :   R^-1 * (Q^T * e_k_hat)
-    o_sub.Solve_Tr_System(  UPLO, NCHAR, n,
-                            one, A_Hat, mk_Hat,
+    o_sub.Solve_Tr_System_Block(  UPLO, NCHAR, n,
+                            one, I->slen, A_Hat, mk_Hat,
                             info);
     
     delete [] work_qr;

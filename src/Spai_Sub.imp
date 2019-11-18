@@ -430,6 +430,7 @@ Spai_Sub<T>::Create_Submatrix_AHat_Block(Matrix<T>       *A,
     
     for (int j = 0; j < J->len; j++)
     {
+      scalar_width += A->block_sizes[J->idcs[j]];
       index_column = J->idcs[j];
       for (int ii = 0; ii< I->len; ii++)
       {
@@ -443,6 +444,7 @@ Spai_Sub<T>::Create_Submatrix_AHat_Block(Matrix<T>       *A,
     memset(A_Hat, 0, A_Hat_size * sizeof(T));
     
     nnz_cnt = 0;
+
     
     //First loop: Iterating over j - idcs of J
     //Second loop: Iterating over i - idcs of I
@@ -460,7 +462,6 @@ Spai_Sub<T>::Create_Submatrix_AHat_Block(Matrix<T>       *A,
       //printf("j: %d, j_len : %d\n", j, j_len);
        // i = 0;
         block_width = A->block_sizes[J->idcs[j]];
-        scalar_width += block_width;
         nnz_idx = 0; 
         nnz_scalar_idx = 0;
         
@@ -513,14 +514,16 @@ Spai_Sub<T>::Create_Submatrix_AHat_Block(Matrix<T>       *A,
                   for (int ii = 0; ii < block_height; ii++)
                   {
                     //printf("A_hat[%d] = %f, idx2 : %d\n",set_idx2 + ii + block_height * jj , col_buf[nnz_scalar_idx + ii + block_height * jj], nnz_scalar_idx + ii + block_height * jj);
-            //    printf("A_hat[%d] = %f, idx2 : %d\n",set_idx2 + ii + block_height * jj , col_buf[nnz_scalar_idx + ii + block_height * jj], nnz_scalar_idx + ii + block_height * jj);
-                      A_Hat[set_idx2 + ii + block_height * jj] = col_buf[nnz_scalar_idx + ii + block_height * jj]; 
+                //printf("A_hat[%d] = %f, idx2 : %d\n", j * A->block_sizes[0]*scalar_height + jj * scalar_height + block_height * i + ii, col_buf[nnz_scalar_idx + ii+ jj * block_height], nnz_scalar_idx + ii+ jj * block_height);
+                      //A_Hat[set_idx2 + ii + block_height * jj] = col_buf[nnz_scalar_idx + ii + block_height * jj]; 
+                      //BON ne plus toucher
+                      A_Hat[j * A->block_sizes[0]*scalar_height + jj * scalar_height + block_height * i + ii] = col_buf[nnz_scalar_idx + ii + jj * block_height]; 
                   }
                 }
 
-                nnz_scalar_idx += block_width * block_height;
                 nnz_cnt += block_width * block_height;
                 nnz_idx++;
+                nnz_scalar_idx += block_width * block_height;
 
             }
 
@@ -909,10 +912,21 @@ Spai_Sub<T>::Create_ek_Hat_Block( const Index_Set*    I,
                 
     ek_Hat = new T[len];
     memset(ek_Hat, 0, len * sizeof(T));
+
+    int *first_index_block = NULL;
+    first_index_block = new int[I->len];
+    memset(first_index_block, 0, I->len * sizeof(int));  
+
+    for (int i = 1; i < I->len; i++)
+    {
+      printf("idx : %d, bs : %d\n", I->idcs[i-1], A->block_sizes[I->idcs[i-1]]);
+      first_index_block[i] = first_index_block[i-1] + A->block_sizes[I->idcs[i-1]];
+    }
             
     /*Sweep block rows */
     for (int i = 0; i < I->len; i++)
     {
+        k = 0;
         i_val = I->idcs[i];
         if (i_val > col)
             break;
@@ -923,10 +937,10 @@ Spai_Sub<T>::Create_ek_Hat_Block( const Index_Set*    I,
             unit_idx = i;
             while (k<A->block_sizes[col])
             {
-              //printf("k:%d, i: %d, bs : %d\n", k, i, A->block_sizes[col]);
-              ek_Hat[k + i*A->block_sizes[col]] = 1;
+              //printf("k:%d, i: %d, idx : %d\n", k, i, k * I->slen + k + first_index_block[i]);
+              ek_Hat[k * I->slen + k + first_index_block[i]] = 1;
               k++;
-              i++;
+              //i++;
             }
 
             break;
@@ -1052,6 +1066,7 @@ Spai_Sub<T>::Get_Solution_Vals_Block(T* mk_Hat_in, const Matrix<T> *A, const int
 {
     T*  mk_Hat_out = NULL;
     int len = J->slen * A->block_sizes[col], index = 0;
+    int index2 = 0;
 
     int *first_index_block = NULL;
     first_index_block = new int[J->len];
@@ -1059,11 +1074,12 @@ Spai_Sub<T>::Get_Solution_Vals_Block(T* mk_Hat_in, const Matrix<T> *A, const int
 
     for (int j = 1; j < J->len; j++)
     {
-      first_index_block[j] = first_index_block[j-1] + A->block_sizes[J->idcs[j]];
+      first_index_block[j] = first_index_block[j-1] + A->block_sizes[J->idcs[j-1]];
     }
 
     mk_Hat_out = new T[len];
     memset(mk_Hat_out, 0, len * sizeof(T));
+
 
     for (int j = 0; j < J->len; j++)
     {
@@ -1077,8 +1093,17 @@ Spai_Sub<T>::Get_Solution_Vals_Block(T* mk_Hat_in, const Matrix<T> *A, const int
       }
     } 
 
-    
-    
+/*  
+    for (int jj = 0; jj < A->block_sizes[col]; jj++)
+    {
+      for (int j = 0; j < J->slen; j++)
+      {
+        mk_Hat_out[index++] = mk_Hat_in[index2++];
+      }
+      index2 += Islen - J->slen;
+    }
+
+  */  
     delete [] mk_Hat_in;
     delete [] first_index_block;
     return mk_Hat_out;

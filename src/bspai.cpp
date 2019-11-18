@@ -263,8 +263,7 @@ int bspai(PC_MSPAI* mspai)
 
     //Matrix<double> *B;
    
-    //(mspai->M_REAL)->Print_Matrix_Data(mspai->M_REAL);
-//		mspai->A_REAL->Write_Matrix_To_File(mspai->A_REAL, "A.mtx");
+		mspai->M_REAL->Write_Matrix_To_File(mspai->M_REAL, "precond.mtx");
     //B = Matrix<double>::Convert_Block_Matrix(mspai->A_REAL, 0, 10000,0);
 
 	//	B->Write_Matrix_To_File(B, "B.mtx");

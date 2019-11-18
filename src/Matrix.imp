@@ -131,6 +131,15 @@ Matrix<T>::Init_Preconditioner(Matrix<T> *&M,
     M->pe = new int[n];
     for (int i = 0; i < n; i++)
         M->pe[i] = pe[i];
+    memcpy(M->pe, pe, n * sizeof(int));
+
+    M->block_size = block_size;
+    M->max_block_size = max_block_size;
+    M->block_sizes = new int[n];
+
+    memcpy(M->block_sizes, block_sizes, n * sizeof(int));
+
+
 }
 
 

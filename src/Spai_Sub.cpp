@@ -197,6 +197,7 @@ Spai_Sub<double>::Solve_Tr_System(  const char  *UPLO,
 {   
     int lda = std::max(1, n);
     
+    
     dtrtrs(UPLO,
             NCHAR,
             NCHAR,
@@ -209,7 +210,30 @@ Spai_Sub<double>::Solve_Tr_System(  const char  *UPLO,
             &info);
 }
 
-
+template<> void
+Spai_Sub<double>::Solve_Tr_System_Block(  const char  *UPLO,
+                                    const char  *NCHAR,
+                                    int&        n,
+                                    int&        one,
+                                    const int&        ldb,
+                                    double*     A_Hat,
+                                    double*     ek_Hat,
+                                    int&        info)
+{   
+    int lda = std::max(1, n);
+    
+    
+    dtrtrs(UPLO,
+            NCHAR,
+            NCHAR,
+            &n,
+            &one,
+            A_Hat,
+            &lda,
+            ek_Hat,
+            &ldb,
+            &info);
+}
 
 template<> void
 Spai_Sub<double>::Matrix_Vector_Product(const char*   TRANS,

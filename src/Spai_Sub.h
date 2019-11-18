@@ -852,6 +852,14 @@ T*  Get_Solution_Vals_Block(T* mk_Hat_in, const Matrix<T> *A, const int col, Ind
                                 double*     ek_Hat,
                                 int&        info);
         
+        void    Solve_Tr_System_Block(const char  *UPLO,
+                                const char  *NCHAR,
+                                int&        n,
+                                int&        one,
+                                const int&       ldb,
+                                double*     A_Hat,
+                                double*     ek_Hat,
+                                int&        info);
         
         //////////////////////////////////////////////////////////////
         ///     \brief Computes a matrix vector operation for real 
