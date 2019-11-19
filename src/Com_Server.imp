@@ -786,6 +786,126 @@ Com_Server<T>::Get_Col( Matrix<T>       *A,
 
 
 template <class T>  void
+Com_Server<T>::Get_Col_Block( Matrix<T>       *A, 
+                        Matrix<T>       *&M,
+                        Matrix<T>       *B,
+                        Pattern         *P,
+                        Pattern         *UP,
+                        Index_Set*      U_UP,
+                        int             col_current,
+                        int             col,
+                        int&            col_len,
+                        int&            row_len, 
+                        int*&           col_idcs_buf, 
+                        int*&           row_idcs_buf,
+                        T*&             col_buf,
+                        Hash_Table<T>   *&ht,
+                        const int&      pre_k_param,
+                        const bool      use_pre,
+                        const int       pre_max_param)
+{
+    int idx = 0,
+        pcol,
+        loc,
+        pe,
+        begin,
+        end,
+        col_in_UUP;
+    
+    
+    //Check if user wants to prerequest something or
+    if(U_UP && pre_k_param > 0 && use_pre && first) 
+    {              
+        //columns to request are definitly
+        //inside upper pattern column because
+        //start pattern is subset of upper pattern
+                
+        col_in_UUP = U_UP->Get_El_Idx(U_UP, col);
+        
+        begin = col_in_UUP - pre_k_param;
+        
+        if (begin < 0) begin = 0;
+            
+        end = col_in_UUP + pre_k_param;
+        if (end > (U_UP->len - 1)) end = U_UP->len - 1;
+                
+        //prerequest columns -k ... col-1
+        for ( int i = begin; i < col_in_UUP; i++)
+        {
+            pcol = U_UP->idcs[i];
+            pe = A->pe[pcol];
+            if (pe != A->my_id)
+            {
+                if (ht->Get_Location(pcol) < 0)
+                {
+                    idx = pcol - A->start_indices[pe];
+                    Get_Remote_Col( A, M, B, P, UP, pcol, col_len, 
+                                    row_len, col_idcs_buf, 
+                                    row_idcs_buf, col_buf, 
+                                    ht, pe, idx);
+                }    
+            }
+        }        
+                
+        //prerequest columns col+1 ... k
+        for ( int i = col_in_UUP + 1; i <= end; i++)
+        {
+            pcol = U_UP->idcs[i];
+            pe = A->pe[pcol];
+            if (pe != A->my_id)
+            {
+                if (ht->Get_Location(pcol) < 0)
+                {
+                    idx = pcol - A->start_indices[pe];
+                    Get_Remote_Col( A, M, B, P, UP,pcol, col_len, 
+                                    row_len, col_idcs_buf, 
+                                    row_idcs_buf, col_buf, 
+                                    ht, pe, idx);
+                }   
+            }
+        }
+        // if user want only prerequesting once - make this
+        // subcode inaccessible
+        if (pre_max_param) first = false;
+    }
+     
+    
+    // Now get the needed column data and proceed further
+    // in computation
+    pe = A->pe[col];
+    idx = col - A->start_indices[pe];
+    
+    if (pe == A->my_id)
+        Get_Local_Col(  A, col_len, row_len, 
+                        col_idcs_buf, row_idcs_buf, 
+                        col_buf, idx);
+    else
+    {
+        loc = ht->Get_Location(col);
+        
+        if (loc < 0)
+        {
+            Get_Remote_Col( A, M, B, P, UP, col, col_len, 
+                            row_len, col_idcs_buf, 
+                            row_idcs_buf, col_buf, 
+                            ht, pe, idx);
+        }
+        else
+        {
+            ht->Look_Up(col, 
+                        col_idcs_buf,
+                        row_idcs_buf, 
+                        col_buf, 
+                        col_len, 
+                        row_len,
+                        loc);      
+        }
+    }
+}
+
+
+
+template <class T>  void
 Com_Server<T>::Get_Target_Col(  Matrix<T>       *A,
                                 Matrix<T>       *&M,
                                 Matrix<T>       *B, 

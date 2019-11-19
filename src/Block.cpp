@@ -132,7 +132,7 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
     {
       n = block_sizes_local[jb];
       count = 0; /* number of blocks in this block column jb */
-      total_height = 0; /*number of entries in column block jb */
+      total_height = 0; /*number of entries in column block jb (only height not width)*/
 
       /*fill fullcol*/
       //Sweep scalar columns in block column jb
@@ -359,7 +359,7 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
 	MPI_Barrier(B->world);
 	MPI_Allreduce(&max, &B->max_nnz, 1, MPI_INT, MPI_MAX, B->world);
 
-  B->max_nnz *= B->max_block_size;
+  B->max_nnz *= B->max_block_size * B->max_block_size;
 
 
 	/* Initialize the remote transfer buffer */
@@ -371,8 +371,6 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
 
 	B->remote_row_idcs_buf = new int[B->max_nnz];
 	memset(B->remote_row_idcs_buf, 0, B->max_nnz * sizeof(int));
-
-
 
   delete [] fullcol;
   delete [] block_bitvec;

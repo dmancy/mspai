@@ -191,6 +191,8 @@ class Matrix : public Matrix_Base
         /// Values between the pe's
         T                   *remote_col_buf;
 
+
+
         // Index set (to no recreate them for any column)
 
         Index_Set           *I_set;

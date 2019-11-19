@@ -53,11 +53,17 @@ Com_Server<double>::Handle_Get_Col(const Matrix<double> *A,
     
     int             idx,
                     len_col = 0,
+                    slen_col = 0,
                     len_row = 0,
+                    next = 0,
+                    index = 0,
                     *col_idcs_buf = NULL,
                     *row_idcs_buf = NULL;
                                 
-    double          *col_buf = NULL;
+    double          *col_buf      = NULL,
+                    *ptr_buf = NULL;
+                    
+
     
     MPI_Status      status;
     MPI_Comm        world;
@@ -80,12 +86,25 @@ Com_Server<double>::Handle_Get_Col(const Matrix<double> *A,
 
     // Getting the column data from local cache
     len_col         = lines->len_cols[idx];
+    slen_col        = lines->len_scalar[idx] * A->block_sizes[idx + A->my_start_idx]; 
     col_idcs_buf    = lines->col_idcs[idx];
     col_buf         = lines->A[idx];
     if (A->c_lines->row_idcs)
     {
         row_idcs_buf    = lines->row_idcs[idx];
         len_row         = lines->len_rows[idx];
+    }
+
+
+    for (int i = 0; i < len_col; i++)
+    {
+
+      for (int j = 0; j < A->block_sizes[idx + A->my_start_idx] * A->block_sizes[col_idcs_buf[i]]; j++)
+      {
+        A->remote_col_buf[index++] = lines->A[idx][next + j];
+      }
+      next += A->block_sizes[idx + A->my_start_idx] * A->block_sizes[col_idcs_buf[i]];
+      
     }
     
 
@@ -111,11 +130,12 @@ Com_Server<double>::Handle_Get_Col(const Matrix<double> *A,
     }
 
     // Sending column values 
-    if (MPI_Send(static_cast<double*> (col_buf), len_col, MPI_DOUBLE, 
+    if (MPI_Send(static_cast<double*> (A->remote_col_buf), slen_col, MPI_DOUBLE, 
         requestor, send_vals_tag, world))
         throw std::runtime_error(
             "\n\tERROR in method \"Com_Server::"
             "Handle_Get_Col\" by MPI_Send.\n");
+
 }
 
 
@@ -253,7 +273,8 @@ Com_Server<double>::Get_Remote_Col( Matrix<double>      *A,
     int                 send_flag,
                         cols_flag,
                         rows_flag,
-                        vals_flag;
+                        vals_flag,
+                        scalar_len;
         
     MPI_Status          send_status,
                         cols_status,
@@ -370,6 +391,11 @@ Com_Server<double>::Get_Remote_Col( Matrix<double>      *A,
         row_idcs_buf    = A->remote_col_idcs_buf;
     }
 
+    // Compute scalar_len
+
+    for (int i = 0; i < col_len; i++)
+        scalar_len += A->block_sizes[col_idx] * A->block_sizes[col_idcs_buf[i]];
+
 
     // Store the new data into cache 
     if (ht) //Does the hash table exist?
@@ -377,20 +403,22 @@ Com_Server<double>::Get_Remote_Col( Matrix<double>      *A,
         // row structure ?
         if (A->c_lines->row_idcs) 
         {
-            ht->Insert( col_idx,
+            ht->Insert_Block( col_idx,
                         A->remote_col_idcs_buf,
                         A->remote_row_idcs_buf,
                         A->remote_col_buf,
                         col_len,
+                        scalar_len,
                         row_len);
         }
         else 
         {
-            ht->Insert( col_idx,
+            ht->Insert_Block( col_idx,
                         A->remote_col_idcs_buf,
                         A->remote_col_idcs_buf,
                         A->remote_col_buf,
                         col_len,
+                        scalar_len,
                         col_len);
         }
     }

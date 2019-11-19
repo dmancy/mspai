@@ -546,6 +546,24 @@ class Com_Server
                                     double              *mk_Hat, 
                                     const Index_Set     *J);
         
+void
+Get_Col_Block( Matrix<T>       *A, 
+                        Matrix<T>       *&M,
+                        Matrix<T>       *B,
+                        Pattern         *P,
+                        Pattern         *UP,
+                        Index_Set*      U_UP,
+                        int             col_current,
+                        int             col,
+                        int&            col_len,
+                        int&            row_len, 
+                        int*&           col_idcs_buf, 
+                        int*&           row_idcs_buf,
+                        T*&             col_buf,
+                        Hash_Table<T>   *&ht,
+                        const int&      pre_k_param,
+                        const bool      use_pre,
+                        const int       pre_max_param);
         //============================================================
         //======= Template specifications for COMPLEX matrices =======
         //============================================================

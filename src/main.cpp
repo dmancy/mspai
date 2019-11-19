@@ -69,9 +69,9 @@ int main(int argc,char **args)
   /* Read the marix file mat.mtx */
   
   PetscViewer fd;
-  //ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,"orsirr_2_T.dat",FILE_MODE_READ,&fd);CHKERRQ(ierr);
+ ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,"orsirr_2_T.dat",FILE_MODE_READ,&fd);CHKERRQ(ierr);
   //ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,"shyy161.mtx_76480x76480_329762nnz.gz",FILE_MODE_READ,&fd);CHKERRQ(ierr);
-  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,"visc-naca_lhs.pmat",FILE_MODE_READ,&fd);CHKERRQ(ierr);
+//  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,"visc-naca_lhs.pmat",FILE_MODE_READ,&fd);CHKERRQ(ierr);
   ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
   ierr = MatLoad(A,fd);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&fd);CHKERRQ(ierr);
@@ -81,21 +81,21 @@ int main(int argc,char **args)
   MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
 */
   /* Read new vector in binary format */
-  
+  /*
   ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,"visc-naca_b.pmat",FILE_MODE_READ,&fd);CHKERRQ(ierr);
   ierr = VecCreate(PETSC_COMM_WORLD,&b);CHKERRQ(ierr);
   ierr = VecLoad(b,fd);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&fd);CHKERRQ(ierr);
-
-  ierr = VecDuplicate(b,&solution);CHKERRQ(ierr);
-
+*/
+  //ierr = VecDuplicate(b,&solution);CHKERRQ(ierr);
   /* Read solution vector*/
+  /*
   ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,"visc-naca_x.pmat",FILE_MODE_READ,&fd);CHKERRQ(ierr);
   ierr = VecCreate(PETSC_COMM_WORLD,&u);CHKERRQ(ierr);
   ierr = VecLoad(u,fd);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&fd);CHKERRQ(ierr);
 
-  /*
+*/
   ierr = MatGetSize(A, &n, NULL);
   ierr = VecCreate(PETSC_COMM_WORLD,&u);CHKERRQ(ierr);
   ierr = VecSetSizes(u,PETSC_DECIDE,n);CHKERRQ(ierr);
@@ -103,7 +103,7 @@ int main(int argc,char **args)
   ierr = VecDuplicate(u,&b);CHKERRQ(ierr);
   ierr = VecDuplicate(u,&solution);CHKERRQ(ierr);
   ierr = VecSet(b,one);CHKERRQ(ierr);
-  */
+
   /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 Create the linear solver and set various options
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */

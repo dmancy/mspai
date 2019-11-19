@@ -166,8 +166,8 @@ Matrix<T>::Init_Preconditioner(Matrix<T> *&M,
 
     memcpy(M->block_sizes, block_sizes, n * sizeof(int));
 
-    M->I_set = new Index_Set(m);
-    M->J_set = new Index_Set(n);
+    M->I_set = new Index_Set(m*max_arg);
+    M->J_set = new Index_Set(n*max_arg);
 
     M->A_Hat = new T[max_arg * max_block_size*max_block_size];
     M->A_Hat_buffer = new T[max_arg * max_block_size*max_block_size];
@@ -176,11 +176,11 @@ Matrix<T>::Init_Preconditioner(Matrix<T> *&M,
     M->mk_Hat_buffer = new T[max_arg * max_block_size * max_block_size];
     M->bk_Hat = new T[max_arg * max_block_size * max_block_size];
 
-    M->Tau_ptr = new double[TAU_SIZE];
-    M->Work_qr_ptr = new double[QR_SIZE];
-    M->Work_qt_ptr = new double[QT_SIZE];
+    M->Tau_ptr = new double[TAU_SIZE*max_arg];
+    M->Work_qr_ptr = new double[QR_SIZE*max_arg];
+    M->Work_qt_ptr = new double[QT_SIZE*max_arg];
 
-    M->first_index_set = new int[n];
+    M->first_index_set = new int[n*max_arg];
 
 }
 

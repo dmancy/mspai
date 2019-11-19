@@ -94,22 +94,17 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         I = o_sub.Get_I_Set(J, A, M, B, P, UP, U_UP, 
                             ht, pre_k_param, pre_max_param,
                             bitvec, reset_vec);   
+        //printf("A_my_id : %d, Index_Set\n", A->my_id);
         //J->Print_Index_Set("J");
         //I->Print_Index_Set("I");
+
 
         // Create the submatrix A_Hat = A(I;J) and update the 
         // The index of the unit vector
         A_Hat = o_sub.Create_Submatrix_AHat_Block(
                                 A, M, B, P, UP, U_UP,
-                                J, I, m, n, ht, nnz,
+                                J, I, col, m, n, ht, nnz,
                                 pre_k_param, pre_max_param);
-        
-        /*
-        printf("col : %d, jslen : %d, islen : %d\n", col, J->slen, I->slen);
-    for (int k = 0; k < J->slen * I->slen; k++)
-      printf("A_hat[%d] = %f\n", k, A_Hat[k]);
-      */
-        //A_Hat = o_sub.Convert_block_AHat(A_Hat, A, J, I);
         
        
        /* 
@@ -119,12 +114,6 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
                                 pre_k_param, pre_max_param);
                                 */
     /*
-    for (int k = 0; k < J->slen * I->slen; k++)
-      printf("A_hat_after[%d] = %f\n", k, A_Hat[k]);
-      */
-       /* 
-    for (int k = 0; k < J->len * I->len; k++)
-      printf("A_hat_s[%d] = %f\n", k, A_Hat_scalar[k]);
       */
         // Create the unit vector
         // Notice that the name is the solution name already.         
@@ -139,27 +128,9 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         
             
           mk_Hat = o_sub.Create_ek_Hat_Block(I, A, M, I->slen * A->block_sizes[col], col, unit_idx);             
-        /*  
-            printf("step 1 \n");
-    for (int k = 0; k < I->slen * A->block_sizes[col]; k++)
-      printf("ek_hat[%d] = %f\n", k, mk_Hat[k]);
-      */
-
-            //printf("len mk hat in : %d\n", I->slen * A->block_sizes[col]);
             
             
-     //   mk_Hat = o_sub.Convert_block_mHat(mk_Hat, A, col, I);
 
-        /*
-            printf("step 2 \n");
-    for (int k = 0; k < J->slen * A->block_sizes[col]; k++)
-      printf("mk_hat[%d] = %f\n", k, mk_Hat[k]);
-            
-    for (int k = 0; k < m*n; k++)
-      printf("A_hat[%d] = %f\n", k, A_Hat[k]);
-
-    printf("m : %d, n : %d, I->slen : %d, i->lem : %d\n", m, n, I->slen, I->len);
-          */    
         // Copy the unit vector. This is used for 
         // computing the residual vector later 
         //bk_Hat = o_sub.Copy_Vector(mk_Hat, I->slen * A->block_sizes[col]);
@@ -170,29 +141,23 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         
         // Computing solution m_k which is stored within
         // mk_Hat.
-        /*
-        printf("m : %d, n : %d\n", m, n);
-        */
+        
+        
         Approximative_Solution_Block( A_Hat, M->A_Hat_buffer, M, m, n,
                                 mk_Hat, I, A->block_sizes[col]);
 
         // Extract solution values
        // mk_Hat = o_sub.Get_Solution_Vals(mk_Hat, J);
 
-        /*
-            printf("step 2 \n");
-    for (int k = 0; k < I->slen * A->block_sizes[col]; k++)
-      printf("pre solution[%d] = %f\n", k, mk_Hat[k]);
-      */
-        
         //// A REMETTRE  changer la boucle dans la focntion ci dessous
         memcpy(M->mk_Hat_buffer, mk_Hat, I->slen * A->block_sizes[col] * sizeof(T));
 
         o_sub.Get_Solution_Vals_Block(M->mk_Hat_buffer, mk_Hat, M, A, col, J, I->slen);
         /*
-    for (int k = 0; k < J->slen * A->block_sizes[col]; k++)
+        printf("A_my_id : %d, solution\n", A->my_id);
+    //for (int k = 0; k < J->slen * A->block_sizes[col]; k++)
       printf("solution[%d] = %.13e\n", k, mk_Hat[k]);
-          */      
+      */
         // Computing the residual vector
         // and the frobenius norm of it
         /*

@@ -278,6 +278,7 @@ class Spai_Sub
                                       Index_Set     *U_UP,
                                       Index_Set     *J, 
                                       Index_Set     *I,
+                                      int           col,
                                       int&          m,
                                       int&          n,
                                       Hash_Table<T> *&ht,

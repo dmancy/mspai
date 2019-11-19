@@ -126,6 +126,51 @@ Hash_Table<T>::Insert(  int             idx,
 }
 
 
+template <class T>  bool 
+Hash_Table<T>::Insert_Block(  int             idx, 
+                        int             *col_idcs_buf, 
+                        int             *row_idcs_buf, 
+                        T               *col_buf, 
+                        int             col_len,
+                        int             scalar_len,
+                        int             row_len)
+{
+    int loc,
+        *htcol_idcs_buf,
+        *htrow_idcs_buf;
+        
+    T   *htvals_buf;
+    
+    // If user does not want to use hash table
+    // no look up has to be performed.
+    // This may only occur if user set -hs 0
+    if (! this) return false;
+    
+    loc = Find_Location(idx);
+    
+    // The column/row indices arrays have 2 elements more
+    // because into first position the index of the 
+    // column/row is inserted, and on second position
+    // there is the length of the column/row
+    
+    htcol_idcs_buf = new int[col_len + 2];
+    htcol_idcs_buf[0] = idx;
+    htcol_idcs_buf[1] = col_len;
+    memcpy(&htcol_idcs_buf[2], col_idcs_buf, col_len * sizeof(int));
+    col_idcs_table[loc] = htcol_idcs_buf;
+    
+    htrow_idcs_buf = new int[row_len + 2];
+    htrow_idcs_buf[0] = idx;
+    htrow_idcs_buf[1] = row_len;
+    memcpy(&htrow_idcs_buf[2], row_idcs_buf, row_len * sizeof(int));
+    row_idcs_table[loc] = htrow_idcs_buf;
+
+    htvals_buf = new T[scalar_len];
+    memcpy(htvals_buf, col_buf, scalar_len * sizeof(T));
+    vals_table[loc] = htvals_buf;
+
+    return true;
+}
 
 template <class T>  bool
 Hash_Table<T>::Look_Up( int             idx, 

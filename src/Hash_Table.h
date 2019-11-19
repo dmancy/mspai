@@ -112,6 +112,14 @@ class Hash_Table
                         int             col_len,
                         int             row_len);
         
+bool 
+Insert_Block(  int             idx, 
+                        int             *col_idcs_buf, 
+                        int             *row_idcs_buf, 
+                        T               *col_buf, 
+                        int             col_len,
+                        int             scalar_len,
+                        int             row_len);
         
         ///////////////////////////////////////////////
         ///     \brief Look up if element is in hash table
