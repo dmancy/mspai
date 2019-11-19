@@ -95,18 +95,18 @@ Com_Server<double>::Handle_Get_Col(const Matrix<double> *A,
         len_row         = lines->len_rows[idx];
     }
 
+    double *buffer = A->remote_col_send; 
 
     for (int i = 0; i < len_col; i++)
     {
 
       for (int j = 0; j < A->block_sizes[idx + A->my_start_idx] * A->block_sizes[col_idcs_buf[i]]; j++)
       {
-        A->remote_col_buf[index++] = lines->A[idx][next + j];
+        buffer[index++] = lines->A[idx][next + j];
       }
       next += A->block_sizes[idx + A->my_start_idx] * A->block_sizes[col_idcs_buf[i]];
       
     }
-    
 
     // Send then synchronously the remotely 
     // requested column data
@@ -130,7 +130,7 @@ Com_Server<double>::Handle_Get_Col(const Matrix<double> *A,
     }
 
     // Sending column values 
-    if (MPI_Send(static_cast<double*> (A->remote_col_buf), slen_col, MPI_DOUBLE, 
+    if (MPI_Send(static_cast<double*> (buffer), slen_col, MPI_DOUBLE, 
         requestor, send_vals_tag, world))
         throw std::runtime_error(
             "\n\tERROR in method \"Com_Server::"

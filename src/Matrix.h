@@ -192,6 +192,11 @@ class Matrix : public Matrix_Base
         T                   *remote_col_buf;
 
 
+        /// Remote buffer for sending values
+        /// to other pes
+        T                   *remote_col_send;
+
+
 
         // Index set (to no recreate them for any column)
 

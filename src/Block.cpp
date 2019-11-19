@@ -366,6 +366,9 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
 	B->remote_col_buf = new double[B->max_nnz];
 	memset(B->remote_col_buf, 0, B->max_nnz * sizeof(double));
 
+	B->remote_col_send = new double[B->max_nnz];
+	memset(B->remote_col_send, 0, B->max_nnz * sizeof(double));
+
 	B->remote_col_idcs_buf = new int[B->max_nnz];
 	memset(B->remote_col_idcs_buf, 0, B->max_nnz * sizeof(int));
 

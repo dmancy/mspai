@@ -94,19 +94,29 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         I = o_sub.Get_I_Set(J, A, M, B, P, UP, U_UP, 
                             ht, pre_k_param, pre_max_param,
                             bitvec, reset_vec);   
-        //printf("A_my_id : %d, Index_Set\n", A->my_id);
-        //J->Print_Index_Set("J");
-        //I->Print_Index_Set("I");
+        /*
+        if (!A->my_id)
+        {
+        printf("A_my_id : %d, Index_Set\n", A->my_id);
+        J->Print_Index_Set("J");
+        I->Print_Index_Set("I");
+        }
 
-
+*/
         // Create the submatrix A_Hat = A(I;J) and update the 
         // The index of the unit vector
         A_Hat = o_sub.Create_Submatrix_AHat_Block(
                                 A, M, B, P, UP, U_UP,
                                 J, I, col, m, n, ht, nnz,
                                 pre_k_param, pre_max_param);
+        /*
         
-       
+        if (!A->my_id)
+        {
+          for (int i = 0; i <m*n; i++)
+            printf("A hat [%d] = %f\n", i , A_Hat[i]);
+        }
+       */
        /* 
         A_Hat = o_sub.Create_Submatrix_AHat(
                                 A, M, B, P, UP, U_UP,
@@ -128,7 +138,13 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         
             
           mk_Hat = o_sub.Create_ek_Hat_Block(I, A, M, I->slen * A->block_sizes[col], col, unit_idx);             
-            
+/*
+        if (!A->my_id)
+        {
+          for (int i = 0; i <I->slen * A->block_sizes[col]; i++)
+            printf("mk hat [%d] = %f\n", i , mk_Hat[i]);
+        }
+  */          
             
 
         // Copy the unit vector. This is used for 
@@ -153,10 +169,13 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         memcpy(M->mk_Hat_buffer, mk_Hat, I->slen * A->block_sizes[col] * sizeof(T));
 
         o_sub.Get_Solution_Vals_Block(M->mk_Hat_buffer, mk_Hat, M, A, col, J, I->slen);
-        /*
+    /*    
+        if (!A->my_id)
+        {
         printf("A_my_id : %d, solution\n", A->my_id);
-    //for (int k = 0; k < J->slen * A->block_sizes[col]; k++)
+    for (int k = 0; k < J->slen * A->block_sizes[col]; k++)
       printf("solution[%d] = %.13e\n", k, mk_Hat[k]);
+        }
       */
         // Computing the residual vector
         // and the frobenius norm of it

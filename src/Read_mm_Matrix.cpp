@@ -1011,6 +1011,9 @@ Read_mm_Matrix::Data_To_Matrix( int N,
     mtx->remote_col_buf = new double[mtx->max_nnz];
     memset(mtx->remote_col_buf, 0, mtx->max_nnz * sizeof(double));
     
+    mtx->remote_col_send = new double[mtx->max_nnz];
+    memset(mtx->remote_col_send, 0, mtx->max_nnz * sizeof(double));
+
     mtx->remote_col_idcs_buf = new int[mtx->max_nnz];
     memset(mtx->remote_col_idcs_buf, 0, mtx->max_nnz * sizeof(int));
     

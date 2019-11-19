@@ -50,6 +50,7 @@ Matrix<T>::Matrix(MPI_Comm world_m)
     remote_col_idcs_buf = NULL;
     remote_row_idcs_buf = NULL;
     remote_col_buf      = NULL;
+    remote_col_send     = NULL;
     my_nnz              = 0;
     pe                  = NULL;
     next_col            = 0;
@@ -86,6 +87,7 @@ Matrix<T>::~Matrix()
     if (remote_col_buf)         delete [] remote_col_buf;
     if (remote_col_idcs_buf)    delete [] remote_col_idcs_buf;
     if (remote_row_idcs_buf)    delete [] remote_row_idcs_buf;
+    if (remote_col_send)        delete [] remote_col_send;
     if (block_sizes)            delete [] block_sizes;
     if (I_set)                  delete    I_set;
     if (J_set)                  delete    J_set;
