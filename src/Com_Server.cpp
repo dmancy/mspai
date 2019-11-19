@@ -274,7 +274,7 @@ Com_Server<double>::Get_Remote_Col( Matrix<double>      *A,
                         cols_flag,
                         rows_flag,
                         vals_flag,
-                        scalar_len;
+                        scalar_len = 0;
         
     MPI_Status          send_status,
                         cols_status,
