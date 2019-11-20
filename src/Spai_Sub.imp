@@ -420,6 +420,7 @@ Spai_Sub<T>::Create_Submatrix_AHat_Block(Matrix<T>       *A,
                     block_width,
                     block_height,
                     *first_index_col = NULL, //First scalar index of the block column j
+                    *first_index_row = NULL,
                     scalar_width = 0, //number of scalar columns in A_Hat
                     scalar_height = 0, //number of scalr rows in A_Hat
                     *col_idcs_buf = NULL,
@@ -448,8 +449,19 @@ Spai_Sub<T>::Create_Submatrix_AHat_Block(Matrix<T>       *A,
     
     nnz_cnt = 0;
 
+    // Set first_index_col
     first_index_col = M->first_index_set;
-    memset(first_index_col, 0, j_len * sizeof(int));
+    first_index_col[0] = 0;
+    for (int j = 1; j < j_len; j++)
+      first_index_col[j] = first_index_col[j-1] + A->block_sizes[J->idcs[j-1]];
+
+    // Set first index row 
+    first_index_row = M->first_index_row;
+    first_index_row[0] = 0;
+    for (int i = 1; i < i_len; i++)
+    {
+      first_index_row[i] = first_index_row[i-1] + A->block_sizes[I->idcs[i-1]];
+    }
 
     //First loop: Iterating over j - idcs of J
     //Second loop: Iterating over i - idcs of I
@@ -458,7 +470,6 @@ Spai_Sub<T>::Create_Submatrix_AHat_Block(Matrix<T>       *A,
 
     for (int ii = 0; ii < i_len; ii++)
       scalar_height += A->block_sizes[I->idcs[ii]];
-    
 
     for (int j = 0; j < j_len; j++)
     {
@@ -508,11 +519,13 @@ Spai_Sub<T>::Create_Submatrix_AHat_Block(Matrix<T>       *A,
                 {
                   for (int ii = 0; ii < block_height; ii++)
                   {
-                     A_Hat[first_index_col[j] *scalar_height + jj * scalar_height + block_height * i + ii] = col_buf[nnz_scalar_idx + ii + jj * block_height]; 
+                    // A_Hat[first_index_col[j] *scalar_height + jj * scalar_height + block_height * i + ii] = col_buf[nnz_scalar_idx + ii + jj * block_height]; 
+                     A_Hat[first_index_col[j] *scalar_height + jj * scalar_height + first_index_row[i] + ii] = col_buf[nnz_scalar_idx + ii + jj * block_height]; 
+                     if (!(col_buf[nnz_scalar_idx + ii + jj * block_height] == 0))
+                       nnz_cnt += 1;
                   }
                 }
 
-                nnz_cnt += block_width * block_height;
                 nnz_idx++;
                 nnz_scalar_idx += block_width * block_height;
 
@@ -522,9 +535,6 @@ Spai_Sub<T>::Create_Submatrix_AHat_Block(Matrix<T>       *A,
 
         }
 
-        // Set first_index_col
-        if (j != j_len-1)
-          first_index_col[j+1] = first_index_col[j] + block_width;
     }
     n = scalar_width;
     m = scalar_height;
@@ -1069,7 +1079,7 @@ Spai_Sub<T>::Get_Solution_Vals_Block(T* mk_Hat_in, T* mk_Hat_out, const Matrix<T
 
     int *first_index_block = NULL;
     first_index_block = M->first_index_set;
-    memset(first_index_block, 0, J->len * sizeof(int));  
+    first_index_block[0] = 0;
 
     for (int j = 1; j < J->len; j++)
     {

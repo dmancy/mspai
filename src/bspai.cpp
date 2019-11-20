@@ -227,8 +227,21 @@ int bspai(PC_MSPAI* mspai)
 				    mspai->M_REAL->Write_Matrix_To_File(mspai->M_REAL, "precond.mtx");
 
            }
+
+		  //    mspai->M_REAL->Write_Matrix_To_File(mspai->M_REAL, "precond_block.mtx");
+          Matrix<double> *Scalar = NULL;
+
+          if (mspai->A_REAL->block_size != 1)
+          {
+              Scalar = Scalar_Matrix(mspai->M_REAL);
+              delete mspai->M_REAL;
+
+              mspai->M_REAL = Scalar;
+          }
+		//      mspai->M_REAL->Write_Matrix_To_File(mspai->M_REAL, "precond_scalar.mtx");
+
                     
-		    Matrix<double>::Convert_Matrix_to_Mat(PETSC_COMM_WORLD, mspai->M_REAL, &(mspai->PM));
+		    Matrix<double>::Convert_Matrix_to_Mat(mspai->A_REAL->world, mspai->M_REAL, &(mspai->PM));
 
 		    if (!(mspai->left_prec))
 			    ierr = MatTranspose(*(mspai->PM), MAT_INITIAL_MATRIX, mspai->PM);

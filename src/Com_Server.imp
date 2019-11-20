@@ -954,8 +954,9 @@ Com_Server<T>::Get_Local_Col(Matrix<T>       *A,
     ///modif
     int   next = 0,
           index = 0;
-/*
-    col_buf = A->remote_col_buf;
+
+    /*
+    col_buf = new T[col_len*A->max_block_size * A->max_block_size];;
 
     for (int i = 0; i < col_len; i++)
     {
@@ -967,8 +968,8 @@ Com_Server<T>::Get_Local_Col(Matrix<T>       *A,
       next += A->block_sizes[idx + A->my_start_idx] * A->block_sizes[col_idcs_buf[i]];
       
     }
-
 */
+
     if (A->c_lines->row_idcs)   //unsymmetric matrix
     {
         row_len         = A->c_lines->len_rows[idx];

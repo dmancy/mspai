@@ -70,6 +70,7 @@ Matrix<T>::Matrix(MPI_Comm world_m)
     Work_qr_ptr         = NULL;
     Work_qt_ptr         = NULL;
     first_index_set     = NULL;
+    first_index_row     = NULL;
 }
 
 
@@ -100,6 +101,7 @@ Matrix<T>::~Matrix()
     if (Work_qt_ptr)            delete [] Work_qt_ptr;
     if (Work_qr_ptr)            delete [] Work_qr_ptr;
     if (first_index_set)        delete [] first_index_set;
+    if (first_index_row)        delete [] first_index_row;
 }
 
 
@@ -183,6 +185,7 @@ Matrix<T>::Init_Preconditioner(Matrix<T> *&M,
     M->Work_qt_ptr = new double[QT_SIZE*max_arg];
 
     M->first_index_set = new int[n*max_arg];
+    M->first_index_row = new int[n*max_arg];
 
 }
 
@@ -692,7 +695,7 @@ Matrix<T>::Convert_Matrix_to_Mat(MPI_Comm comm, Matrix<double> *B, Mat **PB)
 		{
 			for (k=0; k<B->c_lines->len_cols[i]; k++){
 				global_col = B->c_lines->col_idcs[i][k];
-				if ((global_col >= first_diag_col) & (global_col < last_diag_col))
+				if ((global_col >= first_diag_col) && (global_col < last_diag_col))
 					d_nnz[i]++;
 				else
 					o_nnz[i]++;
@@ -731,6 +734,98 @@ Matrix<T>::Convert_Matrix_to_Mat(MPI_Comm comm, Matrix<double> *B, Mat **PB)
 	}
 
 		
+template <> PetscErrorCode
+Matrix<double>::Convert_Matrix_Block_to_Mat_Block(MPI_Comm comm, Matrix<double> *B, Mat *PB)
+	{
+    //Matrix must have a constant block size
+		PetscErrorCode	ierr;
+    printf("Debut : my id : %d\n", B->my_id);
+		int            m,n,M,N;
+		int            *d_nnz,*o_nnz;
+		int            global_row,global_col,first_diag_col,last_diag_col,bs;
+    PetscScalar    *val = NULL;
+    Mat             A;
+		
+		PetscFunctionBegin;
+		/*
+		if (*PB)
+			MatDestroy(*PB);
+*/
+    bs = B->block_size;
+    printf("bs : %d\n", bs);
+
+    n = B->my_nbr_cols;
+    m = n;
+
+		/* Determine preallocation for MaPBtCreateMPIAIJ */
+    
+		ierr = PetscMalloc1(m, &d_nnz);
+		ierr = PetscMalloc1(m, &o_nnz);
+
+
+		for (int i=0; i<m; i++)
+    {
+			d_nnz[i] = 0; 
+      o_nnz[i] = 0;
+    }
+		first_diag_col = B->my_start_idx;
+		last_diag_col = first_diag_col + B->my_nbr_cols;
+	
+		for (int i=0; i<B->my_nbr_cols; i++)
+		{
+			for (int k=0; k<B->c_lines->len_cols[i]; k++){
+				global_col = B->c_lines->col_idcs[i][k];
+				if ((global_col >= first_diag_col) & (global_col < last_diag_col))
+					d_nnz[i]++;
+				else
+					o_nnz[i]++;
+			}
+		}
+    
+		for (int i=0; i<B->my_nbr_cols; i++)
+    {
+      printf("row : %d, d_nnz : %d, o_nnz : %d\n", i + B->my_start_idx, d_nnz[i], o_nnz[i]);
+    }
+
+		M = N = B->n;
+
+		//ierr = MatCreate(PETSC_COMM_WORLD, &A);CHKERRQ(ierr);
+		//ierr = MatSetSizes(*MP,m,n,M,N);CHKERRQ(ierr);
+		//ierr = MatSetType(A,MATBAIJ);CHKERRQ(ierr);
+		/* Here we only know how to create AIJ format */
+    ierr = MatCreateBAIJ(comm, bs, m, n, M, N, 0, d_nnz, 0, o_nnz, &A);
+    //ierr = MatCreateBAIJ(comm, bs, m, n, M, N, 20, NULL, 20, NULL, A);
+    //ierr = MatSetFromOptions(*PB);
+    //ierr = MatSetUp(A);
+		//ierr = MatCreate(comm,PB);CHKERRQ(ierr);
+		//ierr = MatSetSizes(*PB,m,n,M,N);CHKERRQ(ierr);
+		//ierr = MatSetType(*PB,MATAIJ);CHKERRQ(ierr);
+		//ierr = MatSeqAIJSetPreallocation(*PB,d_nz,d_nnz);CHKERRQ(ierr);
+		//ierr = MatMPIAIJSetPreallocation(*PB,d_nz,d_nnz,o_nz,o_nnz);CHKERRQ(ierr);
+		
+
+		for (int i=0; i<B->my_nbr_cols; i++)
+		{
+			global_row = B->my_start_idx+i;
+			for (int k=0; k<B->c_lines->len_cols[i]; k++)
+			{
+				global_col = B->c_lines->col_idcs[i][k];
+
+        printf("row : %d, col : %d\n", global_row, global_col);
+				val = B->c_lines->A[i];
+				ierr = MatSetValuesBlocked(A,1,&global_row,1,&global_col,val,ADD_VALUES);
+			}
+		}
+
+		ierr = PetscFree(d_nnz);
+		ierr = PetscFree(o_nnz);
+
+		ierr = MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
+		ierr = MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
+		PetscFunctionReturn(0);
+	}
+
+
 template <class T> 
 PetscErrorCode Matrix<T>::Convert_Mat_to_Matrix(MPI_Comm comm, Matrix<double> **B, Mat *A)
 {
@@ -1203,6 +1298,7 @@ void Matrix<T>::Find_Constant_Blocks(Matrix<T> *A, int block_size, int* &block_s
 
     if (odd_block)
       nblocks++;
+    
 
     block_sizes = new int[nblocks];
 

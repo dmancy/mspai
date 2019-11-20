@@ -107,4 +107,5 @@ Compressed_Lines<T>::~Compressed_Lines()
     if (row_idcs)   delete [] row_idcs;
     if (len_cols)   delete [] len_cols;
     if (len_rows)   delete [] len_rows;
+    if (len_scalar) delete [] len_scalar;
 }

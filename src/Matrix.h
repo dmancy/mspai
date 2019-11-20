@@ -215,6 +215,7 @@ class Matrix : public Matrix_Base
         T                   *bk_Hat;
 
         int                 *first_index_set;
+        int                 *first_index_row;
 
         /// Lapack buffers
         double              *Tau_ptr;
@@ -392,6 +393,7 @@ class Matrix : public Matrix_Base
         /////////////////////////////////////////////////////////
         static PetscErrorCode       Convert_Matrix_to_Mat(MPI_Comm comm, Matrix<double> *B, Mat **PB);
 
+        static PetscErrorCode Convert_Matrix_Block_to_Mat_Block(MPI_Comm comm, Matrix<double> *B, Mat *PB);
 
 
 
@@ -435,7 +437,7 @@ class Matrix : public Matrix_Base
         static int Check_Next_Run(Matrix<T> *A, int i, int i_next, int bs);
 
 
-    private:
+//    private:
 
         /////////////////////////////////////////////////////////
         ///     \brief  Counting the nnz elements of

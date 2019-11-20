@@ -77,12 +77,12 @@ PetscErrorCode PC_MSPAI::PCSetUp_MSPAI(Mat A)
 		A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, &A); 
 	}
 
-		A_REAL->Write_Matrix_To_File(A_REAL, "A.mtx");
+		//A_REAL->Write_Matrix_To_File(A_REAL, "A.mtx");
     Matrix<double> *B;
    
     B = Matrix<double>::Convert_Block_Matrix(A_REAL, 0, 10000,0);
 
-		B->Write_Matrix_To_File(B, "B.mtx");
+		//B->Write_Matrix_To_File(B, "B.mtx");
 
     delete A_REAL;
     A_REAL = B;

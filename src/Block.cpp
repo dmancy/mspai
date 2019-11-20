@@ -126,7 +126,7 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
   //Sweep sub block columns in a processor
   //
   jb = 0;
-  for (int startj=0; jb<max_block_columns; startj += block_sizes_local[jb], jb++)
+  for (int startj=0; jb<max_block_columns; jb++)
   {
     if (jb < B->my_nbr_cols)
     {
@@ -196,6 +196,7 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
         }
       }
     }
+  startj += block_sizes_local[jb];
   }
 
   /*i and j : column and row indices in the scalar matrix
@@ -375,6 +376,7 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
 	B->remote_row_idcs_buf = new int[B->max_nnz];
 	memset(B->remote_row_idcs_buf, 0, B->max_nnz * sizeof(int));
 
+
   delete [] fullcol;
   delete [] block_bitvec;
   delete [] block_start;
@@ -382,6 +384,157 @@ Matrix<double> *Convert_To_Block_Matrix(Matrix<double> *A, int nblocks_local, in
 
   return B;
 }
+
+Matrix<double> *Scalar_Matrix(Matrix<double> *B)
+{
+  int mnl = 0, m, n;
+  int start_index, len, height;
+  int *block_start = NULL;
+  int jstart, istart, jb_global, ib_global, i_global, next, j_val;
+  double val;
+  double *Aval = NULL;
+  int max_nnz = 0, this_nz;
+
+
+  Matrix<double> *S = NULL;
+  S = new Matrix<double>(B->world);
+
+  for (int j = 0; j < B->my_nbr_cols; j++)
+  {
+      mnl += B->block_sizes[j + B->my_start_idx];
+  }
+
+  S->my_nbr_cols = mnl;
+
+  S->all_nbr_cols = new int[B->num_procs];
+
+  // Filling all_nbr_cols
+  MPI_Barrier(B->world);
+  MPI_Allgather(static_cast<void *>(&mnl), 1, MPI_INT,
+                static_cast<void *>(S->all_nbr_cols), 1, MPI_INT,
+                B->world);
+
+  S->n = 0;
+  for (int i = 0; i < S->num_procs; i++)
+      S->n += S->all_nbr_cols[i];
+
+  /* Only scalar matrices so far */
+  S->m = S->n;
+
+
+  S->start_indices = new int[S->num_procs];
+  S->start_indices[0] = 0;
+  for (int pe = 1; pe < S->num_procs; pe++)
+    S->start_indices[pe] = S->start_indices[pe-1] + S->all_nbr_cols[pe-1];
+
+  S->my_start_idx = S->start_indices[S->my_id];
+
+  S->pe = new int[S->n];
+  for (int pe = 0; pe < S->num_procs; pe++)
+  {
+    start_index = S->start_indices[pe];
+    for (int i = 0; i <S->all_nbr_cols[pe]; i++)
+    {
+      S->pe[start_index + i] = pe;
+    }
+  }
+
+  S->block_size = 1;
+  S->max_block_size = 1;
+  S->block_sizes = new int[S->n];
+
+  for (int i = 0; i < S->n; i++)
+    S->block_sizes[i] = 1;
+
+  S->c_lines = new Compressed_Lines<double>(S->my_nbr_cols, 0); // No row structure
+
+  block_start = B->first_index_set;
+  block_start[0] = 0;
+  for (int ib = 1; ib < B->n; ib++)
+    block_start[ib] = block_start[ib-1] + B->block_sizes[ib-1];
+
+  /* i and j are local row and column indices into the scalar matrix.
+   *      ib and jb are local row and column indices into the block matrix */
+  jb_global = B->my_start_idx;
+  jstart = 0;
+
+  for (int jb = 0; jb < B->my_nbr_cols; jb++)
+  {
+
+    n = B->block_sizes[jb_global];
+    /* Determine the scalar length of block column jb */
+    height = 0;
+
+    for (int kb = 0; kb < B->c_lines->len_cols[jb]; kb++)
+    {
+      ib_global = B->c_lines->col_idcs[jb][kb];
+      height += B->block_sizes[ib_global];
+    }
+
+    /* Allocate Scalar columns in S associated with block column jb */
+    for (int j = jstart; j < jstart + B->block_sizes[jb_global]; j++)
+    {
+      S->c_lines->col_idcs[j] = new int[height];
+      S->c_lines->A[j] = new double[height];
+      S->c_lines->len_cols[j] = 0;
+    }
+
+    /* Install values associaed with block column jb */
+
+    next = 0;
+    for (int kb = 0; kb < B->c_lines->len_cols[jb]; kb++)
+    {
+      Aval = &(B->c_lines->A[jb][next]);
+      ib_global = B->c_lines->col_idcs[jb][kb];
+      istart = block_start[ib_global];
+      m = B->block_sizes[ib_global];
+
+      for (int col = 0; col < n; col++)
+      {
+        for (int row = 0; row < m; row++)
+        {
+          val = Aval[col*m + row];
+          if (val != 0.0)
+          {
+            j_val = jstart + col;
+            i_global = istart + row;
+            len = S->c_lines->len_cols[j_val]++;
+            S->c_lines->col_idcs[j_val][len] = i_global;
+            S->c_lines->A[j_val][len] = val;
+          }
+        }
+      }
+      next += m*n;
+    }
+    jstart += B->block_sizes[jb_global];
+    jb_global++;
+  }
+
+
+  /* Max nnz calculation */
+  B->max_nnz = B->Count_NNZ();
+/*
+  for (int j = 0; j < B->my_nbr_cols; j++)
+  {
+    this_nz = 0;
+    for (int k = 0; k < B->c_lines->len_cols[j]; k++)
+    {
+      i_global = B->c_lines->col_idcs[j][k];
+      this_nz++;
+    }
+    
+    if (this_nz > max_nnz)
+        max_nnz = this_nz;
+
+  }
+
+  MPI_Barrier(B->world);
+  MPI_Allreduce(static_cast<void *> (&max_nnz), static_cast<void *> (&(B->max_nnz)), 1, MPI_INT, MPI_MAX, B->world);
+*/
+ return S; 
+}
+  
+  
 
 
 

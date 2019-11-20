@@ -81,7 +81,7 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
     // Extract pattern from pattern matrix  
     // Create the Index Set J    
     o_comm.Get_P_Col(A, M, B, P, UP, col, J);
-    
+
     //step is -1 because the first improvement step is 
     // only the static SPAI
     for (int step = -1; step < max_impr_steps; step++)
@@ -94,58 +94,18 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         I = o_sub.Get_I_Set(J, A, M, B, P, UP, U_UP, 
                             ht, pre_k_param, pre_max_param,
                             bitvec, reset_vec);   
-        /*
-        if (!A->my_id)
-        {
-        printf("A_my_id : %d, Index_Set\n", A->my_id);
-        J->Print_Index_Set("J");
-        I->Print_Index_Set("I");
-        }
-
-*/
         // Create the submatrix A_Hat = A(I;J) and update the 
         // The index of the unit vector
         A_Hat = o_sub.Create_Submatrix_AHat_Block(
                                 A, M, B, P, UP, U_UP,
                                 J, I, col, m, n, ht, nnz,
                                 pre_k_param, pre_max_param);
-        /*
-        
-        if (!A->my_id)
-        {
-          for (int i = 0; i <m*n; i++)
-            printf("A hat [%d] = %f\n", i , A_Hat[i]);
-        }
-       */
-       /* 
-        A_Hat = o_sub.Create_Submatrix_AHat(
-                                A, M, B, P, UP, U_UP,
-                                J, I, m, n, ht, nnz,
-                                pre_k_param, pre_max_param);
-                                */
-    /*
-      */
         // Create the unit vector
         // Notice that the name is the solution name already.         
-        /*
-        if (B)
-            mk_Hat = o_sub.Create_bk_Hat(A, M, B, P, UP,
-                                         I, I->len, col);
-        else
-        */
-    //printf("len 1 : %d, len 2 : %d\n", I->len, I->slen * A->block_sizes[col]);
- //           mk_Hat = o_sub.Create_ek_Hat(I, I->len, col, unit_idx);             
         
             
           mk_Hat = o_sub.Create_ek_Hat_Block(I, A, M, I->slen * A->block_sizes[col], col, unit_idx);             
-/*
-        if (!A->my_id)
-        {
-          for (int i = 0; i <I->slen * A->block_sizes[col]; i++)
-            printf("mk hat [%d] = %f\n", i , mk_Hat[i]);
-        }
-  */          
-            
+
 
         // Copy the unit vector. This is used for 
         // computing the residual vector later 
@@ -153,7 +113,6 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         bk_Hat = M->bk_Hat;
         memcpy(bk_Hat, mk_Hat, I->slen * A->block_sizes[col]);
 
-       // bk_Hat = o_sub.Copy_Vector(mk_Hat, I->len);
         
         // Computing solution m_k which is stored within
         // mk_Hat.
@@ -162,6 +121,7 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         Approximative_Solution_Block( A_Hat, M->A_Hat_buffer, M, m, n,
                                 mk_Hat, I, A->block_sizes[col]);
 
+
         // Extract solution values
        // mk_Hat = o_sub.Get_Solution_Vals(mk_Hat, J);
 
@@ -169,14 +129,8 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         memcpy(M->mk_Hat_buffer, mk_Hat, I->slen * A->block_sizes[col] * sizeof(T));
 
         o_sub.Get_Solution_Vals_Block(M->mk_Hat_buffer, mk_Hat, M, A, col, J, I->slen);
-    /*    
-        if (!A->my_id)
-        {
-        printf("A_my_id : %d, solution\n", A->my_id);
-    for (int k = 0; k < J->slen * A->block_sizes[col]; k++)
-      printf("solution[%d] = %.13e\n", k, mk_Hat[k]);
-        }
-      */
+
+        
         // Computing the residual vector
         // and the frobenius norm of it
         /*
@@ -207,35 +161,24 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
             break;
 
         
-//        delete [] mk_Hat;
-       // delete [] A_Hat;
-   //     delete [] bk_Hat;
-        //delete I;
     }
     
     //Inserting solution row into preconditioner
     o_comm.Insert_Row_Solution_Block(  A, M, B, P, UP, col, 
                                  mk_Hat, J);
 
-
-    //Free heap storage last time
-  //  if (mk_Hat)     delete [] mk_Hat;
-//    if (bk_Hat)     delete [] bk_Hat;
-    //if (A_Hat)      delete [] A_Hat;
-    //delete I;
-    //delete J;
 }
 
 
 template<class T>   void
 Spai_Unrestrained<T>::Approximative_Solution_Block( T*      A_Hat_orig, 
-                                              T*      A_Hat_of_M,
-                                              Matrix<T>*  M,
-                                              int&    m, 
-                                              int&    n, 
-                                              T*&     mk_Hat,
-                                              const   Index_Set* I,
-                                              const int block_size_col)
+                                                    T*      A_Hat_of_M,
+                                                    Matrix<T>*  M,
+                                                    int&    m, 
+                                                    int&    n, 
+                                                    T*&     mk_Hat,
+                                                    const   Index_Set* I,
+                                                    const int block_size_col)
 {
     
     int         lda      = 0,
