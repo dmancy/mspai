@@ -1,4 +1,7 @@
 
+#ifndef IMSPAI_H
+#define IMSPAI_H
+
 //file includings
 #include "Read_mm_Matrix.h"
 #include "Command_Line.h"
@@ -18,9 +21,6 @@
 //PETSc includings
 #include <petscksp.h>
 #include <petsc/private/pcimpl.h>
-
-#ifndef IMSPAI_H
-#define IMSPAI_H
 
 
 class PC_MSPAI

@@ -5,25 +5,7 @@ static char help[] = "Solves a linear system in parallel with KSP.\n\
    
 
 //file includings
-#include "Read_mm_Matrix.h"
-#include "Command_Line.h"
-#include "Matrix.h"
-#include "Pattern.h"
-#include "Timer.h"
-#include "Switch_Algorithm.h"
-#include "Pattern_Switch.h"
-#include "Macros.h"
-#include "bspai.h"
-
-//C++ includings
-#include <iostream>
-#include <stdexcept>
-#include <mpi.h>
-#include <mkl.h>
-
-//PETSc includings
-#include <petscksp.h>
-#include "PetscShell.h"
+#include "main.h"
 
 double T;
 
@@ -46,7 +28,7 @@ int main(int argc,char **args)
   PetscReal      norm, *residual = NULL, time=0;      /* norm of solution error */
   PC_MSPAI 	 *mspai = NULL;
   PetscScalar    v,one = 1.0,none = -1.0;
-  PetscInt       i,j,Ii,J,Istart,Iend,m = 11,n = 78,its, na=10000, rank;
+  PetscInt       i,j,Ii,J,Istart,Iend,m = 11,n = 78, na=10000, rank;
   PetscErrorCode ierr;
   PetscBool      user_defined_pc = PETSC_FALSE;
   PetscOptionItems opt;
@@ -69,9 +51,9 @@ int main(int argc,char **args)
   /* Read the marix file mat.mtx */
   
   PetscViewer fd;
- ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,"orsirr_2_T.dat",FILE_MODE_READ,&fd);CHKERRQ(ierr);
+ //ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,"orsirr_2_T.dat",FILE_MODE_READ,&fd);CHKERRQ(ierr);
  // ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,"shyy161.mtx_76480x76480_329762nnz.gz",FILE_MODE_READ,&fd);CHKERRQ(ierr);
-//  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,"visc-naca_lhs.pmat",FILE_MODE_READ,&fd);CHKERRQ(ierr);
+  ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,"visc-naca_lhs.pmat",FILE_MODE_READ,&fd);CHKERRQ(ierr);
   ierr = MatCreate(PETSC_COMM_WORLD,&A);CHKERRQ(ierr);
   ierr = MatLoad(A,fd);CHKERRQ(ierr);
   ierr = PetscViewerDestroy(&fd);CHKERRQ(ierr);
@@ -298,10 +280,10 @@ int MyKSPMonitor(KSP ksp, int n, PetscReal rnorm, void *dummy)
 	t2 = MPI_Wtime();
 	time += t2-t1;
 
-	PetscPrintf(PETSC_COMM_WORLD, "Iteration %d , Residual norm : %.12e , Time : %f \n", n, norm, t1-T-time);
+	ierr = PetscPrintf(PETSC_COMM_WORLD, "Iteration %d , Residual norm : %.12e , Time : %f \n", n, norm, t1-T-time);
 
 //	PetscPrintf(PETSC_COMM_WORLD, "Iteration %d , Residual norm : %.12e , Time : %f \n", n, rnorm, t1-T);
-	return 0;
+	return ierr;
 }
 
 

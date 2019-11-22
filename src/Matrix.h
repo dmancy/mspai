@@ -149,6 +149,7 @@ inline int comp (const void * elem1, const void * elem2);
 inline void kLargest(Row_sparsify arr[], int n, int k);
 
 
+void write_block(FILE *fptr, double *a, int m, int n);
 
 //////////////////////////////////////////
 ///     \class Matrix
@@ -270,8 +271,7 @@ class Matrix : public Matrix_Base
         ///     \param file The file where the matrix
         ///                 should be printed to
         /////////////////////////////////////////////////////////
-        void        Write_Matrix_To_File(   Matrix<double>  *matrix,
-                                            char            *file);
+        void        Write_Matrix_To_File(char            *file);
 
 
         //================================================================
@@ -435,6 +435,10 @@ class Matrix : public Matrix_Base
         static int Find_Diagonal_Block( Matrix<T> *A, int i, int upper_bs_limit);
         static int Initial_Run_Length(Matrix<T> *A, int i);
         static int Check_Next_Run(Matrix<T> *A, int i, int i_next, int bs);
+
+
+        Matrix<T> *Convert_To_Block_Matrix(int nblocks_local, int *block_sizes_local);
+        Matrix<T> *Scalar_Matrix(void);
 
 
 //    private:

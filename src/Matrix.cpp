@@ -168,10 +168,99 @@ Matrix<double>::Print_Matrix_Human_Readable(const Matrix<double>    *matrix,
 }
 
 
+template <> PetscErrorCode
+Matrix<double>::Convert_Matrix_Block_to_Mat_Block(MPI_Comm comm, Matrix<double> *B, Mat *PB)
+	{
+    //Matrix must have a constant block size
+		PetscErrorCode	ierr;
+    printf("Debut : my id : %d\n", B->my_id);
+		int            m,n,M,N;
+		int            *d_nnz,*o_nnz;
+		int            global_row,global_col,first_diag_col,last_diag_col,bs;
+    PetscScalar    *val = NULL;
+    Mat             A;
+		
+		PetscFunctionBegin;
+		/*
+		if (*PB)
+			MatDestroy(*PB);
+*/
+    bs = B->block_size;
+    printf("bs : %d\n", bs);
+
+    n = B->my_nbr_cols;
+    m = n;
+
+		/* Determine preallocation for MaPBtCreateMPIAIJ */
+    
+		ierr = PetscMalloc1(m, &d_nnz);
+		ierr = PetscMalloc1(m, &o_nnz);
+
+
+		for (int i=0; i<m; i++)
+    {
+			d_nnz[i] = 0; 
+      o_nnz[i] = 0;
+    }
+		first_diag_col = B->my_start_idx;
+		last_diag_col = first_diag_col + B->my_nbr_cols;
+	
+		for (int i=0; i<B->my_nbr_cols; i++)
+		{
+			for (int k=0; k<B->c_lines->len_cols[i]; k++){
+				global_col = B->c_lines->col_idcs[i][k];
+				if ((global_col >= first_diag_col) & (global_col < last_diag_col))
+					d_nnz[i]++;
+				else
+					o_nnz[i]++;
+			}
+		}
+    
+		for (int i=0; i<B->my_nbr_cols; i++)
+    {
+      printf("row : %d, d_nnz : %d, o_nnz : %d\n", i + B->my_start_idx, d_nnz[i], o_nnz[i]);
+    }
+
+		M = N = B->n;
+
+		//ierr = MatCreate(PETSC_COMM_WORLD, &A);CHKERRQ(ierr);
+		//ierr = MatSetSizes(*MP,m,n,M,N);CHKERRQ(ierr);
+		//ierr = MatSetType(A,MATBAIJ);CHKERRQ(ierr);
+		/* Here we only know how to create AIJ format */
+    ierr = MatCreateBAIJ(comm, bs, m, n, M, N, 0, d_nnz, 0, o_nnz, &A);
+    //ierr = MatCreateBAIJ(comm, bs, m, n, M, N, 20, NULL, 20, NULL, A);
+    //ierr = MatSetFromOptions(*PB);
+    //ierr = MatSetUp(A);
+		//ierr = MatCreate(comm,PB);CHKERRQ(ierr);
+		//ierr = MatSetSizes(*PB,m,n,M,N);CHKERRQ(ierr);
+		//ierr = MatSetType(*PB,MATAIJ);CHKERRQ(ierr);
+		//ierr = MatSeqAIJSetPreallocation(*PB,d_nz,d_nnz);CHKERRQ(ierr);
+		//ierr = MatMPIAIJSetPreallocation(*PB,d_nz,d_nnz,o_nz,o_nnz);CHKERRQ(ierr);
+		
+
+		for (int i=0; i<B->my_nbr_cols; i++)
+		{
+			global_row = B->my_start_idx+i;
+			for (int k=0; k<B->c_lines->len_cols[i]; k++)
+			{
+				global_col = B->c_lines->col_idcs[i][k];
+
+        printf("row : %d, col : %d\n", global_row, global_col);
+				val = B->c_lines->A[i];
+				ierr = MatSetValuesBlocked(A,1,&global_row,1,&global_col,val,ADD_VALUES);
+			}
+		}
+
+		ierr = PetscFree(d_nnz);
+		ierr = PetscFree(o_nnz);
+
+		ierr = MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
+		ierr = MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
+		PetscFunctionReturn(0);
+	}
 
 template<> void 
-Matrix<double>::Write_Matrix_To_File( Matrix<double> *matrix,
-                                      char           *file)
+Matrix<double>::Write_Matrix_To_File(char           *file)
 {
     int         row,
                 col,    
@@ -533,4 +622,28 @@ Matrix<COMPLEX>::Write_Matrix_To_File(Matrix<COMPLEX> *matrix,
     // Stop time measurement
     o_timer.Stop_Timer();
     o_timer.Report_Time(world);
+}
+
+
+
+void write_block(FILE *fptr, double *a, int m, int n)
+{
+  double val;
+  static int count = 0;
+  const char *str;
+  for (int i=0; i<m; i++)
+  {
+    for (int j=0; j<n; j++)
+    {
+      val = a[i+m*j];
+      if (val < 0.0) 
+          str = " ";
+      else
+          str = "  ";
+
+      fprintf(fptr, "%s%.13e", str, val);
+      count += 1;
+    }
+    fprintf(fptr, "\n");
+  }
 }

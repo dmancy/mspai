@@ -36,7 +36,39 @@ static char help[] = "MSPAI algorithm";
 
 
 
-int bspai(PC_MSPAI* mspai)
+int bspai(Matrix<double>   *&A_REAL,
+          Matrix<double>   *&M_REAL,
+          Matrix<double>   *&B_REAL,
+          Matrix<double>   *&C_REAL,
+          Mat         *&PM,
+          char  *target_file,
+          char  *probing_Be_file,
+          char  *pattern_file,
+          char  *output_file,
+          char  *u_pattern_file,
+          bool& use_prob,
+          bool& use_mean,
+          int& use_schur,
+          int&  target_param,
+          int&  pattern_param,
+          int&  prob_Ce_N,
+          int&  nb_pwrs,
+          int&  u_pattern_param,
+          int&  opt_level,
+          int&  qr,
+          double&  fillgrade_param,
+          int&  cache_param,
+          double&  epsilon_param,
+          int&  maxnew_param,
+          int&  max_impr_steps,
+          int&  hash_param,
+          int&  pre_k_param,
+          int&  pre_max_param,
+          int&  block_size,
+          int&  write_param,
+          bool&  left_prec,
+          double& rho_param,
+          int&  verbose)
 {
     // SPAI controling parameters
          
@@ -57,11 +89,11 @@ int bspai(PC_MSPAI* mspai)
     MPI_Comm_size(MPI_COMM_WORLD,&num_procs);
     MPI_Comm_rank(MPI_COMM_WORLD,&my_id);
 
-   bool symmetric_system = mspai->A_REAL->symmetric;
+   bool symmetric_system = A_REAL->symmetric;
 
    
 
-   if (mspai->verbose)
+   if (verbose)
    {
         if(my_id == 0)
         {
@@ -73,7 +105,7 @@ int bspai(PC_MSPAI* mspai)
         }
         
                     // Start time measurement
-		    if (mspai->verbose)
+		    if (verbose)
 		    {
 			    o_timer = Timer();
 			    o_timer.Start_Timer();
@@ -95,7 +127,7 @@ int bspai(PC_MSPAI* mspai)
                     }
    }
             Read_mm_Matrix o_rm;
-		    if (mspai->verbose)
+		    if (verbose)
                     {
                         // Reading data input and generating the 
                         // target matrix B
@@ -107,23 +139,23 @@ int bspai(PC_MSPAI* mspai)
                         }
 		    }
 			
-                    o_rm.Read_Target_File(mspai->A_REAL,
-                                          mspai->target_file, 
-                                          mspai->probing_Be_file, 
-                                          mspai->use_prob, 
-                                          mspai->use_schur,
-                                          mspai->B_REAL,
-                                          mspai->prob_Ce_N,
-                                          mspai->target_param,
-                                          mspai->rho_param,
-					  mspai->verbose,
+                    o_rm.Read_Target_File(A_REAL,
+                                          target_file, 
+                                          probing_Be_file, 
+                                          use_prob, 
+                                          use_schur,
+                                          B_REAL,
+                                          prob_Ce_N,
+                                          target_param,
+                                          rho_param,
+					                                verbose,
                                           MPI_COMM_WORLD);
 					      
                     
 
                     
                     // Reading pattern file and generating pattern
-		    if (mspai->verbose)
+		    if (verbose)
 		    {
 			    if(my_id == 0)
 			    {
@@ -134,22 +166,22 @@ int bspai(PC_MSPAI* mspai)
 
 
                     Pattern_Switch<double> o_ps;
-                    P = o_ps.Generate_Pattern(mspai->A_REAL,
-                                              mspai->pattern_file,
-                                              mspai->pattern_param,
-                                              mspai->use_schur,
-                                              mspai->prob_Ce_N,
-                                              mspai->use_prob,
-					      mspai->nb_pwrs,
-					      mspai->verbose);
+                    P = o_ps.Generate_Pattern(A_REAL,
+                                              pattern_file,
+                                              pattern_param,
+                                              use_schur,
+                                              prob_Ce_N,
+                                              use_prob,
+                                              nb_pwrs,
+                                              verbose);
 
                     
                     // Does user wants any upper pattern?
-                    if (mspai->u_pattern_param < 3)
+                    if (u_pattern_param < 3)
                     {
                         // Reading upper pattern file and generating 
                         // upper pattern
-			if (mspai->verbose)
+			if (verbose)
 			{
 				if (my_id == 0)
 				{
@@ -158,19 +190,19 @@ int bspai(PC_MSPAI* mspai)
 				}
 			}
 
-                        UP = o_ps.Generate_Pattern(mspai->A_REAL,
-                                                   mspai->u_pattern_file,
-                                                   mspai->u_pattern_param,
-                                                   mspai->use_schur,
-                                                   mspai->prob_Ce_N,
-                                                   mspai->use_prob,
-						   mspai->nb_pwrs,
-						   mspai->verbose);
+                        UP = o_ps.Generate_Pattern(A_REAL,
+                                                   u_pattern_file,
+                                                   u_pattern_param,
+                                                   use_schur,
+                                                   prob_Ce_N,
+                                                   use_prob,
+                                                   nb_pwrs,
+                                                   verbose);
                     }              
 
                     // Checking optimization level and getting the 
                     // requested SPAI algorithm
-		    if (mspai->verbose)
+		    if (verbose)
 		    {
 			    if(my_id == 0)
 				std::cout << "\n\t* Checking opimization level... " 
@@ -179,16 +211,16 @@ int bspai(PC_MSPAI* mspai)
                     Switch_Algorithm<double> o_alg;
                     Spai<double>* alg_ptr  = 
                             o_alg.Get_Algorithm(my_id,
-                                                mspai->opt_level, 
-                                                mspai->cache_param,
-                                                mspai->qr,
-                                                mspai->fillgrade_param,
-						mspai->verbose);
+                                                opt_level, 
+                                                cache_param,
+                                                qr,
+                                                fillgrade_param,
+                                                verbose);
  
                     
                     // Compute the preconditioner with requested 
                     // SPAI algorithm for real matrices
-		    if (mspai->verbose)
+		    if (verbose)
 		    {
 			    if(my_id == 0)
 			    {
@@ -197,57 +229,58 @@ int bspai(PC_MSPAI* mspai)
 			    }
 		    }
 
-                    alg_ptr->SPAI_Algorithm(mspai->A_REAL, 
-                                            mspai->M_REAL,
-                                            mspai->B_REAL,
+                    alg_ptr->SPAI_Algorithm(A_REAL, 
+                                            M_REAL,
+                                            B_REAL,
                                             P,
                                             UP,
-                                            mspai->epsilon_param,
-                                            mspai->maxnew_param,
-                                            mspai->max_impr_steps,
-                                            mspai->hash_param,
-                                            mspai->use_mean,
-                                            mspai->pre_k_param,
-                                            mspai->pre_max_param,
-				                              	    mspai->verbose);
+                                            epsilon_param,
+                                            maxnew_param,
+                                            max_impr_steps,
+                                            hash_param,
+                                            use_mean,
+                                            pre_k_param,
+                                            pre_max_param,
+				                              	    verbose);
                     
-          if (mspai->write_param)
+          if (write_param)
           {
-            if (mspai->verbose)
+            if (verbose)
             {
                 // Write preconditioner to file
                 if(my_id == 0)
                 {
                   std::cout << "\n\t* Writing solution to file " +
-                         std::string(mspai->output_file) + "...";
+                         std::string(output_file) + "...";
                   std::cout.flush();
                 }
 		        }
 
-				    mspai->M_REAL->Write_Matrix_To_File(mspai->M_REAL, "precond.mtx");
+				    M_REAL->Write_Matrix_To_File("precond.mtx");
+				    A_REAL->Write_Matrix_To_File("A.mtx");
 
            }
 
 		  //    mspai->M_REAL->Write_Matrix_To_File(mspai->M_REAL, "precond_block.mtx");
           Matrix<double> *Scalar = NULL;
 
-          if (mspai->A_REAL->block_size != 1)
+          if (A_REAL->block_size != 1)
           {
-              Scalar = Scalar_Matrix(mspai->M_REAL);
-              delete mspai->M_REAL;
+              Scalar = M_REAL->Scalar_Matrix();
+              delete M_REAL;
 
-              mspai->M_REAL = Scalar;
+              M_REAL = Scalar;
           }
-		//      mspai->M_REAL->Write_Matrix_To_File(mspai->M_REAL, "precond_scalar.mtx");
+		      M_REAL->Write_Matrix_To_File("precond_scalar.mtx");
 
                     
-		    Matrix<double>::Convert_Matrix_to_Mat(mspai->A_REAL->world, mspai->M_REAL, &(mspai->PM));
+		    Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL, &(PM));
 
-		    if (!(mspai->left_prec))
-			    ierr = MatTranspose(*(mspai->PM), MAT_INITIAL_MATRIX, mspai->PM);
+		    if (!(left_prec))
+			    ierr = MatTranspose(*(PM), MAT_INITIAL_MATRIX, PM);
 
         // Stop time measurement
-        if (mspai->verbose)
+        if (verbose)
 		    { 
 			    if (my_id == 0)
 				  std::cout << "\t\t\t\t_____________________________________\n"
@@ -261,7 +294,7 @@ int bspai(PC_MSPAI* mspai)
     delete P;
     delete UP;  
                 
-    if (mspai->verbose)
+    if (verbose)
     {
       if(my_id == 0)
       {
@@ -274,33 +307,27 @@ int bspai(PC_MSPAI* mspai)
     
     MPI_Barrier(MPI_COMM_WORLD);
 
-    //Matrix<double> *B;
-   
-		//mspai->M_REAL->Write_Matrix_To_File(mspai->M_REAL, "precond.mtx");
-    //B = Matrix<double>::Convert_Block_Matrix(mspai->A_REAL, 2, 100000,0);
-
-	//	B->Write_Matrix_To_File(B, "B.mtx");
-  if (mspai->A_REAL)
+  if (A_REAL)
   {
-	  delete mspai->A_REAL;
-    mspai->A_REAL = NULL;
+	  delete A_REAL;
+    A_REAL = NULL;
   }
-  if (mspai->B_REAL)
+  if (B_REAL)
   {
-	  delete mspai->B_REAL;
-    mspai->B_REAL = NULL;
+	  delete B_REAL;
+    B_REAL = NULL;
   }
 
-  if (mspai->M_REAL)
+  if (M_REAL)
   {
-	  delete mspai->M_REAL;
-    mspai->M_REAL = NULL;
+	  delete M_REAL;
+    M_REAL = NULL;
   }
 
-  if (mspai->C_REAL)
+  if (C_REAL)
   {
-	  delete mspai->C_REAL;
-    mspai->C_REAL = NULL;
+	  delete C_REAL;
+    C_REAL = NULL;
   }
     
     return EXIT_SUCCESS;
