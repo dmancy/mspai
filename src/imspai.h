@@ -11,7 +11,6 @@
 #include "Switch_Algorithm.h"
 #include "Pattern_Switch.h"
 #include "Macros.h"
-#include "bspai.h"
 
 //C++ includings
 #include <iostream>
@@ -58,6 +57,8 @@ class PC_MSPAI
 		PetscErrorCode PCSetWriteParam(const int& wp);
     PetscErrorCode PCSetBSParam(const int& bs);
 
+    int bspai(void);
+
 		PetscErrorCode PCSetCeVecs(Vec** vec, const int nb);
 		~PC_MSPAI();
 
@@ -74,38 +75,38 @@ class PC_MSPAI
 		Vec **prob_Ce;
 		
 	        double              epsilon_param,
-			            fillgrade_param,
-			            rho_param;
+                              fillgrade_param,
+                              rho_param;
 	    
-		char                *matrix_file,
-				    *pattern_file,
-				    *u_pattern_file,
-				    *probing_Ce_file,
-				    *probing_Be_file,
-				    *target_file,
-				    *output_file;
+		      char                *matrix_file,
+                              *pattern_file,
+                              *u_pattern_file,
+                              *probing_Ce_file,
+                              *probing_Be_file,
+                              *target_file,
+                              *output_file;
 		    
-		int                 maxnew_param,
-				    max_impr_steps,
-				    write_param,
-				    pattern_param,
-				    u_pattern_param,
-				    hash_param,
-				    cache_param,
-				    opt_level,
-				    qr,
-				    pre_k_param,
-				    pre_max_param,
-				    prob_Ce_N,
-				    target_param,
-				    use_schur,
-				    nb_pwrs,
-            block_size,
-				    verbose;
+		      int                 maxnew_param,
+                              max_impr_steps,
+                              write_param,
+                              pattern_param,
+                              u_pattern_param,
+                              hash_param,
+                              cache_param,
+                              opt_level,
+                              qr,
+                              pre_k_param,
+                              pre_max_param,
+                              prob_Ce_N,
+                              target_param,
+                              use_schur,
+                              nb_pwrs,
+                              block_size,
+                              verbose;
 				    
-		 bool               use_mean,
-				    use_prob,
-		 		    left_prec;
+		       bool               use_mean,
+                              use_prob,
+                              left_prec;
 
 };
 

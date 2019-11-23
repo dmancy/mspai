@@ -1,10 +1,5 @@
-
 #include "imspai.h"
 
-//C++ includings
-#include <iostream>
-#include <stdexcept>
-#include <mpi.h>
 
 std::stringstream   out_str;    
 
@@ -87,39 +82,7 @@ PetscErrorCode PC_MSPAI::PCSetUp_MSPAI(Mat A)
     delete A_REAL;
     A_REAL = B;
 
-bspai(A_REAL,
-      M_REAL,
-      B_REAL,
-      C_REAL,
-      PM,
-      target_file,
-      probing_Be_file,
-      pattern_file,
-      output_file,
-      u_pattern_file,
-      use_prob,
-      use_mean,
-      use_schur,
-      target_param,
-      pattern_param,
-      prob_Ce_N,
-      nb_pwrs,
-      u_pattern_param,
-      opt_level,
-      qr,
-      fillgrade_param,
-      cache_param,
-      epsilon_param,
-      maxnew_param,
-      max_impr_steps,
-      hash_param,
-      pre_k_param,
-      pre_max_param,
-      block_size,
-      write_param,
-      left_prec,
-      rho_param,
-      verbose); 
+    bspai();
 
 	return 0;
 
@@ -735,6 +698,274 @@ PetscErrorCode PC_MSPAI::PCSetBSParam(const int& bs)
 {
 	block_size = bs;
 	return 0;
+}
+
+
+int PC_MSPAI::bspai(void)
+{
+    // SPAI controling parameters
+         
+
+    int  my_id, num_procs;
+    
+            
+    Pattern         *P = NULL,
+                    *UP = NULL;
+                        
+    Timer           o_timer;
+    
+    Command_Line    o_cm;
+    PetscErrorCode  ierr;
+    PetscViewer fd;
+        
+    
+    MPI_Comm_size(MPI_COMM_WORLD,&num_procs);
+    MPI_Comm_rank(MPI_COMM_WORLD,&my_id);
+
+   bool symmetric_system = A_REAL->symmetric;
+
+   
+
+   if (verbose)
+   {
+        if(my_id == 0)
+        {
+            o_cm.Print_Short_License();
+            std::cout <<    "\n\t============================"
+                    "===============================" << std::endl;
+            std::cout << "\t===================   STARTING MSPAI   "
+                    "====================\n" << std::endl;
+        }
+        
+                    // Start time measurement
+		    if (verbose)
+		    {
+			    o_timer = Timer();
+			    o_timer.Start_Timer();
+		    }
+                    
+                    // Reading data input and generating the matrix A
+                    if(my_id == 0)
+                    {
+                        std::cout << "\t  Input is REAL!" << std::endl;
+                        if (symmetric_system)
+                        {
+                            std::cout << "\n\t    WARNING: Matrix is symmetric but\n";
+                            std::cout << "\t\t     in general MSPAI will not\n";
+                            std::cout << "\t\t     preserve symmetry.";
+                            std::cout << std::endl;
+                        }
+                        std::cout << "\n\t* Reading matrix data...\t\t ";
+                        std::cout.flush();
+                    }
+   }
+            Read_mm_Matrix o_rm;
+		    if (verbose)
+                    {
+                        // Reading data input and generating the 
+                        // target matrix B
+			
+                        if(my_id == 0) 
+                        {
+                            std::cout << "\n\t* Reading target matrix data...\t\t "; 
+                            std::cout.flush();
+                        }
+		    }
+			
+                    o_rm.Read_Target_File(A_REAL,
+                                          target_file, 
+                                          probing_Be_file, 
+                                          use_prob, 
+                                          use_schur,
+                                          B_REAL,
+                                          prob_Ce_N,
+                                          target_param,
+                                          rho_param,
+					                                verbose,
+                                          MPI_COMM_WORLD);
+					      
+                    
+
+                    
+                    // Reading pattern file and generating pattern
+		    if (verbose)
+		    {
+			    if(my_id == 0)
+			    {
+				std::cout << "\n\t* Generating pattern data...\t\t ";
+				std::cout.flush();
+			    }
+		    }
+
+
+                    Pattern_Switch<double> o_ps;
+                    P = o_ps.Generate_Pattern(A_REAL,
+                                              pattern_file,
+                                              pattern_param,
+                                              use_schur,
+                                              prob_Ce_N,
+                                              use_prob,
+                                              nb_pwrs,
+                                              verbose);
+
+                    
+                    // Does user wants any upper pattern?
+                    if (u_pattern_param < 3)
+                    {
+                        // Reading upper pattern file and generating 
+                        // upper pattern
+			if (verbose)
+			{
+				if (my_id == 0)
+				{
+				    std::cout << "\n\t* Generating upper pattern data...\t ";
+				    std::cout.flush();
+				}
+			}
+
+                        UP = o_ps.Generate_Pattern(A_REAL,
+                                                   u_pattern_file,
+                                                   u_pattern_param,
+                                                   use_schur,
+                                                   prob_Ce_N,
+                                                   use_prob,
+                                                   nb_pwrs,
+                                                   verbose);
+                    }              
+
+                    // Checking optimization level and getting the 
+                    // requested SPAI algorithm
+		    if (verbose)
+		    {
+			    if(my_id == 0)
+				std::cout << "\n\t* Checking opimization level... " 
+					  << std::endl;
+		    }
+                    Switch_Algorithm<double> o_alg;
+                    Spai<double>* alg_ptr  = 
+                            o_alg.Get_Algorithm(my_id,
+                                                opt_level, 
+                                                cache_param,
+                                                qr,
+                                                fillgrade_param,
+                                                verbose);
+ 
+                    
+                    // Compute the preconditioner with requested 
+                    // SPAI algorithm for real matrices
+		    if (verbose)
+		    {
+			    if(my_id == 0)
+			    {
+				std::cout << "\t* Computing SPAI...\t\t\t ";
+				std::cout.flush();
+			    }
+		    }
+
+                    alg_ptr->SPAI_Algorithm(A_REAL, 
+                                            M_REAL,
+                                            B_REAL,
+                                            P,
+                                            UP,
+                                            epsilon_param,
+                                            maxnew_param,
+                                            max_impr_steps,
+                                            hash_param,
+                                            use_mean,
+                                            pre_k_param,
+                                            pre_max_param,
+				                              	    verbose);
+                    
+                    P->Print_Pattern_Data();
+
+          if (write_param)
+          {
+            if (verbose)
+            {
+                // Write preconditioner to file
+                if(my_id == 0)
+                {
+                  std::cout << "\n\t* Writing solution to file " +
+                         std::string(output_file) + "...";
+                  std::cout.flush();
+                }
+		        }
+
+				    M_REAL->Write_Matrix_To_File("precond.mtx");
+				    A_REAL->Write_Matrix_To_File("A.mtx");
+
+           }
+				    
+
+          Matrix<double> *Scalar = NULL;
+
+          if (A_REAL->block_size != 1)
+          {
+              Scalar = M_REAL->Scalar_Matrix();
+              delete M_REAL;
+
+              M_REAL = Scalar;
+          }
+		      M_REAL->Write_Matrix_To_File("precond_scalar.mtx");
+
+                    
+		    Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL, &(PM));
+
+		    if (!(left_prec))
+			    ierr = MatTranspose(*(PM), MAT_INITIAL_MATRIX, PM);
+
+        // Stop time measurement
+        if (verbose)
+		    { 
+			    if (my_id == 0)
+				  std::cout << "\t\t\t\t_____________________________________\n"
+					     "\n\t\t\t\tTotal time: \t ";
+
+			    o_timer.Stop_Timer();
+			    o_timer.Report_Time(MPI_COMM_WORLD);
+		    }
+                    
+                    delete alg_ptr;
+    delete P;
+    delete UP;  
+                
+    if (verbose)
+    {
+      if(my_id == 0)
+      {
+          std::cout << "\n\n\t================   SUCCESSFULLY "
+                  "FINISHED   ================" << std::endl;
+          std::cout << "\t==========================="
+                  "================================\n" << std::endl;
+      }
+    }
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+
+  if (A_REAL)
+  {
+	  delete A_REAL;
+    A_REAL = NULL;
+  }
+  if (B_REAL)
+  {
+	  delete B_REAL;
+    B_REAL = NULL;
+  }
+
+  if (M_REAL)
+  {
+	  delete M_REAL;
+    M_REAL = NULL;
+  }
+
+  if (C_REAL)
+  {
+	  delete C_REAL;
+    C_REAL = NULL;
+  }
+    
+    return EXIT_SUCCESS;
 }
 
 

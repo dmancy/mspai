@@ -103,7 +103,6 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         // Create the unit vector
         // Notice that the name is the solution name already.         
         
-            
           mk_Hat = o_sub.Create_ek_Hat_Block(I, A, M, I->slen * A->block_sizes[col], col, unit_idx);             
 
 
@@ -133,6 +132,7 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
         
         // Computing the residual vector
         // and the frobenius norm of it
+        
         /*
         residual_norm = o_sub.Residual_Norm(
                                 A_Hat, m, n, 
@@ -140,6 +140,7 @@ Spai_Unrestrained<T>::SPAI_Column(Matrix<T> *A,
                                 residual_vals);
 */
         // Finishing conditions
+        
         if ( (residual_norm <= epsilon_param)   //residual good enough
              || (step == (max_impr_steps - 1))  // Don't delete solution,
            )                                    // No augment sparsity

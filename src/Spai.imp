@@ -94,6 +94,7 @@ Spai<T>::SPAI_Algorithm(Matrix<T>   *A,
     
     o_comm.Init();
     
+    MPI_Barrier(A->world);
     if (verbose)
     {
 	    // Start time measurement
@@ -102,7 +103,7 @@ Spai<T>::SPAI_Algorithm(Matrix<T>   *A,
     }
     
     
-    MPI_Barrier(A->world);
+    //MPI_Barrier(A->world);
     
     //Iterating over each column
     while(true)
@@ -110,6 +111,7 @@ Spai<T>::SPAI_Algorithm(Matrix<T>   *A,
         col = o_load.Grab_M_Col(A, M, B, P, UP);
         if (col < 0) 
             break; 
+        
         SPAI_Column(A, 
                     M, 
                     B,
@@ -126,6 +128,7 @@ Spai<T>::SPAI_Algorithm(Matrix<T>   *A,
                     pre_max_param, 
                     bitvec, 
                     reset_vec);
+                    
     }
     
     o_comm.Say_Im_Done(A, M, B, P, UP);

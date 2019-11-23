@@ -700,7 +700,7 @@ Com_Server<T>::Get_Col( Matrix<T>       *A,
         //inside upper pattern column because
         //start pattern is subset of upper pattern
                 
-        col_in_UUP = U_UP->Get_El_Idx(U_UP, col);
+        col_in_UUP = U_UP->Get_El_Idx(U_UP, col);  //Col is in the upper pattern
         
         begin = col_in_UUP - pre_k_param;
         
