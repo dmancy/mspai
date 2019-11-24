@@ -64,7 +64,7 @@ Spai<T>::SPAI_Algorithm(Matrix<T>   *A,
 
     //union of all upper pattern index sets
     Index_Set*      U_UP = NULL; 
-
+  
     
     // Does the user want to use a hash table?
     if (hash_param > 0) 
@@ -86,13 +86,57 @@ Spai<T>::SPAI_Algorithm(Matrix<T>   *A,
 
     memset(bitvec, 0, bitvec_size * sizeof(unsigned int));
     
+    PetscPrintf(A->world, "Pre communication : "); 
+    if (verbose)
+    {
+	    // Start time measurement
+	    o_timer = Timer();
+	    o_timer.Start_Timer();
+    }
     // Creating union of all pattern sets this
     // pe will have to compute if upper pattern 
     // was requested
+    UP = P;
+
+    //printf("Debut  nb col : %d\n", UP->my_nbr_cols);
     if (UP)
-        U_UP = o_sub.Union_UP(UP);      
+        U_UP = o_sub.Union_UP(UP, A->n/A->num_procs*2 );      
+    //U_UP->Print_Index_Set("UP");
     
+    //printf("Fini \n");
     o_comm.Init();
+
+
+    //printf("Init\n");
+    o_comm.Prereq_Col(A, 
+                      M,
+                      B,
+                      P,
+                      UP,
+                      U_UP,
+                      ht,
+                      pre_k_param,
+                      true,
+                      pre_max_param);
+    
+    o_comm.Say_Im_Done_Prefetching(A, M, B, P, UP);
+    //printf("Done\n");
+
+    // pe is not idle if other pe's work - 
+    // he will test and communicate until 
+    // every pe has finished.
+    do  
+        o_comm.Communicate(A, M, B, P, UP);
+    while (! o_comm.Get_all_done_prefetching()); // all_done is testing 
+                                     // if everybody finished 
+                                     // his work
+                                     //
+    if (verbose)
+    { 
+	    // Stop time measurement
+	    o_timer.Stop_Timer();
+	    o_timer.Report_Time(A->world);
+    }
     
     MPI_Barrier(A->world);
     if (verbose)

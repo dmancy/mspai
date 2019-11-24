@@ -876,7 +876,6 @@ int PC_MSPAI::bspai(void)
                                             pre_max_param,
 				                              	    verbose);
                     
-                    P->Print_Pattern_Data();
 
           if (write_param)
           {
@@ -906,7 +905,7 @@ int PC_MSPAI::bspai(void)
 
               M_REAL = Scalar;
           }
-		      M_REAL->Write_Matrix_To_File("precond_scalar.mtx");
+		      //M_REAL->Write_Matrix_To_File("precond_scalar.mtx");
 
                     
 		    Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL, &(PM));

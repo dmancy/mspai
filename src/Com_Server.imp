@@ -34,6 +34,8 @@
 template<class T>   int 
 Com_Server<T>::nbr_done = 0;
 
+template<class T>   int 
+Com_Server<T>::nbr_done_pre_fetching = 0;
 
 template<class T>   bool 
 Com_Server<T>::first = true;
@@ -43,6 +45,7 @@ template<class T>   void
 Com_Server<T>::Init()
 {
     all_done = false;
+    all_done_pre_fetching = false;
 }
 
 
@@ -55,6 +58,11 @@ Com_Server<T>::Get_all_done()
 }
 
 
+template<class T>   bool 
+Com_Server<T>::Get_all_done_prefetching()
+{
+    return all_done_pre_fetching;
+}
 
 template<class T>   void 
 Com_Server<T>::Communicate( Matrix<T> *A, 
@@ -154,6 +162,20 @@ Com_Server<T>::Communicate( Matrix<T> *A,
                         Handle_Done_Signal(A, requestor); 
                     break;
                 }
+
+                case im_done_pre_tag:       // A PE is done.  PE 0 counts it 
+                {
+                    if (A) 
+                        Handle_Im_Done_Pre(A, requestor); 
+                    break;
+                }
+    
+                case done_pre_signal_tag:   //Everyone is done 
+                {
+                    if (A) 
+                        Handle_Done_Signal_Pre(A, requestor); 
+                    break;
+                }
     
                 case exit_tag:          // error exit
                     throw std::runtime_error(
@@ -164,6 +186,7 @@ Com_Server<T>::Communicate( Matrix<T> *A,
     }
     while (flag && (tag < 10));
 
+    Check_Done_Prefetch(P);
     Check_Done(P);
 }
 
@@ -189,6 +212,24 @@ Com_Server<T>::Handle_Im_Done(  Matrix<T> *A,
 }
 
 
+template<class T>   void 
+Com_Server<T>::Handle_Im_Done_Pre(  Matrix<T> *A, 
+                                    int requestor)
+{   
+    int         tmp;
+    MPI_Status  status;
+
+    
+    // Master pe 0 counts how many cluster nodes already
+    // finished their work.
+    if (MPI_Recv(static_cast<void*> (&tmp), 1, MPI_INT, 
+        requestor, im_done_pre_tag, A->world, &status))
+        throw std::runtime_error(
+            "\n\tERROR in method \"Com_Server::"
+            "Handle_Im_Done_Prefetch\" by MPI_Recv.\n");
+    
+    nbr_done_pre_fetching++;
+}
 
 template<class T>   void 
 Com_Server<T>::Handle_Done_Signal(Matrix<T> *A, 
@@ -208,6 +249,22 @@ Com_Server<T>::Handle_Done_Signal(Matrix<T> *A,
 }
 
 
+template<class T>   void 
+Com_Server<T>::Handle_Done_Signal_Pre(Matrix<T> *A, 
+                               int requestor)
+{
+    int         tmp;
+    MPI_Status  status;
+
+    // pe = 0 receives from a remote pe that he 
+    // finished
+    if (MPI_Recv(static_cast<void*> (&tmp), 1, MPI_INT, 
+        0, done_pre_signal_tag, A->world, &status))
+        throw std::runtime_error(
+            "\n\tERROR in method \"Com_Server::"
+            "Handle_Done_Signal\" by MPI_Recv.\n");
+    all_done_pre_fetching = true;
+}
 
 template<class T>   void 
 Com_Server<T>::Say_Im_Done( Matrix<T> *A, 
@@ -247,6 +304,42 @@ Com_Server<T>::Say_Im_Done( Matrix<T> *A,
 }
 
 
+template<class T>   void 
+Com_Server<T>::Say_Im_Done_Prefetching( Matrix<T> *A, 
+                                        Matrix<T> *&M,
+                                        Matrix<T> *B,
+                                        Pattern   *P,
+                                        Pattern   *UP)
+{
+    int         one = 1,
+                flag;
+                
+    MPI_Request request;
+    MPI_Status  status;
+
+
+    if (P->my_id == 0) nbr_done_pre_fetching++;
+    else 
+    {
+        // Send to master pe = 0 that I'm done
+        if (MPI_Isend(static_cast<void*> (&one), 1, MPI_INT, 
+            0, im_done_pre_tag, A->world, &request))
+            throw std::runtime_error(
+                "\n\tERROR in method \"Com_Server::"
+                "Say_Im_Done_Prefetch\" by MPI_Isend.\n");
+        
+        // Check if my message arrived
+        do 
+        {
+            Communicate(A, M, B, P, UP);
+            if (MPI_Test(&request, &flag, &status))
+                throw std::runtime_error(
+                    "\n\tERROR in method \"Com_Server::"
+                    "Say_Im_Done_Prefetch\" by MPI_Test.\n");
+        }
+        while (! flag);
+    }
+}
 
 template<class T>   void 
 Com_Server<T>::Check_Done(Pattern *P)
@@ -269,6 +362,30 @@ Com_Server<T>::Check_Done(Pattern *P)
             all_done = true;
         }
 }
+
+
+template<class T>   void 
+Com_Server<T>::Check_Done_Prefetch(Pattern *P)
+{
+    int     one = 1;
+    
+    MPI_Request request;
+
+    if (P->my_id == 0)
+        if ((!all_done_pre_fetching) && (nbr_done_pre_fetching == P->num_procs))
+        {
+            for (int i = 1; i < P->num_procs; i++) 
+            {
+                if (MPI_Isend(static_cast<void*> (&one), 1, MPI_INT, 
+                    i, done_pre_signal_tag, P->world, &request))
+                    throw std::runtime_error(
+                        "\n\tERROR in method \"Com_Server::"
+                        "Check_Done\" by MPI_Isest.\n");
+            }
+            all_done_pre_fetching = true;
+        }
+}
+
 
 
 
@@ -783,6 +900,69 @@ Com_Server<T>::Get_Col( Matrix<T>       *A,
     }
 }
 
+
+template <class T>  void
+Com_Server<T>::Prereq_Col(  Matrix<T>       *A, 
+                            Matrix<T>       *&M,
+                            Matrix<T>       *B,
+                            Pattern         *P,
+                            Pattern         *UP,
+                            Index_Set*      U_UP,
+                            Hash_Table<T>   *&ht,
+                            const int&      pre_k_param,
+                            const bool      use_pre,
+                            const int       pre_max_param)
+  {
+
+    int idx = 0,
+        pcol,
+        loc,
+        begin,
+        end,
+        col_len = 0,
+        row_len = 0,
+        *col_idcs_buf = NULL,
+        *row_idcs_buf = NULL,
+        pe;
+    
+                  
+        T               *col_buf = NULL;
+    
+    //Check if user wants to prerequest something or
+    if(U_UP && pre_k_param > 0 && use_pre && first) 
+    {              
+        //columns to request are definitly
+        //inside upper pattern column because
+        //start pattern is subset of upper pattern
+                
+        begin = 0;
+            
+        end = U_UP->len;
+                
+        //prerequest columns 
+        for ( int i = begin; i < end; i++)
+        {
+            pcol = U_UP->idcs[i];
+            pe = A->pe[pcol];
+            if (pe != A->my_id)
+            {
+                if (ht->Get_Location(pcol) < 0)
+                {
+                    idx = pcol - A->start_indices[pe];
+                    Get_Remote_Col( A, M, B, P, UP, pcol, col_len, 
+                                    row_len, col_idcs_buf, 
+                                    row_idcs_buf, col_buf, 
+                                    ht, pe, idx);
+                }    
+            }
+        }        
+                
+        // if user want only prerequesting once - make this
+        // subcode inaccessible
+        if (pre_max_param) first = false;
+    }
+
+  }
 
 
 template <class T>  void

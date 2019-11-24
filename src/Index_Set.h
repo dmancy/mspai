@@ -34,6 +34,8 @@
 #ifndef GUARD_INDEX_SET_H
 #define GUARD_INDEX_SET_H
 
+#include <algorithm>
+
 ///////////////////////////////////////////
 ///     \class Index_Set
 ///     \brief This class represents an
@@ -144,6 +146,7 @@ class Index_Set
         Index_Set*  Set_Union(  Index_Set*  is_a, 
                                 Index_Set*  is_b);
         
+        void  Set_Union(  Index_Set*  is_a);
         
         ///////////////////////////////////////////////
         ///     \brief Get index of element in index set.

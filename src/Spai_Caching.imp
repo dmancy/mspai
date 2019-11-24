@@ -96,7 +96,6 @@ Spai_Caching<T>::SPAI_Column(Matrix<T>       *A,
     // and will be updated each augmenting 
     // step.
     J = new Index_Set(A->n);    
-    
     // Extract pattern from pattern matrix  
     // Create the Index Set J
     o_comm.Get_P_Col(A, M, B, P, UP, col, J);

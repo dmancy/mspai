@@ -188,6 +188,53 @@ Index_Set::Set_Intersection(Index_Set*  is_a,
 }
 
 
+void
+Index_Set::Set_Union(Index_Set*     is_a)
+{
+    int         a,
+                b,
+                idx_a = 0,
+                idx_b = 0,
+                len_a = is_a->len,
+                len_b = len,
+                diff = 0;
+
+    while (idx_a < len_a && idx_b < len_b)
+    {
+        a = is_a->idcs[idx_a];
+        b = idcs[idx_b];
+        if (a < b)
+        {
+            idcs[len++] = a;
+            idx_a++;
+        }   
+        else if (a > b)
+        {
+            idx_b++;
+        }
+        else    // a == b
+        {
+            idx_a++;
+            idx_b++;
+        }
+    }
+    
+    
+    // one of the index set has finished,
+    // remaining elements of the other index set
+    // will now be copied. 
+    diff = len_a - idx_a;
+    if (diff)
+    {
+        memcpy( idcs + len, 
+                is_a->idcs + idx_a, 
+                diff * sizeof(int));
+        len += diff;
+    }
+    
+    std::sort(idcs, idcs+len); 
+    
+}
 
 Index_Set*
 Index_Set::Set_Union(Index_Set*     is_a, 

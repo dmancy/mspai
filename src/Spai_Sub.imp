@@ -53,16 +53,14 @@ Spai_Sub<T>::Init_Lapack_Vals(const int   m,
 
 
 template <class T>  Index_Set*
-Spai_Sub<T>::Union_UP(Pattern *UP)
+Spai_Sub<T>::Union_UP(Pattern *UP, const int max_arg)
 {
-        Index_Set*  old_is  = NULL,
-        *U_UP   = new Index_Set(0);
+        Index_Set *U_UP   = new Index_Set(max_arg);
+        U_UP->len = 0;
                 
         for (int i = 0; i < UP->my_nbr_cols; i++)
         {
-            old_is = U_UP;
-            U_UP = U_UP->Set_Union(old_is, UP->j_sets[i]);
-            delete old_is;
+            U_UP->Set_Union(UP->j_sets[i]);
         }
     
         return U_UP;

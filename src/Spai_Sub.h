@@ -107,6 +107,7 @@ class Spai_Sub
         //////////////////////////////////////////////////////////////
         Index_Set*   Union_UP(Pattern   *UP);
         
+        Index_Set*   Union_UP(Pattern   *UP, int max_arg);
             
         //////////////////////////////////////////////////////////////
         ///     \brief Compute the index set I from the previously 

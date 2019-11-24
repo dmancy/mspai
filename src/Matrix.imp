@@ -128,7 +128,7 @@ Matrix<T>::Init_Preconditioner(Matrix<T> *&M,
                                const int m_dim,
                                const int n_dim)
 {
-    int max_arg = 5000;  //Length of buffers
+    int max_arg = 3000;  //Length of buffers
     int TAU_SIZE = 1000;
     int QR_SIZE = 1000;
     int QT_SIZE = 1000;
@@ -136,7 +136,7 @@ Matrix<T>::Init_Preconditioner(Matrix<T> *&M,
     M = new Matrix<T>(world);
 
     M->n = n_dim;
-    M->m = m_dim;
+    M->m = n_dim;
     M->all_nbr_cols = new int[M->num_procs];
     M->start_indices = new int[M->num_procs];
 
@@ -169,8 +169,8 @@ Matrix<T>::Init_Preconditioner(Matrix<T> *&M,
 
     memcpy(M->block_sizes, block_sizes, n * sizeof(int));
 
-    M->I_set = new Index_Set(m*max_arg);
-    M->J_set = new Index_Set(n*max_arg);
+    M->I_set = new Index_Set(max_arg);
+    M->J_set = new Index_Set(max_arg);
 
     M->A_Hat = new T[max_arg * max_block_size*max_block_size];
     M->A_Hat_buffer = new T[max_arg * max_block_size*max_block_size];
@@ -183,8 +183,8 @@ Matrix<T>::Init_Preconditioner(Matrix<T> *&M,
     M->Work_qr_ptr = new double[QR_SIZE*max_arg];
     M->Work_qt_ptr = new double[QT_SIZE*max_arg];
 
-    M->first_index_set = new int[n*max_arg];
-    M->first_index_row = new int[n*max_arg];
+    M->first_index_set = new int[max_arg];
+    M->first_index_row = new int[max_arg];
 
 }
 

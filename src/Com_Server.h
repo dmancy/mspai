@@ -141,6 +141,14 @@ const int send_Bcols_tag    = 20;
 const int send_Bvals_tag    = 21;
 
 
+/// communication id that this pe
+/// has finished to prerequest its columns
+const int im_done_pre_tag       = 22;
+
+/// communication id that every 
+/// pe has finished
+const int done_pre_signal_tag   = 23;
+
 /////////////////////////////////////////
 ///     \class Com_Server
 ///     \brief This class is responsible 
@@ -176,6 +184,8 @@ class Com_Server
         ///////////////////////////////////////////////
         bool    Get_all_done();
         
+         
+        bool    Get_all_done_prefetching();
         /////////////////////////////////////////////////////
         ///     \brief Communication method which maps the 
         ///            request to the specific handle method 
@@ -223,6 +233,11 @@ class Com_Server
                             Pattern   *P,
                             Pattern   *UP);
         
+        void Say_Im_Done_Prefetching(Matrix<T> *A, 
+                                     Matrix<T> *&M,
+                                     Matrix<T> *B,
+                                     Pattern   *P,
+                                     Pattern   *UP);
         
         /////////////////////////////////////////////////////
         ///     \brief Some pe has finished his work and 
@@ -364,6 +379,16 @@ class Com_Server
                         const bool      use_pre,
                         const int       pre_max_param);
         
+        void    Prereq_Col(Matrix<T>       *A, 
+                          Matrix<T>       *&M,
+                          Matrix<T>       *B,
+                          Pattern         *P,
+                          Pattern         *UP,
+                          Index_Set*      U_UP,
+                          Hash_Table<T>   *&ht,
+                          const int&      pre_k_param,
+                          const bool      use_pre,
+                          const int       pre_max_param);
         
         ///////////////////////////////////////////////////////
         ///     \brief Requesting column data of the target 
@@ -691,6 +716,12 @@ Get_Col_Block( Matrix<T>       *A,
         
         /// Flag whether everybody has finished his work
         bool        all_done;
+
+        /// Number of already finished pes
+        static int  nbr_done_pre_fetching;
+
+        /// Flag whether everybody has finished to prefetch its column
+        bool        all_done_pre_fetching;
         
         /// Flag to check if user wants to prerequest all columns
         /// at once at the beginning.
@@ -719,6 +750,9 @@ Get_Col_Block( Matrix<T>       *A,
         void        Handle_Im_Done(Matrix<T> *A, 
                                    int requestor);
         
+        void        Handle_Im_Done_Pre(Matrix<T> *A, 
+                                       int requestor);
+
         /////////////////////////////////////////////////////
         ///     \brief All pes have finished, status will be
         ///            set to all_done = true.
@@ -733,6 +767,9 @@ Get_Col_Block( Matrix<T>       *A,
         void    Handle_Done_Signal(Matrix<T> *A, 
                                    int requestor);
         
+        void    Handle_Done_Signal_Pre(Matrix<T> *A, 
+                                       int requestor);
+
         /////////////////////////////////////////////////////
         ///     \brief Checking if all pes have finished their
         ///            work.
@@ -746,6 +783,7 @@ Get_Col_Block( Matrix<T>       *A,
         /////////////////////////////////////////////////////
         void    Check_Done(Pattern *P);
         
+        void    Check_Done_Prefetch(Pattern *P);
         
         
         //============================================================
