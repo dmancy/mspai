@@ -189,7 +189,7 @@ Index_Set::Set_Intersection(Index_Set*  is_a,
 
 
 void
-Index_Set::Set_Union(Index_Set*     is_a)
+Index_Set::Set_Union(Index_Set*     is_a, const int&  start_column, const int& end_column)
 {
     int         a,
                 b,
@@ -202,7 +202,15 @@ Index_Set::Set_Union(Index_Set*     is_a)
     while (idx_a < len_a && idx_b < len_b)
     {
         a = is_a->idcs[idx_a];
+        /*
+        if ((start_column <= a) && (end_column > a))
+        {
+          idx_a++;
+          continue;
+        }
+        */
         b = idcs[idx_b];
+        
         if (a < b)
         {
             idcs[len++] = a;

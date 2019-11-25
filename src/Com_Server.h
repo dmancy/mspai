@@ -705,7 +705,8 @@ Get_Col_Block( Matrix<T>       *A,
                                     const Index_Set     *J);
         
         
-	void Initialize_nbr_done(void);
+	    void Initialize_nbr_done(void);
+	    void Initialize_nbr_done_prefetching(void);
 
     private:
         

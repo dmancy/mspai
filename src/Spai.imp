@@ -86,7 +86,6 @@ Spai<T>::SPAI_Algorithm(Matrix<T>   *A,
 
     memset(bitvec, 0, bitvec_size * sizeof(unsigned int));
     
-    PetscPrintf(A->world, "Pre communication : "); 
     if (verbose)
     {
 	    // Start time measurement
@@ -96,17 +95,13 @@ Spai<T>::SPAI_Algorithm(Matrix<T>   *A,
     // Creating union of all pattern sets this
     // pe will have to compute if upper pattern 
     // was requested
-    UP = P;
-
-    //printf("Debut  nb col : %d\n", UP->my_nbr_cols);
-    if (UP)
-        U_UP = o_sub.Union_UP(UP, A->n/A->num_procs*2 );      
-    //U_UP->Print_Index_Set("UP");
-    
     //printf("Fini \n");
     o_comm.Init();
+    UP = P;
 
-
+ //   printf("Debut  nb col : %d\n", A->n/A->num_procs*2 );
+    if (UP)
+        U_UP = o_sub.Union_UP(UP, A->n );      
     //printf("Init\n");
     o_comm.Prereq_Col(A, 
                       M,
@@ -130,7 +125,6 @@ Spai<T>::SPAI_Algorithm(Matrix<T>   *A,
     while (! o_comm.Get_all_done_prefetching()); // all_done is testing 
                                      // if everybody finished 
                                      // his work
-                                     //
     if (verbose)
     { 
 	    // Stop time measurement
@@ -188,6 +182,7 @@ Spai<T>::SPAI_Algorithm(Matrix<T>   *A,
 
 
     o_comm.Initialize_nbr_done();
+    o_comm.Initialize_nbr_done_prefetching();
     
     MPI_Barrier(A->world);  
    

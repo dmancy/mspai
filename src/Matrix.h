@@ -223,6 +223,8 @@ class Matrix : public Matrix_Base
         double              *Work_qt_ptr;
         double              *Work_qr_ptr;
 
+        int              send;
+
 
         //Methods
         //================================================================

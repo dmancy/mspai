@@ -1,4 +1,5 @@
 #include "imspai.h"
+#include "Block.h"
 
 
 std::stringstream   out_str;    
@@ -75,7 +76,7 @@ PetscErrorCode PC_MSPAI::PCSetUp_MSPAI(Mat A)
 		//A_REAL->Write_Matrix_To_File(A_REAL, "A.mtx");
     Matrix<double> *B;
    
-    B = Matrix<double>::Convert_Block_Matrix(A_REAL, 1, 10000,0);
+    B = Matrix<double>::Convert_Block_Matrix(A_REAL, block_size, 1000000,0);
 
 		//B->Write_Matrix_To_File(B, "B.mtx");
 
@@ -907,8 +908,8 @@ int PC_MSPAI::bspai(void)
           }
 		      //M_REAL->Write_Matrix_To_File("precond_scalar.mtx");
 
-                    
 		    Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL, &(PM));
+        //printf("id : %d, columns got : %d\n", A_REAL->my_id, A_REAL->send);
 
 		    if (!(left_prec))
 			    ierr = MatTranspose(*(PM), MAT_INITIAL_MATRIX, PM);

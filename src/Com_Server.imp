@@ -929,7 +929,7 @@ Com_Server<T>::Prereq_Col(  Matrix<T>       *A,
         T               *col_buf = NULL;
     
     //Check if user wants to prerequest something or
-    if(U_UP && pre_k_param > 0 && use_pre && first) 
+    if(U_UP  && use_pre && first) 
     {              
         //columns to request are definitly
         //inside upper pattern column because

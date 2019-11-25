@@ -146,7 +146,7 @@ class Index_Set
         Index_Set*  Set_Union(  Index_Set*  is_a, 
                                 Index_Set*  is_b);
         
-        void  Set_Union(  Index_Set*  is_a);
+        void  Set_Union(  Index_Set*  is_a, const int& start_column, const int& end_column);
         
         ///////////////////////////////////////////////
         ///     \brief Get index of element in index set.

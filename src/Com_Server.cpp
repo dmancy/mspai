@@ -46,10 +46,16 @@ Com_Server<double>::Initialize_nbr_done(void)
 	nbr_done = 0;
 }
 
+template<> void 
+Com_Server<double>::Initialize_nbr_done_prefetching(void)
+{
+	nbr_done_pre_fetching = 0;
+}
 template<>  void 
 Com_Server<double>::Handle_Get_Col(const Matrix<double> *A, 
                                    const int     requestor)
 {
+    A->send++;
     
     int             idx,
                     len_col = 0,

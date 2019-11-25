@@ -70,6 +70,7 @@ Matrix<T>::Matrix(MPI_Comm world_m)
     Work_qt_ptr         = NULL;
     first_index_set     = NULL;
     first_index_row     = NULL;
+    send                = 0;
 }
 
 
@@ -1836,7 +1837,8 @@ Matrix<T> *Matrix<T>::Scalar_Matrix(void)
 
   S->c_lines = new Compressed_Lines<double>(S->my_nbr_cols, 0); // No row structure
 
-  block_start = first_index_set;
+  //Reuse of array pe of the old Matrix
+  block_start = pe;
   block_start[0] = 0;
   for (int ib = 1; ib < n; ib++)
     block_start[ib] = block_start[ib-1] + block_sizes[ib-1];
