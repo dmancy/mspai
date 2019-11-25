@@ -260,7 +260,7 @@ Matrix<double>::Convert_Matrix_Block_to_Mat_Block(MPI_Comm comm, Matrix<double> 
 	}
 
 template<> void 
-Matrix<double>::Write_Matrix_To_File(char           *file)
+Matrix<double>::Write_Matrix_To_File(char const *file)
 {
     int         row,
                 col,    

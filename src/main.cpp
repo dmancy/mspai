@@ -219,7 +219,7 @@ int main(int argc,char **args)
      - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
   T = MPI_Wtime();
 
-  for (int iteration = 0; iteration < 1; iteration++)
+  for (int iteration = 0; iteration < 3; iteration++)
   {
         ierr = KSPSolve(ksp,b,solution);CHKERRQ(ierr);
         //MatTranspose(A,MAT_INPLACE_MATRIX,&A);

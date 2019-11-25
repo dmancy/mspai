@@ -42,7 +42,7 @@ Load_Balance<T>::Grab_M_Col(Matrix<T> *A,
             index,
             col;
             
-    Com_Server<T>   o_comm;
+    //Com_Server<T>   o_comm;
     
 
     // Do I still have local columns to process?

@@ -43,8 +43,6 @@ Spai_Sub<T>::Init_Lapack_Vals(const int   m,
     k       = std::min(m, n);
     lda     = std::max(m, 1);
     lwork   = std::max(1, lwork); 
-//    *work   = new T[lwork];
-//    *tau    = new T[k];
     
     memset(*work, 0, lwork * sizeof(T));
     memset(*tau, 0, k * sizeof(T));
@@ -406,7 +404,6 @@ Spai_Sub<T>::Create_Submatrix_AHat_Block(Matrix<T>       *A,
 {
     int             j_len = J->len,
                     i_len = I->len,
-                    i,
                     nnz_idx,
                     set_idx2 = 0,
                     nnz_scalar_idx,
@@ -868,8 +865,7 @@ Spai_Sub<T>::Create_ek_Hat( const Index_Set*    I,
 {
     T       *ek_Hat = NULL;
                             
-    int     i_val,
-            k = 0;
+    int     i_val;
                         
     bool    found = false;
     
@@ -912,8 +908,6 @@ Spai_Sub<T>::Create_ek_Hat_Block( const Index_Set*    I,
     int     i_val,
             k = 0;
                         
-    bool    found = false;
-    
                 
     //ek_Hat = new T[len];
     ek_Hat = M->mk_Hat;
@@ -941,7 +935,6 @@ Spai_Sub<T>::Create_ek_Hat_Block( const Index_Set*    I,
         if ( i_val == col )
         {
           /*Block diagonal : i_val , col */
-            found = true;
             unit_idx = i;
             while (k<A->block_sizes[col])
             {
@@ -954,11 +947,6 @@ Spai_Sub<T>::Create_ek_Hat_Block( const Index_Set*    I,
             break;
         }
     }
-    /*
-                
-    if (found)
-        Set_Unit_Idx(ek_Hat, unit_idx);
-      */      
     return ek_Hat;
 }
 
@@ -1073,7 +1061,6 @@ template <class T>  void
 Spai_Sub<T>::Get_Solution_Vals_Block(T* mk_Hat_in, T* mk_Hat_out, const Matrix<T> *M, const Matrix<T> *A, const int col, Index_Set* J, int Islen)
 {
     int len = J->slen * A->block_sizes[col], index = 0;
-    int index2 = 0;
 
     int *first_index_block = NULL;
     first_index_block = M->first_index_set;

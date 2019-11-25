@@ -273,7 +273,7 @@ class Matrix : public Matrix_Base
         ///     \param file The file where the matrix
         ///                 should be printed to
         /////////////////////////////////////////////////////////
-        void        Write_Matrix_To_File(char            *file);
+        void        Write_Matrix_To_File(char const *file);
 
 
         //================================================================

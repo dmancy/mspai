@@ -742,14 +742,13 @@ PetscErrorCode Matrix<T>::Convert_Mat_to_Matrix(MPI_Comm comm, Matrix<double> **
 	Matrix<double>               *M = NULL;
 	Mat			AT;
 	int                     i,j;
-	int                     row_indx;
-	int                     len,pe,start_indx;
+	int                     pe,start_indx;
 	int 			A_buf_size = 0;
 	int 			row_buf_size = 0;
 	PetscErrorCode          ierr;
   const int               *cols = NULL;
 	const double            *vals = NULL;
-	int                     n,m,mnl,nnl,nz,rstart,rend,gap = 0, max = 0;
+	int                     n,m,mnl,nnl,nz,gap = 0, max = 0;
 	PetscMPIInt             size,rank;
 	PetscBool 		isSymmetric;
 	Compressed_Lines<double> *lines = NULL;
@@ -916,6 +915,12 @@ PetscErrorCode Matrix<T>::Convert_Mat_to_Matrix(MPI_Comm comm, Matrix<double> **
 		
   lines = NULL;
 
+  M->block_size = 1;
+  M->max_block_size = 1;
+  M->block_sizes = new int[n];
+  for (int k = 0; k < n; k++)
+    M->block_sizes[k] = 1;
+
   delete *B;
 	*B = M;
 
@@ -938,6 +943,7 @@ PetscErrorCode Matrix<T>::Convert_Mat_to_Matrix(MPI_Comm comm, Matrix<double> **
 	int 			row_buf_size = 0;
 */
 	PetscErrorCode          ierr;
+	PetscMPIInt             size,rank;
 /*
 	const int               *cols = NULL;
 	const double            *vals = NULL;
@@ -950,8 +956,10 @@ PetscErrorCode Matrix<T>::Convert_Mat_to_Matrix(MPI_Comm comm, Matrix<double> **
 
 	PetscScalar 		**array;
 	PetscFunctionBegin;
+  */
 	ierr = MPI_Comm_size(comm,&size);CHKERRQ(ierr);
 	ierr = MPI_Comm_rank(comm,&rank);CHKERRQ(ierr);
+  /*
 	ierr = MatGetSize(*A,&n,&n);CHKERRQ(ierr);
 	ierr = MatGetLocalSize(*A,&mnl,&nnl);CHKERRQ(ierr);
 

@@ -55,7 +55,7 @@ template<>  void
 Com_Server<double>::Handle_Get_Col(const Matrix<double> *A, 
                                    const int     requestor)
 {
-    A->send++;
+    //A->send++;
     
     int             idx,
                     len_col = 0,

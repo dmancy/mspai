@@ -916,7 +916,6 @@ Com_Server<T>::Prereq_Col(  Matrix<T>       *A,
 
     int idx = 0,
         pcol,
-        loc,
         begin,
         end,
         col_len = 0,
@@ -1132,10 +1131,10 @@ Com_Server<T>::Get_Local_Col(Matrix<T>       *A,
     col_buf             = A->c_lines->A[idx];
 
     ///modif
+    /*
     int   next = 0,
           index = 0;
 
-    /*
     col_buf = new T[col_len*A->max_block_size * A->max_block_size];;
 
     for (int i = 0; i < col_len; i++)

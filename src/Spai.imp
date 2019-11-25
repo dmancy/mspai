@@ -86,50 +86,49 @@ Spai<T>::SPAI_Algorithm(Matrix<T>   *A,
 
     memset(bitvec, 0, bitvec_size * sizeof(unsigned int));
     
-    if (verbose)
-    {
-	    // Start time measurement
-	    o_timer = Timer();
-	    o_timer.Start_Timer();
-    }
     // Creating union of all pattern sets this
     // pe will have to compute if upper pattern 
     // was requested
     //printf("Fini \n");
     o_comm.Init();
-    UP = P;
+//    UP = P;
 
- //   printf("Debut  nb col : %d\n", A->n/A->num_procs*2 );
     if (UP)
+    {
+      if (verbose)
+      {
+        // Start time measurement
+        o_timer = Timer();
+        o_timer.Start_Timer();
+      }
         U_UP = o_sub.Union_UP(UP, A->n );      
-    //printf("Init\n");
-    o_comm.Prereq_Col(A, 
-                      M,
-                      B,
-                      P,
-                      UP,
-                      U_UP,
-                      ht,
-                      pre_k_param,
-                      true,
-                      pre_max_param);
-    
-    o_comm.Say_Im_Done_Prefetching(A, M, B, P, UP);
-    //printf("Done\n");
+      o_comm.Prereq_Col(A, 
+                        M,
+                        B,
+                        P,
+                        UP,
+                        U_UP,
+                        ht,
+                        pre_k_param,
+                        true,
+                        pre_max_param);
+      
+      o_comm.Say_Im_Done_Prefetching(A, M, B, P, UP);
 
-    // pe is not idle if other pe's work - 
-    // he will test and communicate until 
-    // every pe has finished.
-    do  
-        o_comm.Communicate(A, M, B, P, UP);
-    while (! o_comm.Get_all_done_prefetching()); // all_done is testing 
-                                     // if everybody finished 
-                                     // his work
-    if (verbose)
-    { 
-	    // Stop time measurement
-	    o_timer.Stop_Timer();
-	    o_timer.Report_Time(A->world);
+      // pe is not idle if other pe's work - 
+      // he will test and communicate until 
+      // every pe has finished.
+      do  
+          o_comm.Communicate(A, M, B, P, UP);
+      while (! o_comm.Get_all_done_prefetching()); // all_done is testing 
+                                       // if everybody finished 
+                                       // his work
+      if (verbose)
+      { 
+        // Stop time measurement
+        o_timer.Stop_Timer();
+        o_timer.Report_Time(A->world);
+      }
     }
     
     MPI_Barrier(A->world);

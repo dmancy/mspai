@@ -1,5 +1,4 @@
 #include "imspai.h"
-#include "Block.h"
 
 
 std::stringstream   out_str;    
@@ -74,14 +73,18 @@ PetscErrorCode PC_MSPAI::PCSetUp_MSPAI(Mat A)
 	}
 
 		//A_REAL->Write_Matrix_To_File(A_REAL, "A.mtx");
-    Matrix<double> *B;
-   
-    B = Matrix<double>::Convert_Block_Matrix(A_REAL, block_size, 1000000,0);
 
-		//B->Write_Matrix_To_File(B, "B.mtx");
+  //if (block_size != 1)
+  //{
+      Matrix<double> *B;
+     
+      B = Matrix<double>::Convert_Block_Matrix(A_REAL, block_size, 1000000,0);
 
-    delete A_REAL;
-    A_REAL = B;
+      //B->Write_Matrix_To_File(B, "B.mtx");
+
+      delete A_REAL;
+      A_REAL = B;
+  //}
 
     bspai();
 
@@ -444,6 +447,7 @@ PetscErrorCode PC_MSPAI::PCSetFromOptions_SPAI(PetscOptionItems *PetscOptionsObj
             "\tUse a valid start pattern file instead.\n");
     
     // check for upper pattern parameter
+    /*
     if (up < 3)
     {
         if (u_pattern_file[0] == '1') up = 1;
@@ -457,6 +461,7 @@ PetscErrorCode PC_MSPAI::PCSetFromOptions_SPAI(PetscOptionItems *PetscOptionsObj
                 "\n\tUsing an upper pattern is not possible when\n"
                 "\tusing schur probing!\n"); 
     }
+    */
     
     // check for correct k parameter if prerequesting columns
     if (pk < 0)
@@ -540,7 +545,7 @@ PetscErrorCode PC_MSPAI::PCSetFromOptions_SPAI(PetscOptionItems *PetscOptionsObj
         if(ns > 0 && mn > 0) // no update-steps -> no qr udpates
             opt_level = 3;
 
-	return 0;
+  return 0;
 }
 
 PetscErrorCode PC_MSPAI::PCSetA_REAL(Matrix<double> *A)
@@ -717,7 +722,6 @@ int PC_MSPAI::bspai(void)
     
     Command_Line    o_cm;
     PetscErrorCode  ierr;
-    PetscViewer fd;
         
     
     MPI_Comm_size(MPI_COMM_WORLD,&num_procs);
@@ -823,6 +827,7 @@ int PC_MSPAI::bspai(void)
 				    std::cout.flush();
 				}
 			}
+        
 
                         UP = o_ps.Generate_Pattern(A_REAL,
                                                    u_pattern_file,
@@ -906,7 +911,6 @@ int PC_MSPAI::bspai(void)
 
               M_REAL = Scalar;
           }
-		      //M_REAL->Write_Matrix_To_File("precond_scalar.mtx");
 
 		    Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL, &(PM));
         //printf("id : %d, columns got : %d\n", A_REAL->my_id, A_REAL->send);
@@ -927,6 +931,7 @@ int PC_MSPAI::bspai(void)
                     
                     delete alg_ptr;
     delete P;
+
     delete UP;  
                 
     if (verbose)
@@ -965,7 +970,7 @@ int PC_MSPAI::bspai(void)
     C_REAL = NULL;
   }
     
-    return EXIT_SUCCESS;
+    return ierr;
 }
 
 
