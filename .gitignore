@@ -2,3 +2,5 @@
 *.d
 bin/
 tags
+src/Block.*
+src/bspai.imp
