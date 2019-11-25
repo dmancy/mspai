@@ -31,348 +31,235 @@
 */
 #include <algorithm>
 
-template <class T>  void
-Spai_Sub<T>::Init_Lapack_Vals(const int   m,
-                              const int   n,
-                              int&        k,
-                              int&        lda,
-                              int&        lwork,
-                              T**         work,
-                              T**         tau)
+template <class T>
+void Spai_Sub<T>::Init_Lapack_Vals(
+    const int m, const int n, int& k, int& lda, int& lwork, T** work, T** tau)
 {
-    k       = std::min(m, n);
-    lda     = std::max(m, 1);
-    lwork   = std::max(1, lwork); 
-    
+    k = std::min(m, n);
+    lda = std::max(m, 1);
+    lwork = std::max(1, lwork);
+
     memset(*work, 0, lwork * sizeof(T));
     memset(*tau, 0, k * sizeof(T));
 }
 
-
-
-template <class T>  Index_Set*
-Spai_Sub<T>::Union_UP(Pattern *UP, const int max_arg)
+template <class T>
+Index_Set* Spai_Sub<T>::Union_UP(Pattern* UP, const int max_arg)
 {
-        Index_Set *U_UP   = new Index_Set(max_arg);
-        U_UP->len = 0;
-                
-        for (int i = 0; i < UP->my_nbr_cols; i++)
-        {
-            U_UP->Set_Union(UP->j_sets[i], UP->my_start_idx, UP->my_start_idx + UP->my_nbr_cols);
-        }
-    
-        return U_UP;
+    Index_Set* U_UP = new Index_Set(max_arg);
+    U_UP->len = 0;
+
+    for (int i = 0; i < UP->my_nbr_cols; i++) {
+        U_UP->Set_Union(UP->j_sets[i], UP->my_start_idx, UP->my_start_idx + UP->my_nbr_cols);
+    }
+
+    return U_UP;
 }
 
-
-
-template <class T>  Index_Set* 
-Spai_Sub<T>::Get_I_Set( Index_Set     *J,
-                        Matrix<T>     *A,
-                        Matrix<T>     *&M,
-                        Matrix<T>     *B,
-                        Pattern       *P,
-                        Pattern       *UP,
-                        Index_Set     *U_UP,
-                        Hash_Table<T> *&ht,
-                        const int&    pre_k_param,
-                        const int     pre_max_param,
-                        unsigned int  *&bitvec,
-                        unsigned int  *&reset_vec)
+template <class T>
+Index_Set* Spai_Sub<T>::Get_I_Set(Index_Set* J,
+                                  Matrix<T>* A,
+                                  Matrix<T>*& M,
+                                  Matrix<T>* B,
+                                  Pattern* P,
+                                  Pattern* UP,
+                                  Index_Set* U_UP,
+                                  Hash_Table<T>*& ht,
+                                  const int& pre_k_param,
+                                  const int pre_max_param,
+                                  unsigned int*& bitvec,
+                                  unsigned int*& reset_vec)
 {
-    int             pos,
-                    bit,
-                    r_idx,
-                    i_len         = 0,
-                    col_len       = 0,
-                    row_len       = 0,
-                    *col_idcs_buf = NULL,
-                    *row_idcs_buf = NULL,
-                    reset_len     = 0;
-                    
-    T               *col_buf = NULL;
-            
-    Index_Set       *I = NULL;
-                    
-    Com_Server<T>   o_comm;
-    
-    
-    //I = new Index_Set(A->m);
+    int pos, bit, r_idx, i_len = 0, col_len = 0, row_len = 0,
+                         *col_idcs_buf = NULL, *row_idcs_buf = NULL, reset_len = 0;
+
+    T* col_buf = NULL;
+
+    Index_Set* I = NULL;
+
+    Com_Server<T> o_comm;
+
+    // I = new Index_Set(A->m);
     I = M->I_set;
 
-    for (int j = 0; j < J->len; j++)
-    {           
-        o_comm.Get_Col( A,
-                        M,
-                        B,
-                        P, 
-                        UP,
-                        U_UP,
-                        J->idcs[j], 
-                        col_len,
-                        row_len, 
-                        col_idcs_buf, 
-                        row_idcs_buf,
-                        col_buf,
-                        ht,
-                        pre_k_param,
-                        true,
-                        pre_max_param);
+    for (int j = 0; j < J->len; j++) {
+        o_comm.Get_Col(A, M, B, P, UP, U_UP, J->idcs[j], col_len, row_len, col_idcs_buf,
+                       row_idcs_buf, col_buf, ht, pre_k_param, true, pre_max_param);
 
         /*Sweep entries in column col*/
-        for (int idx = 0; idx < col_len; idx++)
-        { 
-            //Get the row index value 
+        for (int idx = 0; idx < col_len; idx++) {
+            // Get the row index value
             r_idx = col_idcs_buf[idx];
-            pos = r_idx >> 5;       //log n bits of int
-            bit = r_idx % 32;       //n bits of int
-            if (! Bit_Test( bitvec[pos], bit )) 
-            {                    
-                Set_Bit( &bitvec[pos], bit ); 
+            pos = r_idx >> 5; // log n bits of int
+            bit = r_idx % 32; // n bits of int
+            if (!Bit_Test(bitvec[pos], bit)) {
+                Set_Bit(&bitvec[pos], bit);
                 I->idcs[i_len++] = r_idx;
                 reset_vec[reset_len++] = pos;
             }
         }
     }
-    
+
     // Sort I
     std::sort(I->idcs, I->idcs + i_len);
     I->len = i_len;
-    
-    // Avoiding memset of whole bitvec because 
+
+    // Avoiding memset of whole bitvec because
     // too expensive for large matrices. Just
     // reset the used positions.
     Reset_bitvec(bitvec, reset_len, reset_vec);
 
-    
     return I;
 }
 
-
-
-template<class T>   Index_Set* 
-Spai_Sub<T>::Union_Nl_Sets( Matrix<T>     *A, 
-                            Matrix<T>     *&M,
-                            Matrix<T>     *B, 
-                            Pattern       *P,
-                            Pattern       *UP,
-                            Index_Set     *U_UP,
-                            Index_Set     *L,
-                            Hash_Table<T> *&ht,
-                            const int&    pre_k_param,
-                            const int     pre_max_param,
-                            unsigned int  *&bitvec,
-                            unsigned int  *&reset_vec)
+template <class T>
+Index_Set* Spai_Sub<T>::Union_Nl_Sets(Matrix<T>* A,
+                                      Matrix<T>*& M,
+                                      Matrix<T>* B,
+                                      Pattern* P,
+                                      Pattern* UP,
+                                      Index_Set* U_UP,
+                                      Index_Set* L,
+                                      Hash_Table<T>*& ht,
+                                      const int& pre_k_param,
+                                      const int pre_max_param,
+                                      unsigned int*& bitvec,
+                                      unsigned int*& reset_vec)
 {
-    
-    
-    
-    int             pos,
-                    bit,
-                    r_idx,
-                    col_len       = 0,
-                    row_len       = 0,
-                    u_nl_len      = 0,
-                    *col_idcs_buf = NULL,
-                    *row_idcs_buf = NULL,
-                    reset_len     = 0;
-                    
-    T               *col_buf = NULL;
-            
-    Index_Set       *U_Nl = NULL;
-    
-    Com_Server<T>   o_comm;
-    
-   
-    U_Nl = new Index_Set(A->n);
-    
-    if (A->symmetric)   // symmetric input matrix
-    {
-        for (int i = 0; i < L->len; i++)
-        {
-            o_comm.Get_Col( A, 
-                            M, 
-                            B,
-                            P,
-                            UP,
-                            U_UP,
-                            L->idcs[i], 
-                            col_len,
-                            row_len, 
-                            col_idcs_buf, 
-                            row_idcs_buf,
-                            col_buf,
-                            ht,
-                            pre_k_param,
-                            false,
-                            pre_max_param);
+    int pos, bit, r_idx, col_len = 0, row_len = 0, u_nl_len = 0,
+                         *col_idcs_buf = NULL, *row_idcs_buf = NULL, reset_len = 0;
 
-            for (int idx = 0; idx < col_len; idx++)
-            { 
-                //Get the row index value 
-                r_idx = col_idcs_buf[idx];
-                pos = r_idx >> 5;       //log n bits of int
-                bit = r_idx % 32;       //n bits of int
-                if (! Bit_Test( bitvec[pos], bit )) 
-                {                    
-                    Set_Bit( &bitvec[pos], bit ); 
-                    U_Nl->idcs[u_nl_len++] = r_idx;
-                    reset_vec[reset_len++] = pos;
-                }
-            }
-        }
-    }
-    else                // no symmetry
+    T* col_buf = NULL;
+
+    Index_Set* U_Nl = NULL;
+
+    Com_Server<T> o_comm;
+
+    U_Nl = new Index_Set(A->n);
+
+    if (A->symmetric) // symmetric input matrix
     {
-        for (int i = 0; i < L->len; i++)
-        {
-            o_comm.Get_Col( A, 
-                            M, 
-                            B,
-                            P,
-                            UP,
-                            U_UP,
-                            L->idcs[i], 
-                            col_len,
-                            row_len, 
-                            col_idcs_buf,
-                            row_idcs_buf, 
-                            col_buf,
-                            ht,
-                            pre_k_param,
-                            false,
-                            pre_max_param);
-            
-            for (int idx = 0; idx < row_len; idx++)
-            { 
-                //Get the col index value 
-                r_idx = row_idcs_buf[idx];
-                pos = r_idx >> 5;       //log n bits of int
-                bit = r_idx % 32;       //n bits of int
-                if (! Bit_Test( bitvec[pos], bit )) 
-                {                    
-                    Set_Bit( &bitvec[pos], bit ); 
+        for (int i = 0; i < L->len; i++) {
+            o_comm.Get_Col(A, M, B, P, UP, U_UP, L->idcs[i], col_len, row_len,
+                           col_idcs_buf, row_idcs_buf, col_buf, ht, pre_k_param,
+                           false, pre_max_param);
+
+            for (int idx = 0; idx < col_len; idx++) {
+                // Get the row index value
+                r_idx = col_idcs_buf[idx];
+                pos = r_idx >> 5; // log n bits of int
+                bit = r_idx % 32; // n bits of int
+                if (!Bit_Test(bitvec[pos], bit)) {
+                    Set_Bit(&bitvec[pos], bit);
                     U_Nl->idcs[u_nl_len++] = r_idx;
                     reset_vec[reset_len++] = pos;
                 }
             }
         }
     }
-    
-    //Sort U_Nl
+    else // no symmetry
+    {
+        for (int i = 0; i < L->len; i++) {
+            o_comm.Get_Col(A, M, B, P, UP, U_UP, L->idcs[i], col_len, row_len,
+                           col_idcs_buf, row_idcs_buf, col_buf, ht, pre_k_param,
+                           false, pre_max_param);
+
+            for (int idx = 0; idx < row_len; idx++) {
+                // Get the col index value
+                r_idx = row_idcs_buf[idx];
+                pos = r_idx >> 5; // log n bits of int
+                bit = r_idx % 32; // n bits of int
+                if (!Bit_Test(bitvec[pos], bit)) {
+                    Set_Bit(&bitvec[pos], bit);
+                    U_Nl->idcs[u_nl_len++] = r_idx;
+                    reset_vec[reset_len++] = pos;
+                }
+            }
+        }
+    }
+
+    // Sort U_Nl
     std::sort(U_Nl->idcs, U_Nl->idcs + u_nl_len);
     U_Nl->len = u_nl_len;
-    
-    // Avoiding memset of whole bitvec because 
+
+    // Avoiding memset of whole bitvec because
     // too expensive for large matrices. Just
     // reset the used positions.
     Reset_bitvec(bitvec, reset_len, reset_vec);
-    
+
     return U_Nl;
 }
 
-
-    
-template <class T>  int     
-Spai_Sub<T>::Bit_Test(unsigned int bv, int bit)
+template <class T>
+int Spai_Sub<T>::Bit_Test(unsigned int bv, int bit)
 {
-    return ( bv & (1 << bit) ); 
+    return (bv & (1 << bit));
 }
 
-
-
-template <class T>  void    
-Spai_Sub<T>::Set_Bit(unsigned int *bv, int bit)
+template <class T>
+void Spai_Sub<T>::Set_Bit(unsigned int* bv, int bit)
 {
     *bv |= (1 << bit);
 }
 
-
-
-template<class T> void
-Spai_Sub<T>::Reset_bitvec(unsigned int   *&bitvec, 
-                          int            reset_len, 
-                          unsigned int   *reset_vec)
+template <class T>
+void Spai_Sub<T>::Reset_bitvec(unsigned int*& bitvec, int reset_len, unsigned int* reset_vec)
 {
     for (int i = 0; i < reset_len; i++)
-        bitvec[reset_vec[i]] = 0;    
+        bitvec[reset_vec[i]] = 0;
 }
 
-
-template <class T>  T* 
-Spai_Sub<T>::Create_Submatrix_AHat( Matrix<T>       *A,
-                                    Matrix<T>       *&M,
-                                    Matrix<T>       *B,
-                                    Pattern         *P,
-                                    Pattern         *UP,
-                                    Index_Set       *U_UP,
-                                    Index_Set       *J, 
-                                    Index_Set       *I,
-                                    int&            m,
-                                    int&            n,
-                                    Hash_Table<T>   *&ht,
-                                    int&            nnz_cnt,
-                                    const int&      pre_k_param,
-                                    const int       pre_max_param)
+template <class T>
+T* Spai_Sub<T>::Create_Submatrix_AHat(Matrix<T>* A,
+                                      Matrix<T>*& M,
+                                      Matrix<T>* B,
+                                      Pattern* P,
+                                      Pattern* UP,
+                                      Index_Set* U_UP,
+                                      Index_Set* J,
+                                      Index_Set* I,
+                                      int& m,
+                                      int& n,
+                                      Hash_Table<T>*& ht,
+                                      int& nnz_cnt,
+                                      const int& pre_k_param,
+                                      const int pre_max_param)
 {
-    int             j_len = J->len,
-                    i_len = I->len,
-                    nnz_idx,
-                    set_idx2 = 0,
-                    nbr_nnz_in_col,
-                    nbr_nnz_in_row,
-                    *col_idcs_buf = NULL,
-                    *row_idcs_buf = NULL;
+    int j_len = J->len, i_len = I->len, nnz_idx, set_idx2 = 0, nbr_nnz_in_col,
+        nbr_nnz_in_row, *col_idcs_buf = NULL, *row_idcs_buf = NULL;
 
-    T               *A_Hat;
-    
-    T               *col_buf;
-    
-    Com_Server<T>   o_comm;
-    
-            
+    T* A_Hat;
+
+    T* col_buf;
+
+    Com_Server<T> o_comm;
+
     A_Hat = new T[j_len * i_len];
     memset(A_Hat, 0, j_len * i_len * sizeof(T));
-    
+
     nnz_cnt = 0;
-    
-    //First loop: Iterating over j - idcs of J
-    //Second loop: Iterating over i - idcs of I
-    //If row-index of nnz in column is equal: Set at position idx in A_hat
-    //If not: don't set but increment idx and goto next i-index of I
-    for (int j = 0; j < j_len; j++)
-    {
-        nnz_idx = 0; 
-    
-        o_comm.Get_Col( A, 
-                        M, 
-                        B,
-                        P,
-                        UP,
-                        U_UP,
-                        J->idcs[j], 
-                        nbr_nnz_in_col,
-                        nbr_nnz_in_row,
-                        col_idcs_buf,
-                        row_idcs_buf,
-                        col_buf,
-                        ht,
-                        pre_k_param,
-                        true,
-                        pre_max_param);
-                
-        for (int i = 0; i < i_len; i++, set_idx2++)
-        {
-            if (nnz_idx == nbr_nnz_in_col)
-            {
-                set_idx2 += (i_len - i); //add remaining 0 entries
+
+    // First loop: Iterating over j - idcs of J
+    // Second loop: Iterating over i - idcs of I
+    // If row-index of nnz in column is equal: Set at position idx in A_hat
+    // If not: don't set but increment idx and goto next i-index of I
+    for (int j = 0; j < j_len; j++) {
+        nnz_idx = 0;
+
+        o_comm.Get_Col(A, M, B, P, UP, U_UP, J->idcs[j], nbr_nnz_in_col,
+                       nbr_nnz_in_row, col_idcs_buf, row_idcs_buf, col_buf, ht,
+                       pre_k_param, true, pre_max_param);
+
+        for (int i = 0; i < i_len; i++, set_idx2++) {
+            if (nnz_idx == nbr_nnz_in_col) {
+                set_idx2 += (i_len - i); // add remaining 0 entries
                 break;
             }
-            
-            if ( I->idcs[i] == col_idcs_buf[nnz_idx])
-            {
+
+            if (I->idcs[i] == col_idcs_buf[nnz_idx]) {
                 A_Hat[set_idx2] = col_buf[nnz_idx];
-            //    printf("A_hat[%d] = %f, idx2 : %d\n",set_idx2 , col_buf[nnz_idx], nnz_idx);
+                //    printf("A_hat[%d] = %f, idx2 : %d\n",set_idx2 ,
+                //    col_buf[nnz_idx], nnz_idx);
                 nnz_idx++;
                 nnz_cnt++;
             }
@@ -385,563 +272,424 @@ Spai_Sub<T>::Create_Submatrix_AHat( Matrix<T>       *A,
     return A_Hat;
 }
 
-template <class T>  T* 
-Spai_Sub<T>::Create_Submatrix_AHat_Block(Matrix<T>       *A,
-                                    Matrix<T>       *&M,
-                                    Matrix<T>       *B,
-                                    Pattern         *P,
-                                    Pattern         *UP,
-                                    Index_Set       *U_UP,
-                                    Index_Set       *J, 
-                                    Index_Set       *I,
-                                    int             col,
-                                    int&            m,
-                                    int&            n,
-                                    Hash_Table<T>   *&ht,
-                                    int&            nnz_cnt,
-                                    const int&      pre_k_param,
-                                    const int       pre_max_param)
+template <class T>
+T* Spai_Sub<T>::Create_Submatrix_AHat_Block(Matrix<T>* A,
+                                            Matrix<T>*& M,
+                                            Matrix<T>* B,
+                                            Pattern* P,
+                                            Pattern* UP,
+                                            Index_Set* U_UP,
+                                            Index_Set* J,
+                                            Index_Set* I,
+                                            int col,
+                                            int& m,
+                                            int& n,
+                                            Hash_Table<T>*& ht,
+                                            int& nnz_cnt,
+                                            const int& pre_k_param,
+                                            const int pre_max_param)
 {
-    int             j_len = J->len,
-                    i_len = I->len,
-                    nnz_idx,
-                    set_idx2 = 0,
-                    nnz_scalar_idx,
-                    nbr_nnz_in_col,
-                    nbr_nnz_in_row,
-                    A_Hat_size = 0,
-                    index_column,
-                    index_row,
-                    block_width,
-                    block_height,
-                    *first_index_col = NULL, //First scalar index of the block column j
-                    *first_index_row = NULL,
-                    scalar_width = 0, //number of scalar columns in A_Hat
-                    scalar_height = 0, //number of scalr rows in A_Hat
-                    *col_idcs_buf = NULL,
-                    *row_idcs_buf = NULL;
+    int j_len = J->len, i_len = I->len, nnz_idx, set_idx2 = 0, nnz_scalar_idx,
+        nbr_nnz_in_col, nbr_nnz_in_row, A_Hat_size = 0, index_column, index_row,
+        block_width, block_height,
+        *first_index_col = NULL, // First scalar index of the block column j
+            *first_index_row = NULL,
+        scalar_width = 0,  // number of scalar columns in A_Hat
+        scalar_height = 0, // number of scalr rows in A_Hat
+            *col_idcs_buf = NULL, *row_idcs_buf = NULL;
 
-    T               *A_Hat;
-    
-    T               *col_buf;
-    
-    Com_Server<T>   o_comm;
-    
-    for (int j = 0; j < J->len; j++)
-    {
-      scalar_width += A->block_sizes[J->idcs[j]];
-      index_column = J->idcs[j];
-      for (int ii = 0; ii< I->len; ii++)
-      {
-        index_row = I->idcs[ii];
-        A_Hat_size += (A->block_sizes[index_row] * A->block_sizes[index_column]);
-      }
+    T* A_Hat;
+
+    T* col_buf;
+
+    Com_Server<T> o_comm;
+
+    for (int j = 0; j < J->len; j++) {
+        scalar_width += A->block_sizes[J->idcs[j]];
+        index_column = J->idcs[j];
+        for (int ii = 0; ii < I->len; ii++) {
+            index_row = I->idcs[ii];
+            A_Hat_size += (A->block_sizes[index_row] * A->block_sizes[index_column]);
+        }
     }
-            
+
     A_Hat = M->A_Hat;
-    
+
     memset(A_Hat, 0, A_Hat_size * sizeof(T));
-    
+
     nnz_cnt = 0;
 
     // Set first_index_col
     first_index_col = M->first_index_set;
     first_index_col[0] = 0;
     for (int j = 1; j < j_len; j++)
-      first_index_col[j] = first_index_col[j-1] + A->block_sizes[J->idcs[j-1]];
+        first_index_col[j] = first_index_col[j - 1] + A->block_sizes[J->idcs[j - 1]];
 
-    // Set first index row 
+    // Set first index row
     first_index_row = M->first_index_row;
     first_index_row[0] = 0;
-    for (int i = 1; i < i_len; i++)
-    {
-      first_index_row[i] = first_index_row[i-1] + A->block_sizes[I->idcs[i-1]];
+    for (int i = 1; i < i_len; i++) {
+        first_index_row[i] = first_index_row[i - 1] + A->block_sizes[I->idcs[i - 1]];
     }
 
-    //First loop: Iterating over j - idcs of J
-    //Second loop: Iterating over i - idcs of I
-    //If row-index of nnz in column is equal: Set at position idx in A_hat
-    //If not: don't set but increment idx and goto next i-index of I
+    // First loop: Iterating over j - idcs of J
+    // Second loop: Iterating over i - idcs of I
+    // If row-index of nnz in column is equal: Set at position idx in A_hat
+    // If not: don't set but increment idx and goto next i-index of I
 
     for (int ii = 0; ii < i_len; ii++)
-      scalar_height += A->block_sizes[I->idcs[ii]];
+        scalar_height += A->block_sizes[I->idcs[ii]];
 
-    for (int j = 0; j < j_len; j++)
-    {
-      
+    for (int j = 0; j < j_len; j++) {
         block_width = A->block_sizes[J->idcs[j]];
-        nnz_idx = 0; 
+        nnz_idx = 0;
         nnz_scalar_idx = 0;
-        
-    
-        o_comm.Get_Col_Block( A, 
-                        M, 
-                        B,
-                        P,
-                        UP,
-                        U_UP,
-                        col,
-                        J->idcs[j], 
-                        nbr_nnz_in_col, //Number of non-zeros blocks in the column
-                        nbr_nnz_in_row,
-                        col_idcs_buf,
-                        row_idcs_buf,
-                        col_buf,
-                        ht,
-                        pre_k_param,
-                        true,
-                        pre_max_param);
-        
-                
+
+        o_comm.Get_Col_Block(
+            A, M, B, P, UP, U_UP, col, J->idcs[j],
+            nbr_nnz_in_col, // Number of non-zeros blocks in the column
+            nbr_nnz_in_row, col_idcs_buf, row_idcs_buf, col_buf, ht,
+            pre_k_param, true, pre_max_param);
+
         // Sweep Blocks rows
-        for (int i = 0; i < i_len; i++)
-        {
+        for (int i = 0; i < i_len; i++) {
             block_height = A->block_sizes[I->idcs[i]];
-            //If all the column entries have been added then the rest are 0s
-            if (nnz_idx == nbr_nnz_in_col)
-            {
-                for (int ii = i; ii < i_len; ii++)
-                {
-                    set_idx2 += (block_width * A->block_sizes[I->idcs[ii]]); //add remaining 0 entries
+            // If all the column entries have been added then the rest are 0s
+            if (nnz_idx == nbr_nnz_in_col) {
+                for (int ii = i; ii < i_len; ii++) {
+                    set_idx2 += (block_width * A->block_sizes[I->idcs[ii]]); // add remaining 0 entries
                 }
-                    break;
+                break;
             }
-            
-            //If element nnz_idx in col belongs to I
-            if ( I->idcs[i] == col_idcs_buf[nnz_idx])
-            {
-                for (int jj = 0; jj < block_width; jj++)
-                {
-                  for (int ii = 0; ii < block_height; ii++)
-                  {
-                    // A_Hat[first_index_col[j] *scalar_height + jj * scalar_height + block_height * i + ii] = col_buf[nnz_scalar_idx + ii + jj * block_height]; 
-                     A_Hat[first_index_col[j] *scalar_height + jj * scalar_height + first_index_row[i] + ii] = col_buf[nnz_scalar_idx + ii + jj * block_height]; 
-                     if (!(col_buf[nnz_scalar_idx + ii + jj * block_height] == 0))
-                       nnz_cnt += 1;
-                  }
+
+            // If element nnz_idx in col belongs to I
+            if (I->idcs[i] == col_idcs_buf[nnz_idx]) {
+                for (int jj = 0; jj < block_width; jj++) {
+                    for (int ii = 0; ii < block_height; ii++) {
+                        // A_Hat[first_index_col[j] *scalar_height + jj *
+                        // scalar_height + block_height * i + ii] =
+                        // col_buf[nnz_scalar_idx + ii + jj * block_height];
+                        A_Hat[first_index_col[j] * scalar_height + jj * scalar_height + first_index_row[i] + ii] =
+                            col_buf[nnz_scalar_idx + ii + jj * block_height];
+                        if (!(col_buf[nnz_scalar_idx + ii + jj * block_height] == 0))
+                            nnz_cnt += 1;
+                    }
                 }
 
                 nnz_idx++;
                 nnz_scalar_idx += block_width * block_height;
-
             }
 
             set_idx2 += block_width * block_height;
-
         }
-
     }
     n = scalar_width;
     m = scalar_height;
     I->slen = m;
     J->slen = n;
 
-
     return A_Hat;
 }
-    
-    
-    
-template <class T>  T* 
-Spai_Sub<T>::Convert_block_AHat(T           *A_Hat,
-                                Matrix<T>       *A,
-                                Index_Set       *J, 
-                                Index_Set       *I)
+
+template <class T>
+T* Spai_Sub<T>::Convert_block_AHat(T* A_Hat, Matrix<T>* A, Index_Set* J, Index_Set* I)
 {
-  int A_Hat_size,
-      index = 0,
-      index2 = 0,
-      block_width,
-      block_height,
-      mj = 0,
-      *I_block_height = NULL,
-      *I_block_indices = NULL;
+    int A_Hat_size, index = 0, index2 = 0, block_width, block_height, mj = 0,
+                    *I_block_height = NULL, *I_block_indices = NULL;
 
-  T*  new_A_Hat = NULL;
+    T* new_A_Hat = NULL;
 
-  A_Hat_size = J->slen * I->slen;
+    A_Hat_size = J->slen * I->slen;
 
-  new_A_Hat = new T[A_Hat_size];
+    new_A_Hat = new T[A_Hat_size];
 
-  /* Make I_block_height */
-  I_block_height = new int[I->len];
+    /* Make I_block_height */
+    I_block_height = new int[I->len];
 
-  
-  for (int i = 0; i < I->len; i++)
-    I_block_height[i] = A->block_sizes[I->idcs[i]];
+    for (int i = 0; i < I->len; i++)
+        I_block_height[i] = A->block_sizes[I->idcs[i]];
 
-  /*Make I_block_indices */
-  I_block_indices = new int[I->len*J->len];
+    /*Make I_block_indices */
+    I_block_indices = new int[I->len * J->len];
 
+    memset(I_block_indices, 0, J->len * I->len * sizeof(int));
 
-  memset(I_block_indices, 0, J->len * I->len * sizeof(int));
-
-  for (int j = 0; j < J->len; j++)
-  {
-    index++;
-    block_width = A->block_sizes[J->idcs[j]];
-    for (int i = 1; i < I->len; i++)
-    {
-      I_block_indices[index] = I_block_indices[index-1] + A->block_sizes[I->idcs[i-1]]*block_width;
-      index++;
-    }
-  }
-  
-
-  index = 0;
-
-  for (int j = 0; j < J->len; j++)
-  {
-    block_width = A->block_sizes[J->idcs[j]];
-    for (int jj = 0; jj < block_width; jj++)
-    {
-      for (int i = 0; i < I->len; i ++)
-      {
-        block_height = A->block_sizes[I->idcs[i]];
-        for (int ii = 0; ii < block_height; ii++)
-        {
-//          printf("index : %d, %d\n", j * I->len + i, i);
-          //printf("index : %d, %d\n", index, index2 + I_block_indices[j * I->len + i] + jj * I_block_height[i] + ii);
-          new_A_Hat[index] = A_Hat[index2 + I_block_indices[j * I->len + i] + jj * I_block_height[i] + ii];
-          index++;
-        }
-      }
-    }
-   index2 += I->slen * block_width;
-  }
-
-  delete [] I_block_height;
-  delete [] I_block_indices;
-
-  delete [] A_Hat;
-
- return new_A_Hat;
-
-} 
-
-
-template <class T>  T* 
-Spai_Sub<T>::Convert_block_mHat(T           *m_Hat,
-                                Matrix<T>       *A,
-                                int            col, 
-                                Index_Set       *I)
-{
-  int A_Hat_size,
-      index = 0,
-      index2 = 0,
-      block_width,
-      block_height,
-      mj = 0,
-      *I_block_height = NULL,
-      *I_block_indices = NULL;
-
-  T*  new_A_Hat = NULL;
-
-  A_Hat_size = A->block_sizes[col] * I->slen;
-
-  new_A_Hat = new T[A_Hat_size];
-
-  /* Make I_block_height */
-  I_block_height = new int[I->len];
-
-  
-  for (int i = 0; i < I->len; i++)
-    I_block_height[i] = A->block_sizes[I->idcs[i]];
-
-  /*Make I_block_indices */
-  I_block_indices = new int[I->len];
-
-
-  memset(I_block_indices, 0, I->len * sizeof(int));
-
-  index++;
-  block_width = A->block_sizes[col];
-  for (int i = 1; i < I->len; i++)
-  {
-      I_block_indices[index] = I_block_indices[index-1] + A->block_sizes[I->idcs[i-1]]*block_width;
-      index++;
-  }
-  
-  
-
-  index = 0;
-
-  
-  block_width = A->block_sizes[col];
-  for (int jj = 0; jj < block_width; jj++)
-  {
-    for (int i = 0; i < I->len; i ++)
-    {
-      block_height = A->block_sizes[I->idcs[i]];
-      for (int ii = 0; ii < block_height; ii++)
-      {
-        new_A_Hat[index] = m_Hat[index2 + I_block_indices[i] + jj * I_block_height[i] + ii];
+    for (int j = 0; j < J->len; j++) {
         index++;
-      }
+        block_width = A->block_sizes[J->idcs[j]];
+        for (int i = 1; i < I->len; i++) {
+            I_block_indices[index] = I_block_indices[index - 1] +
+                                     A->block_sizes[I->idcs[i - 1]] * block_width;
+            index++;
+        }
     }
-  }
-  
 
-  delete [] I_block_height;
-  delete [] I_block_indices;
+    index = 0;
 
-  delete [] m_Hat;
+    for (int j = 0; j < J->len; j++) {
+        block_width = A->block_sizes[J->idcs[j]];
+        for (int jj = 0; jj < block_width; jj++) {
+            for (int i = 0; i < I->len; i++) {
+                block_height = A->block_sizes[I->idcs[i]];
+                for (int ii = 0; ii < block_height; ii++) {
+                    //          printf("index : %d, %d\n", j * I->len + i, i);
+                    // printf("index : %d, %d\n", index, index2 +
+                    // I_block_indices[j * I->len + i] + jj * I_block_height[i]
+                    // + ii);
+                    new_A_Hat[index] =
+                        A_Hat[index2 + I_block_indices[j * I->len + i] + jj * I_block_height[i] + ii];
+                    index++;
+                }
+            }
+        }
+        index2 += I->slen * block_width;
+    }
 
- return new_A_Hat;
+    delete[] I_block_height;
+    delete[] I_block_indices;
 
-} 
+    delete[] A_Hat;
 
-template <class T>  cs*
-Spai_Sub<T>::Convert_Matrix_toCS(T*& in_matrix, 
-                                 const int m, 
-                                 const int n, 
-                                 const int nnz)
+    return new_A_Hat;
+}
+
+template <class T>
+T* Spai_Sub<T>::Convert_block_mHat(T* m_Hat, Matrix<T>* A, int col, Index_Set* I)
 {
-    int     idx = 0;
-    
-    T       val;
-    
-    cs*     out_matrix = NULL;
-    
+    int A_Hat_size, index = 0, index2 = 0, block_width, block_height, mj = 0,
+                    *I_block_height = NULL, *I_block_indices = NULL;
+
+    T* new_A_Hat = NULL;
+
+    A_Hat_size = A->block_sizes[col] * I->slen;
+
+    new_A_Hat = new T[A_Hat_size];
+
+    /* Make I_block_height */
+    I_block_height = new int[I->len];
+
+    for (int i = 0; i < I->len; i++)
+        I_block_height[i] = A->block_sizes[I->idcs[i]];
+
+    /*Make I_block_indices */
+    I_block_indices = new int[I->len];
+
+    memset(I_block_indices, 0, I->len * sizeof(int));
+
+    index++;
+    block_width = A->block_sizes[col];
+    for (int i = 1; i < I->len; i++) {
+        I_block_indices[index] = I_block_indices[index - 1] +
+                                 A->block_sizes[I->idcs[i - 1]] * block_width;
+        index++;
+    }
+
+    index = 0;
+
+    block_width = A->block_sizes[col];
+    for (int jj = 0; jj < block_width; jj++) {
+        for (int i = 0; i < I->len; i++) {
+            block_height = A->block_sizes[I->idcs[i]];
+            for (int ii = 0; ii < block_height; ii++) {
+                new_A_Hat[index] =
+                    m_Hat[index2 + I_block_indices[i] + jj * I_block_height[i] + ii];
+                index++;
+            }
+        }
+    }
+
+    delete[] I_block_height;
+    delete[] I_block_indices;
+
+    delete[] m_Hat;
+
+    return new_A_Hat;
+}
+
+template <class T>
+cs* Spai_Sub<T>::Convert_Matrix_toCS(T*& in_matrix, const int m, const int n, const int nnz)
+{
+    int idx = 0;
+
+    T val;
+
+    cs* out_matrix = NULL;
+
     out_matrix = cs_spalloc(m, n, nnz, 1, 1);
-    
+
     for (int col = 0; col < n; col++)
-        for (int row = 0; row < m; row++)
-        {
+        for (int row = 0; row < m; row++) {
             val = in_matrix[col * m + row];
-            if (fabs(val) > null_eps)
-            {
+            if (fabs(val) > null_eps) {
                 out_matrix->nz++;
                 out_matrix->i[idx] = row;
                 out_matrix->p[idx] = col;
-                out_matrix->x[idx] = val; 
+                out_matrix->x[idx] = val;
                 idx++;
             }
         }
 
     out_matrix = cs_compress(out_matrix);
-    
+
     return out_matrix;
-}   
-    
-    
-    
-template <class T>  T*
-Spai_Sub<T>::Create_Augmenting_Columns(Index_Set*       J_aug, 
-                                       Matrix<T>*       A,
-                                       Matrix<T>*&      M,
-                                       Matrix<T>*       B,
-                                       Pattern*         P,
-                                       Pattern*         UP,
-                                       Index_Set*       U_UP,
-                                       Hash_Table<T>*   ht,
-                                       const int&    pre_k_param,
-                                       const int     pre_max_param)
+}
+
+template <class T>
+T* Spai_Sub<T>::Create_Augmenting_Columns(Index_Set* J_aug,
+                                          Matrix<T>* A,
+                                          Matrix<T>*& M,
+                                          Matrix<T>* B,
+                                          Pattern* P,
+                                          Pattern* UP,
+                                          Index_Set* U_UP,
+                                          Hash_Table<T>* ht,
+                                          const int& pre_k_param,
+                                          const int pre_max_param)
 {
-    int             r_idx,
-                    *col_idcs_buf = NULL,
-                    *row_idcs_buf = NULL,
-                    col_len,
-                    row_len;
-    
-    T               *aug_cols = new T[J_aug->len * A->m],
-                    *col_buf = NULL;
-    
-    Com_Server<T>   o_comm;
-    
-            
+    int r_idx, *col_idcs_buf = NULL, *row_idcs_buf = NULL, col_len, row_len;
+
+    T *aug_cols = new T[J_aug->len * A->m], *col_buf = NULL;
+
+    Com_Server<T> o_comm;
+
     memset(aug_cols, 0, J_aug->len * A->m * sizeof(T));
 
-    for (int i = 0; i < J_aug->len; i++)
-    {
-        o_comm.Get_Col( A, 
-                        M, 
-                        B,
-                        P,
-                        UP,
-                        U_UP,
-                        J_aug->idcs[i], 
-                        col_len,
-                        row_len, 
-                        col_idcs_buf, 
-                        row_idcs_buf,
-                        col_buf,
-                        ht,
-                        pre_k_param,
-                        false,
-                        pre_max_param);
-        
-        for (int c = 0; c < col_len; c++)
-        {
+    for (int i = 0; i < J_aug->len; i++) {
+        o_comm.Get_Col(A, M, B, P, UP, U_UP, J_aug->idcs[i], col_len, row_len, col_idcs_buf,
+                       row_idcs_buf, col_buf, ht, pre_k_param, false, pre_max_param);
+
+        for (int c = 0; c < col_len; c++) {
             r_idx = col_idcs_buf[c];
             aug_cols[i * A->m + r_idx] = col_buf[c];
         }
     }
-    
+
     return aug_cols;
 }
 
-
-
-template <class T>  double
-Spai_Sub<T>::Compute_Fillgrade( const int nnz, 
-                                const int m, 
-                                const int n)
+template <class T>
+double Spai_Sub<T>::Compute_Fillgrade(const int nnz, const int m, const int n)
 {
-    return ( static_cast<double> (nnz) / 
-             static_cast<double> (m*n) );   
+    return (static_cast<double>(nnz) / static_cast<double>(m * n));
 }
-    
-    
 
-template <class T>  void 
-Spai_Sub<T>::Ectract_Quadratic_Content( T*      matrix, 
-                                        const   size_t m, 
-                                        const   size_t n)
-{    
-    if(m > n)
-    {
-        T const*   src = matrix;
-        T*         dest = matrix; 
-    
+template <class T>
+void Spai_Sub<T>::Ectract_Quadratic_Content(T* matrix, const size_t m, const size_t n)
+{
+    if (m > n) {
+        T const* src = matrix;
+        T* dest = matrix;
+
         size_t dim_loop = n;
-        while(dim_loop--)
-        {
+        while (dim_loop--) {
             // no memcpy() <- unsafe
             // in src and dest overlap
-            memmove(dest, 
-                    src, 
-                    n * sizeof(T));
+            memmove(dest, src, n * sizeof(T));
             dest += n;
             src += m;
         }
-    }    
+    }
 }
 
-
-
-template <class T>  void
-Spai_Sub<T>::Insert_Row_Solution(Matrix<T>       *A,
-                                 Matrix<T>       *&M,
-                                 const int       col,
-                                 const T         *mk_Hat, 
-                                 const Index_Set *J)
+template <class T>
+void Spai_Sub<T>::Insert_Row_Solution(
+    Matrix<T>* A, Matrix<T>*& M, const int col, const T* mk_Hat, const Index_Set* J)
 {
-    
-    int     pe,
-            idx,
-            nnz,
-            *col_idcs_buf;
-            
-    T       *col_buf;
-    
-    
+    int pe, idx, nnz, *col_idcs_buf;
+
+    T* col_buf;
+
     pe = A->pe[col];
     idx = col - A->start_indices[pe];
 
     nnz = J->len;
     M->c_lines->len_cols[idx] = nnz;
-        
-    col_buf         = new T[nnz];
-    col_idcs_buf    = new int[nnz];
 
-    M->c_lines->A[idx]          = col_buf;
-    M->c_lines->col_idcs[idx]   = col_idcs_buf;
+    col_buf = new T[nnz];
+    col_idcs_buf = new int[nnz];
 
-    for ( int i = 0; i < nnz; i++)
-    {
+    M->c_lines->A[idx] = col_buf;
+    M->c_lines->col_idcs[idx] = col_idcs_buf;
+
+    for (int i = 0; i < nnz; i++) {
         col_idcs_buf[i] = J->idcs[i];
         col_buf[i] = mk_Hat[i];
     }
 }
-            
 
-        
-template<class T>   T*
-Spai_Sub<T>::Create_ek_Hat( const Index_Set*    I, 
-                            const int           len,
-                            const int           col,
-                            int&                unit_idx)
+template <class T>
+T* Spai_Sub<T>::Create_ek_Hat(const Index_Set* I, const int len, const int col, int& unit_idx)
 {
-    T       *ek_Hat = NULL;
-                            
-    int     i_val;
-                        
-    bool    found = false;
-    
-                
+    T* ek_Hat = NULL;
+
+    int i_val;
+
+    bool found = false;
+
     ek_Hat = new T[len];
     memset(ek_Hat, 0, len * sizeof(T));
-            
+
     /*Sweep block rows */
-    for (int i = 0; i < I->len; i++)
-    {
+    for (int i = 0; i < I->len; i++) {
         i_val = I->idcs[i];
         if (i_val > col)
             break;
-        if ( i_val == col )
-        {
+        if (i_val == col) {
             found = true;
             unit_idx = i;
             break;
         }
     }
-    
-                
+
     if (found)
         Set_Unit_Idx(ek_Hat, unit_idx);
-      
+
     return ek_Hat;
 }
 
-
-template<class T>   T*
-Spai_Sub<T>::Create_ek_Hat_Block( const Index_Set*    I, 
-                            const Matrix<T>*    A,
-                            const Matrix<T>*    M,
-                            const int           len,
-                            const int           col,
-                            int&                unit_idx)
+template <class T>
+T* Spai_Sub<T>::Create_ek_Hat_Block(const Index_Set* I,
+                                    const Matrix<T>* A,
+                                    const Matrix<T>* M,
+                                    const int len,
+                                    const int col,
+                                    int& unit_idx)
 {
-    T       *ek_Hat = NULL;
-                            
-    int     i_val,
-            k = 0;
-                        
-                
-    //ek_Hat = new T[len];
+    T* ek_Hat = NULL;
+
+    int i_val, k = 0;
+
+    // ek_Hat = new T[len];
     ek_Hat = M->mk_Hat;
     memset(ek_Hat, 0, len * sizeof(T));
 
-    int *first_index_block = NULL;
-    //first_index_block = new int[I->len];
+    int* first_index_block = NULL;
+    // first_index_block = new int[I->len];
 
     first_index_block = M->first_index_set;
-    memset(first_index_block, 0, I->len * sizeof(int));  
+    memset(first_index_block, 0, I->len * sizeof(int));
 
-    for (int i = 1; i < I->len; i++)
-    {
-      //printf("idx : %d, bs : %d\n", I->idcs[i-1], A->block_sizes[I->idcs[i-1]]);
-      first_index_block[i] = first_index_block[i-1] + A->block_sizes[I->idcs[i-1]];
+    for (int i = 1; i < I->len; i++) {
+        // printf("idx : %d, bs : %d\n", I->idcs[i-1],
+        // A->block_sizes[I->idcs[i-1]]);
+        first_index_block[i] = first_index_block[i - 1] + A->block_sizes[I->idcs[i - 1]];
     }
-            
+
     /*Sweep block rows */
-    for (int i = 0; i < I->len; i++)
-    {
+    for (int i = 0; i < I->len; i++) {
         k = 0;
         i_val = I->idcs[i];
         if (i_val > col)
             break;
-        if ( i_val == col )
-        {
-          /*Block diagonal : i_val , col */
+        if (i_val == col) {
+            /*Block diagonal : i_val , col */
             unit_idx = i;
-            while (k<A->block_sizes[col])
-            {
-              //printf("k:%d, i: %d, idx : %d\n", k, i, k * I->slen + k + first_index_block[i]);
-              ek_Hat[k * I->slen + k + first_index_block[i]] = 1;
-              k++;
-              //i++;
+            while (k < A->block_sizes[col]) {
+                // printf("k:%d, i: %d, idx : %d\n", k, i, k * I->slen + k +
+                // first_index_block[i]);
+                ek_Hat[k * I->slen + k + first_index_block[i]] = 1;
+                k++;
+                // i++;
             }
 
             break;
@@ -950,147 +698,116 @@ Spai_Sub<T>::Create_ek_Hat_Block( const Index_Set*    I,
     return ek_Hat;
 }
 
-
-template<class T>   T*
-Spai_Sub<T>::Create_bk_Hat( Matrix<T>           *A, 
-                            Matrix<T>           *M,
-                            Matrix<T>           *B,
-                            Pattern             *P,
-                            Pattern             *UP,
-                            const Index_Set*    I, 
-                            const int           len,
-                            const int           col)
+template <class T>
+T* Spai_Sub<T>::Create_bk_Hat(Matrix<T>* A,
+                              Matrix<T>* M,
+                              Matrix<T>* B,
+                              Pattern* P,
+                              Pattern* UP,
+                              const Index_Set* I,
+                              const int len,
+                              const int col)
 {
-    T               *bk_Hat         = NULL,
-                    *col_buf        = NULL;  
-    
-    int             i_val,
-                    i_B,
-                    idx_col         = 0,
-                    idx_I           = 0,
-                    pos             = 0,
-                    col_len         = 0,
-                    *col_idcs_buf   = NULL;
-          
-            
-    Com_Server<T>   o_comm;
-               
-    
+    T *bk_Hat = NULL, *col_buf = NULL;
+
+    int i_val, i_B, idx_col = 0, idx_I = 0, pos = 0, col_len = 0, *col_idcs_buf = NULL;
+
+    Com_Server<T> o_comm;
+
     bk_Hat = new T[len];
-    memset(bk_Hat, 0, len * sizeof(T));    
-    
-    o_comm.Get_Target_Col(  A,  
-                            M,
-                            B,
-                            P, 
-                            UP,
-                            col, 
-                            col_len,
-                            col_idcs_buf, 
-                            col_buf);
-    
-        
-    while (idx_col < col_len && idx_I < len)
-    {
-        i_B   = col_idcs_buf[idx_col];
+    memset(bk_Hat, 0, len * sizeof(T));
+
+    o_comm.Get_Target_Col(A, M, B, P, UP, col, col_len, col_idcs_buf, col_buf);
+
+    while (idx_col < col_len && idx_I < len) {
+        i_B = col_idcs_buf[idx_col];
         i_val = I->idcs[idx_I];
-        
-        if (i_B < i_val)      
+
+        if (i_B < i_val)
             idx_col++;
-        else if (i_B > i_val) 
-        {
+        else if (i_B > i_val) {
             pos++;
             idx_I++;
         }
-        else  // i_B == i_val
+        else // i_B == i_val
         {
             bk_Hat[pos++] = col_buf[idx_col];
             idx_col++;
             idx_I++;
-        }  
+        }
     }
-    
+
     return bk_Hat;
 }
 
-
-
-template <class T> T*
-Spai_Sub<T>::Create_ek( const int len, 
-                        const int col)
+template <class T>
+T* Spai_Sub<T>::Create_ek(const int len, const int col)
 {
-    T   *ek_Hat = NULL;
-    
+    T* ek_Hat = NULL;
+
     ek_Hat = new T[len];
     memset(ek_Hat, 0, len * sizeof(T));
     Set_Unit_Idx(ek_Hat, col);
-    
+
     return ek_Hat;
 }
 
-
-
-template<class T>   T*
-Spai_Sub<T>::Copy_Vector(T* in, const int len)
+template <class T>
+T* Spai_Sub<T>::Copy_Vector(T* in, const int len)
 {
-    T*  out;
+    T* out;
     out = new T[len];
     memcpy(out, in, len * sizeof(T));
-    
+
     return out;
 }
 
-
-
-template <class T>  T*
-Spai_Sub<T>::Get_Solution_Vals(T* mk_Hat_in, Index_Set* J)
+template <class T>
+T* Spai_Sub<T>::Get_Solution_Vals(T* mk_Hat_in, Index_Set* J)
 {
-    T*  mk_Hat_out = NULL;
-    
+    T* mk_Hat_out = NULL;
+
     mk_Hat_out = new T[J->len];
     memset(mk_Hat_out, 0, J->len * sizeof(T));
     memcpy(mk_Hat_out, mk_Hat_in, J->len * sizeof(T));
-    
-    delete [] mk_Hat_in;
+
+    delete[] mk_Hat_in;
     return mk_Hat_out;
-    
 }
 
-
-template <class T>  void
-Spai_Sub<T>::Get_Solution_Vals_Block(T* mk_Hat_in, T* mk_Hat_out, const Matrix<T> *M, const Matrix<T> *A, const int col, Index_Set* J, int Islen)
+template <class T>
+void Spai_Sub<T>::Get_Solution_Vals_Block(T* mk_Hat_in,
+                                          T* mk_Hat_out,
+                                          const Matrix<T>* M,
+                                          const Matrix<T>* A,
+                                          const int col,
+                                          Index_Set* J,
+                                          int Islen)
 {
     int len = J->slen * A->block_sizes[col], index = 0;
 
-    int *first_index_block = NULL;
+    int* first_index_block = NULL;
     first_index_block = M->first_index_set;
     first_index_block[0] = 0;
 
-    for (int j = 1; j < J->len; j++)
-    {
-      first_index_block[j] = first_index_block[j-1] + A->block_sizes[J->idcs[j-1]];
+    for (int j = 1; j < J->len; j++) {
+        first_index_block[j] = first_index_block[j - 1] + A->block_sizes[J->idcs[j - 1]];
     }
 
     memset(mk_Hat_out, 0, len * sizeof(T));
 
-
-    for (int j = 0; j < J->len; j++)
-    {
-      for (int jcol = 0; jcol < A->block_sizes[col]; jcol++)
-      {
-        for (int jj = 0; jj < A->block_sizes[J->idcs[j]]; jj++)
-        {
-          mk_Hat_out[index++] = mk_Hat_in[ jcol * Islen + first_index_block[j] + jj];
+    for (int j = 0; j < J->len; j++) {
+        for (int jcol = 0; jcol < A->block_sizes[col]; jcol++) {
+            for (int jj = 0; jj < A->block_sizes[J->idcs[j]]; jj++) {
+                mk_Hat_out[index++] =
+                    mk_Hat_in[jcol * Islen + first_index_block[j] + jj];
+            }
         }
-      }
-    } 
-
+    }
 }
 
-template <class T>  bool
-Spai_Sub<T>::Compare_A_Hat( T*  A1, 
-                            T*  A2, 
-                            int dim)
+template <class T>
+bool Spai_Sub<T>::Compare_A_Hat(T* A1, T* A2, int dim)
 {
     for (int i = 0; i < dim; i++)
         if (!Compare_aij(A1[i], A2[i]))
@@ -1098,84 +815,56 @@ Spai_Sub<T>::Compare_A_Hat( T*  A1,
     return true;
 }
 
-
-
-template <class T>  T*
-Spai_Sub<T>::Extract_mk_Hat(T* mk, Index_Set* J)
+template <class T>
+T* Spai_Sub<T>::Extract_mk_Hat(T* mk, Index_Set* J)
 {
-    T*  mk_Hat_out = NULL;
-    
+    T* mk_Hat_out = NULL;
+
     mk_Hat_out = new T[J->len];
     memset(mk_Hat_out, 0, J->len * sizeof(T));
-    
+
     for (int i = 0; i < J->len; i++)
         mk_Hat_out[i] = mk[J->idcs[i]];
-    
-    delete [] mk;
+
+    delete[] mk;
     return mk_Hat_out;
 }
 
-
-
-template<class T>   double
-Spai_Sub<T>::Residual_Norm( T*      A_Hat,
-                            int&    m,
-                            int&    n, 
-                            T*      mk_Hat, 
-                            T*      ek_Hat,
-                            T*&     residual_vals)
+template <class T>
+double Spai_Sub<T>::Residual_Norm(T* A_Hat, int& m, int& n, T* mk_Hat, T* ek_Hat, T*& residual_vals)
 {
-    double  residual_norm = 0.0,
-            alpha = 1.0,
-            beta = -1.0;
-            
-    const char*   
-            TRANS = "N";
-    
-    int     lda,
-            incx = 1,
-            incy = 1;
-    
-    
-    lda     = std::max(m, 1); 
-    
-    // Get the residual values. 
+    double residual_norm = 0.0, alpha = 1.0, beta = -1.0;
+
+    const char* TRANS = "N";
+
+    int lda, incx = 1, incy = 1;
+
+    lda = std::max(m, 1);
+
+    // Get the residual values.
     // The whole vector is not needed. Just the values
     // for the frobenius calculation. If the whole
     // vector is needed the Index_Set I would give
     // the position of the value within the residual.
-    // Here the smaller subproblem is faster for computation. 
-    Matrix_Vector_Product(  TRANS,
-                            m,
-                            n,
-                            alpha,
-                            A_Hat,
-                            lda,
-                            mk_Hat,
-                            incx,
-                            beta,
-                            ek_Hat,
-                            incy);
-    
-    //Just a new name
+    // Here the smaller subproblem is faster for computation.
+    Matrix_Vector_Product(TRANS, m, n, alpha, A_Hat, lda, mk_Hat, incx, beta, ek_Hat, incy);
+
+    // Just a new name
     residual_vals = ek_Hat;
-    
-    
-    //Compute the residual norm
+
+    // Compute the residual norm
     residual_norm = Euclidean_Norm(residual_vals, m);
-    
+
     return residual_norm;
 }
 
+template <class T>
+double Spai_Sub<T>::Euclidean_Norm(T* residual_vals, const int nbr_elems)
+{
+    if (!residual_vals)
+        return 0.0;
 
-
-template<class T> double
-Spai_Sub<T>::Euclidean_Norm(T* residual_vals, 
-                            const int nbr_elems)
-{   
-    if (!residual_vals) return 0.0;
-    
-    double  sum = 0.0;
+    double sum = 0.0;
 
     // Sqrt_Sum has to be a template specification
     // Computing the whole sum under the sqrt specific to
@@ -1185,54 +874,46 @@ Spai_Sub<T>::Euclidean_Norm(T* residual_vals,
     return sqrt(sum);
 }
 
-
-
-template<class T>   bool
-Spai_Sub<T>::Augment_Sparsity(Matrix<T>*    A,
-                              Matrix<T>*&   M,
-                              Matrix<T>*    B,
-                              Pattern*      P,
-                              Index_Set*    I,
-                              Index_Set*&   J,
-                              Pattern*      UP,
-                              Index_Set*    U_UP,
-                              const int     col,
-                              double        residual_norm,
-                              T*            residual_vals,
-                              const int     maxnew_param,
-                              Hash_Table<T>*& ht,
-                              const int     use_mean,
-                              const int&    pre_k_param,
-                              const int     pre_max_param,
-                              unsigned int  *&bitvec,
-                              unsigned int  *&reset_vec)
+template <class T>
+bool Spai_Sub<T>::Augment_Sparsity(Matrix<T>* A,
+                                   Matrix<T>*& M,
+                                   Matrix<T>* B,
+                                   Pattern* P,
+                                   Index_Set* I,
+                                   Index_Set*& J,
+                                   Pattern* UP,
+                                   Index_Set* U_UP,
+                                   const int col,
+                                   double residual_norm,
+                                   T* residual_vals,
+                                   const int maxnew_param,
+                                   Hash_Table<T>*& ht,
+                                   const int use_mean,
+                                   const int& pre_k_param,
+                                   const int pre_max_param,
+                                   unsigned int*& bitvec,
+                                   unsigned int*& reset_vec)
 {
-    int             idx,
-                    pe;
-    
-    bool            found = false;
-    
-    double          mean_val = 0.0;
-    
-    Index_Set       *L          = NULL,
-                    *J_tilde    = NULL,
-                    *U_Nls      = NULL,
-                    *U          = NULL;
-                
-    RHO_IDX         *rhos       = NULL;
-    
-    Com_Server<T>   o_comm;
-                
-    
+    int idx, pe;
+
+    bool found = false;
+
+    double mean_val = 0.0;
+
+    Index_Set *L = NULL, *J_tilde = NULL, *U_Nls = NULL, *U = NULL;
+
+    RHO_IDX* rhos = NULL;
+
+    Com_Server<T> o_comm;
+
     // Copy Index set I into L and looking
     // if col in I, if not place it into L
     L = new Index_Set(I->len);
-    
-    for( int i = 0; i < I->len; i++)
-    {
+
+    for (int i = 0; i < I->len; i++) {
         idx = I->idcs[i];
         L->idcs[i] = idx;
-        if( idx == col) 
+        if (idx == col)
             found = true;
     }
     // no realloc because L has maximal possible
@@ -1240,229 +921,176 @@ Spai_Sub<T>::Augment_Sparsity(Matrix<T>*    A,
     if (!found)
         L->idcs[L->len++] = col;
 
-    
     // Compute union of all nonzero entries in I -> J_tilde
-    U_Nls = Union_Nl_Sets(A, M, B, P, UP, U_UP, 
-                          L, ht, pre_k_param, 
-                          pre_max_param, bitvec, 
-                          reset_vec);
-    
-    
+    U_Nls = Union_Nl_Sets(A, M, B, P, UP, U_UP, L, ht, pre_k_param,
+                          pre_max_param, bitvec, reset_vec);
+
     // Compute set J_tilde by set difference with U_Nls
     J_tilde = J_tilde->Set_Difference(U_Nls, J);
-    
-    
-    //does the user want to use the upper pattern?
-    if (UP)
-    {   
+
+    // does the user want to use the upper pattern?
+    if (UP) {
         pe = P->pe[col];
-        idx = col - P->start_indices[pe];       
-        
-        // Doing if statement here because 
-        // always allocating U and filling with 
+        idx = col - P->start_indices[pe];
+
+        // Doing if statement here because
+        // always allocating U and filling with
         // indices costs too much time.
         // Allocating U only when this pe
         // is load balancing is is much faster.
-        if (pe == P->my_id)
-        {
-            J_tilde = J_tilde->Set_Intersection(J_tilde, 
-                                                UP->j_sets[idx]);
+        if (pe == P->my_id) {
+            J_tilde = J_tilde->Set_Intersection(J_tilde, UP->j_sets[idx]);
         }
-        else
-        {
+        else {
             // Setting U to maximum possible size
             // because of the load balancing mechanism
             U = new Index_Set(A->m);
-        
+
             o_comm.Get_UP_Col(A, M, B, P, UP, pe, idx, U);
             J_tilde = J_tilde->Set_Intersection(J_tilde, U);
-        
-            delete U; 
-        }            
+
+            delete U;
+        }
     }
-    
-    
+
     // No new candidates to augment
-    if (J_tilde->len == 0) 
-    {
+    if (J_tilde->len == 0) {
         delete L;
         delete J_tilde;
         delete U_Nls;
         return false;
     }
-    
-    
+
     // Compute rho values for all elements of J_tilde
-    rhos = Compute_Rhos(A, M, B, P, UP, U_UP, I, residual_norm, 
-                        residual_vals, J_tilde, mean_val, ht, 
-                        use_mean, pre_k_param, pre_max_param);
-        
-    
+    rhos = Compute_Rhos(A, M, B, P, UP, U_UP, I, residual_norm, residual_vals,
+                        J_tilde, mean_val, ht, use_mean, pre_k_param, pre_max_param);
+
     // Augment J with new indices which improves residual
-    for (int el = 0; 
-            (el < maxnew_param) && 
-            (el < J_tilde->len) && 
-            (rhos[el].rho <= mean_val); 
-        el++)
-    {
+    for (int el = 0;
+         (el < maxnew_param) && (el < J_tilde->len) && (rhos[el].rho <= mean_val); el++) {
         J->idcs[J->len] = rhos[el].idx;
         J->len++;
     }
 
-    //Sorting the new augmented Index_Set J
+    // Sorting the new augmented Index_Set J
     std::sort(J->idcs, J->idcs + J->len);
-    
-    
-    if (rhos) delete [] rhos;
+
+    if (rhos)
+        delete[] rhos;
     delete L;
     delete J_tilde;
     delete U_Nls;
-    
+
     return true;
 }
 
-
-
-template<class T>   RHO_IDX*
-Spai_Sub<T>::Compute_Rhos(  Matrix<T>*      A,
-                            Matrix<T>*&     M,
-                            Matrix<T>*      B,
-                            Pattern         *P,
-                            Pattern         *UP,
-                            Index_Set       *U_UP,
-                            Index_Set*      I,
-                            double          residual_norm,
-                            T*              residual_vals,
-                            Index_Set*      J_tilde,
-                            double&         mean_val,
-                            Hash_Table<T>*& ht,
-                            const int       use_mean,
-                            const int&      pre_k_param,
-                            const int       pre_max_param)
+template <class T>
+RHO_IDX* Spai_Sub<T>::Compute_Rhos(Matrix<T>* A,
+                                   Matrix<T>*& M,
+                                   Matrix<T>* B,
+                                   Pattern* P,
+                                   Pattern* UP,
+                                   Index_Set* U_UP,
+                                   Index_Set* I,
+                                   double residual_norm,
+                                   T* residual_vals,
+                                   Index_Set* J_tilde,
+                                   double& mean_val,
+                                   Hash_Table<T>*& ht,
+                                   const int use_mean,
+                                   const int& pre_k_param,
+                                   const int pre_max_param)
 {
-    bool        first_set = false;
+    bool first_set = false;
 
-    int         col_len,
-                row_len,
-                res_len,
-                j,
-                *col_idcs_buf    = NULL,
-                *row_idcs_buf    = NULL;
-    
-    double      norm_square,
-                rho_j,
-                num,
-                aj_norm = 0.0;
-                    
-    RHO_IDX*    rhos             = NULL;
-    
-    T           *aj              = NULL,
-                *residual        = NULL,
-                *residual_sorted = NULL,
-                *col_buf         = NULL;
-                
+    int col_len, row_len, res_len, j, *col_idcs_buf = NULL, *row_idcs_buf = NULL;
+
+    double norm_square, rho_j, num, aj_norm = 0.0;
+
+    RHO_IDX* rhos = NULL;
+
+    T *aj = NULL, *residual = NULL, *residual_sorted = NULL, *col_buf = NULL;
+
     Com_Server<T> o_comm;
-    
-    
+
     rhos = new RHO_IDX[J_tilde->len];
     norm_square = residual_norm * residual_norm;
-    
-    for (int idx = 0; idx < J_tilde->len; idx++)
-    {
+
+    for (int idx = 0; idx < J_tilde->len; idx++) {
         j = J_tilde->idcs[idx];
-        
-        //Get the column data
-        o_comm.Get_Col( A,
-                        M, 
-                        B,
-                        P,
-                        UP,
-                        U_UP,
-                        j, 
-                        col_len,
-                        row_len, 
-                        col_idcs_buf, 
-                        row_idcs_buf,
-                        col_buf,
-                        ht,
-                        pre_k_param,
-                        true,
-                        pre_max_param);        
-        
+
+        // Get the column data
+        o_comm.Get_Col(A, M, B, P, UP, U_UP, j, col_len, row_len, col_idcs_buf,
+                       row_idcs_buf, col_buf, ht, pre_k_param, true, pre_max_param);
+
         // ||aj||_2
         aj_norm = Euclidean_Norm(col_buf, col_len);
-        
+
         // avoiding memset for small size of indices and
         // nnz in specific column. For large matrices with
         // a small product this is much faster. Memset for
-        // A->m is a great bottleneck in case of updates 
-        // with a high sparsity relative to dimension. 
+        // A->m is a great bottleneck in case of updates
+        // with a high sparsity relative to dimension.
         // This (1200) is an arbitrary choice but
         // experiments showed faster runtimes.
-        if((col_len * I->len) <= 1200)
-        {
+        if ((col_len * I->len) <= 1200) {
             residual = residual_vals;
-            
-            //Compute the numerator
+
+            // Compute the numerator
             // In real:    (r^T * aj)^2
             // In complex: Re[r^H * aj]^2
-            num = Compute_Numerator(residual, aj, I, false, 
-                                    col_buf, col_idcs_buf, col_len);
+            num = Compute_Numerator(residual, aj, I, false, col_buf, col_idcs_buf, col_len);
         }
-        else
-        {                
-            if(!first_set)
-            {
+        else {
+            if (!first_set) {
                 res_len = A->m;
-    
-                // Create sorted residual vector out of 
-                // residual values. 
+
+                // Create sorted residual vector out of
+                // residual values.
                 residual_sorted = new T[res_len];
                 memset(residual_sorted, 0, res_len * sizeof(T));
                 for (int i = 0; i < I->len; i++)
-                    residual_sorted[I->idcs[i]] = residual_vals[i]; 
-        
+                    residual_sorted[I->idcs[i]] = residual_vals[i];
+
                 // Create vector aj == A* e_j
                 // Will have as well dimension of A
                 aj = new T[res_len];
                 memset(aj, 0, res_len * sizeof(T));
-                first_set = true;         
+                first_set = true;
             }
             // Fill aj with values of A
             // The j idx is the j column of matrix A
-            memcpy( aj, col_buf, col_len * sizeof(T) );  
-            
-            //Compute the numerator
+            memcpy(aj, col_buf, col_len * sizeof(T));
+
+            // Compute the numerator
             // In real:    (r^T * aj)^2
             // In complex: Re[r^H * aj]^2
-            num = Compute_Numerator(residual_sorted, aj, I, true, 
-                                    col_buf, col_idcs_buf, col_len);
-            
-        }  
-        
-        //Computing in real: ||r||^2 - (r^T * aj)^2 / ||aj||^2
-        //Computing in complex: ||r||^2 - Re[r^H * aj]^2 / ||aj||^2
-        rho_j = (residual_norm * residual_norm) 
-                    - (num / (aj_norm * aj_norm));
+            num = Compute_Numerator(residual_sorted, aj, I, true, col_buf,
+                                    col_idcs_buf, col_len);
+        }
+
+        // Computing in real: ||r||^2 - (r^T * aj)^2 / ||aj||^2
+        // Computing in complex: ||r||^2 - Re[r^H * aj]^2 / ||aj||^2
+        rho_j = (residual_norm * residual_norm) - (num / (aj_norm * aj_norm));
 
         rho_j = sqrt(rho_j);
         mean_val += rho_j;
-        
-        //Filling result to RHO_IDX array
+
+        // Filling result to RHO_IDX array
         rhos[idx].idx = j;
         rhos[idx].rho = rho_j;
     }
-    //Computing mean value of rho indices
+    // Computing mean value of rho indices
     if (use_mean)
-        mean_val /= J_tilde->len; 
-    
-    //Ascending sort of rhos
+        mean_val /= J_tilde->len;
+
+    // Ascending sort of rhos
     std::sort(rhos, rhos + J_tilde->len, RHO_Comparator());
 
-    if (aj) delete [] aj;
-    if (residual_sorted) 
-        delete [] residual_sorted;
-    
+    if (aj)
+        delete[] aj;
+    if (residual_sorted)
+        delete[] residual_sorted;
+
     return rhos;
 }
-

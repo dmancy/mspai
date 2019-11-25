@@ -30,94 +30,81 @@
     ======================================================================
 */
 
-
-template <class T>  void
-Spai_SD<T>::SPAI_Column(Matrix<T> *A,
-                        Matrix<T>       *&M,
-                        Matrix<T>       *B,
-                        Pattern         *P,
-                        Pattern         *UP,
-                        Index_Set       *U_UP,
-                        const int       col,
-                        const double    epsilon_param,
-                        const int       maxnew_param,
-                        const int       max_impr_steps,
-                        Hash_Table<T>   *ht,
-                        const int       use_mean,
-                        int             pre_k_param,
-                        const int       pre_max_param,
-                        unsigned int    *&bitvec,
-                        unsigned int    *&reset_vec)
+template <class T>
+void Spai_SD<T>::SPAI_Column(Matrix<T>* A,
+                             Matrix<T>*& M,
+                             Matrix<T>* B,
+                             Pattern* P,
+                             Pattern* UP,
+                             Index_Set* U_UP,
+                             const int col,
+                             const double epsilon_param,
+                             const int maxnew_param,
+                             const int max_impr_steps,
+                             Hash_Table<T>* ht,
+                             const int use_mean,
+                             int pre_k_param,
+                             const int pre_max_param,
+                             unsigned int*& bitvec,
+                             unsigned int*& reset_vec)
 {
-        
-    int             m = 0,  // y dimension of A_hat
-                    n = 0,  // x dimension of A_hat
-                    unit_idx = -1,
-                    nnz = 0;//number of nnz within A_Hat
-                
-    double          residual_norm = 1.0e+50; // appr. infinity
-                            
-    T               *A_Hat          = NULL,
-                    *mk_Hat         = NULL,
-                    *bk_Hat         = NULL,
-                    *residual_vals  = NULL;
-        
-    Spai_Sub<T>     o_sub;
-    
-    Com_Server<T>   o_comm;
-                                            
-    Index_Set       *J = NULL, 
-                    *I = NULL;
+    int m = 0, // y dimension of A_hat
+        n = 0, // x dimension of A_hat
+        unit_idx = -1,
+        nnz = 0; // number of nnz within A_Hat
 
-                
+    double residual_norm = 1.0e+50; // appr. infinity
+
+    T *A_Hat = NULL, *mk_Hat = NULL, *bk_Hat = NULL, *residual_vals = NULL;
+
+    Spai_Sub<T> o_sub;
+
+    Com_Server<T> o_comm;
+
+    Index_Set *J = NULL, *I = NULL;
+
     // J will be filled with the
     // new J values from pattern
-    // and will be updated each augmenting 
+    // and will be updated each augmenting
     // step.
-    //J = new Index_Set(A->n);    
-    
+    // J = new Index_Set(A->n);
+
     J = M->J_set;
 
-    // Extract pattern from pattern matrix  
-    // Create the Index Set J    
+    // Extract pattern from pattern matrix
+    // Create the Index Set J
     o_comm.Get_P_Col(A, M, B, P, UP, col, J);
-    
-    //step is -1 because the first improvement step is 
+
+    // step is -1 because the first improvement step is
     // only the static SPAI
-    for (int step = -1; step < max_impr_steps; step++)
-    {   
-        // Drive on communication between pes 
+    for (int step = -1; step < max_impr_steps; step++) {
+        // Drive on communication between pes
         o_comm.Communicate(A, M, B, P, UP);
-        
+
         // Get those row indices where at least one nnz
         // is available in row. Create Index Set I
-        I = o_sub.Get_I_Set(J, A, M, B, P, UP, U_UP, 
-                            ht, pre_k_param, pre_max_param,
-                            bitvec, reset_vec);   
-        // Create the submatrix A_Hat = A(I;J) and update the 
+        I = o_sub.Get_I_Set(J, A, M, B, P, UP, U_UP, ht, pre_k_param,
+                            pre_max_param, bitvec, reset_vec);
+        // Create the submatrix A_Hat = A(I;J) and update the
         // The index of the unit vector
         A_Hat = o_sub.Create_Submatrix_AHat_Block(
-                                A, M, B, P, UP, U_UP,
-                                J, I, col, m, n, ht, nnz,
-                                pre_k_param, pre_max_param);
+            A, M, B, P, UP, U_UP, J, I, col, m, n, ht, nnz, pre_k_param, pre_max_param);
         // Create the unit vector
-        // Notice that the name is the solution name already.         
-        
-            
-          mk_Hat = o_sub.Create_ek_Hat_Block(I, A, M, I->slen * A->block_sizes[col], col, unit_idx);             
-            
+        // Notice that the name is the solution name already.
 
-        // Copy the unit vector. This is used for 
-        // computing the residual vector later 
-        //bk_Hat = o_sub.Copy_Vector(mk_Hat, I->slen * A->block_sizes[col]);
+        mk_Hat = o_sub.Create_ek_Hat_Block(
+            I, A, M, I->slen * A->block_sizes[col], col, unit_idx);
+
+        // Copy the unit vector. This is used for
+        // computing the residual vector later
+        // bk_Hat = o_sub.Copy_Vector(mk_Hat, I->slen * A->block_sizes[col]);
         bk_Hat = M->bk_Hat;
         memcpy(bk_Hat, mk_Hat, I->slen * A->block_sizes[col]);
 
-        
         // Computing solution m_k which is stored within
         // mk_Hat.
-        
-        Approximative_Solution( A_Hat, m, n, mk_Hat, I, col, nnz);
+
+        Approximative_Solution(A_Hat, m, n, mk_Hat, I, col, nnz);
 
         // Extract solution values
 
@@ -126,62 +113,41 @@ Spai_SD<T>::SPAI_Column(Matrix<T> *A,
         o_sub.Get_Solution_Vals_Block(M->mk_Hat_buffer, mk_Hat, M, A, col, J, I->slen);
 
         // Finishing conditions
-        if ( (residual_norm <= epsilon_param)   //residual good enough
-             || (step == (max_impr_steps - 1))  // Don't delete solution,
-           )                                    // No augment sparsity
-            break;  
-        
-        
-        // Solution is not good enough - augmenting 
-        // Finish augmenting if no new candidates found
-        if (!o_sub.Augment_Sparsity(
-                                A, M, B, P, I, 
-                                J, UP, U_UP, col, 
-                                residual_norm, 
-                                residual_vals, 
-                                maxnew_param, 
-                                ht, use_mean,
-                                pre_k_param,
-                                pre_max_param,
-                                bitvec, reset_vec))
+        if ((residual_norm <= epsilon_param)  // residual good enough
+            || (step == (max_impr_steps - 1)) // Don't delete solution,
+            )                                 // No augment sparsity
             break;
 
+        // Solution is not good enough - augmenting
+        // Finish augmenting if no new candidates found
+        if (!o_sub.Augment_Sparsity(A, M, B, P, I, J, UP, U_UP, col, residual_norm,
+                                    residual_vals, maxnew_param, ht, use_mean,
+                                    pre_k_param, pre_max_param, bitvec, reset_vec))
+            break;
     }
-    
-    //Inserting solution row into preconditioner
-    o_comm.Insert_Row_Solution_Block(  A, M, B, P, UP, col, 
-                                 mk_Hat, J);
 
-
+    // Inserting solution row into preconditioner
+    o_comm.Insert_Row_Solution_Block(A, M, B, P, UP, col, mk_Hat, J);
 }
 
-
-template<class T>   void
-Spai_SD<T>::Approximative_Solution( T*      A_Hat_orig, 
-                                    int&    m, 
-                                    int&    n, 
-                                    T*&     mk_Hat,
-                                    const   Index_Set* I,
-                                    const int col,
-                                    const int nnz)
+template <class T>
+void Spai_SD<T>::Approximative_Solution(
+    T* A_Hat_orig, int& m, int& n, T*& mk_Hat, const Index_Set* I, const int col, const int nnz)
 {
     int order;
-    
+
     Spai_Sub<T> o_sub;
 
+    T* A_Hat = o_sub.Copy_Vector(A_Hat_orig, m * n);
 
-    T*  A_Hat = o_sub.Copy_Vector(A_Hat_orig, m * n);
-    
     cs* A_Hat_cs = o_sub.Convert_Matrix_toCS(A_Hat, m, n, nnz);
 
     // If fillgrade < 15 % then use AMD else original arrangement
     order = static_cast<double>(nnz) / (m * n) > 0.15 ? 0 : 3;
 
-    
     // Solve system
-    cs_qrsol(order, A_Hat_cs,mk_Hat);
+    cs_qrsol(order, A_Hat_cs, mk_Hat);
 
-    
     *cs_spfree(A_Hat_cs);
-    delete [] A_Hat;
+    delete[] A_Hat;
 }

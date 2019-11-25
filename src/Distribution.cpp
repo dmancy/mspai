@@ -30,64 +30,43 @@
     ======================================================================
 */
 
-
-//file includings
+// file includings
 #include "Distribution.h"
 
-
-//C++ includings
+// C++ includings
 #include <math.h>
 
-
-void 
-Distribution::Basic_Distribution(   MPI_Comm comm,
-                                    int     n,
-                                    int&    my_nbr_cols,
-                                    int&    split_pe,
-                                    int&    split_idx,
-                                    int&    start_idx)
+void Distribution::Basic_Distribution(
+    MPI_Comm comm, int n, int& my_nbr_cols, int& split_pe, int& split_idx, int& start_idx)
 {
-    int     flr,
-            cng,
-            rem,
-            the_mnl,
-            sum_nbr_cols,
-            num_procs,
-            my_id;
-    
-            
-    MPI_Comm_size(comm,&num_procs);
-    MPI_Comm_rank(comm,&my_id);
+    int flr, cng, rem, the_mnl, sum_nbr_cols, num_procs, my_id;
+
+    MPI_Comm_size(comm, &num_procs);
+    MPI_Comm_rank(comm, &my_id);
     MPI_Barrier(comm);
 
-    flr = floor(static_cast< double > (n) / num_procs);
-    cng = ceil(static_cast< double > (n) / num_procs);
-    rem = fmod(static_cast< double > (n), 
-               static_cast< double > (num_procs));
-    
-    if (my_id < rem) 
+    flr = floor(static_cast<double>(n) / num_procs);
+    cng = ceil(static_cast<double>(n) / num_procs);
+    rem = fmod(static_cast<double>(n), static_cast<double>(num_procs));
+
+    if (my_id < rem)
         the_mnl = cng;
-    else            
+    else
         the_mnl = flr;
-  
+
     // Get the sum of all columns from
     // all pe's
-    MPI_Barrier (comm);
-    MPI_Scan    (&the_mnl, 
-                 &sum_nbr_cols, 
-                 1,
-                 MPI_INT, 
-                 MPI_SUM, 
-                 comm);
-  
+    MPI_Barrier(comm);
+    MPI_Scan(&the_mnl, &sum_nbr_cols, 1, MPI_INT, MPI_SUM, comm);
+
     my_nbr_cols = the_mnl;
     split_pe = rem;
     split_idx = cng * rem;
     start_idx = sum_nbr_cols - the_mnl;
 
-    // Adjust my_nbr_cols in last processor 
-    // if n is not a multiple of chuck size 
-    if (my_id == (num_procs-1))
+    // Adjust my_nbr_cols in last processor
+    // if n is not a multiple of chuck size
+    if (my_id == (num_procs - 1))
         if (sum_nbr_cols != n)
-            my_nbr_cols = the_mnl - (sum_nbr_cols - n);  
+            my_nbr_cols = the_mnl - (sum_nbr_cols - n);
 }

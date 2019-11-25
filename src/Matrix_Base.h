@@ -30,92 +30,88 @@
     ======================================================================
 */
 
-
 #ifndef GUARD_MATRIX_BASE_H
 #define GUARD_MATRIX_BASE_H
 
-//C++ includings
+// C++ includings
 #include <mpi.h>
 
 //////////////////////////////////////
 ///     \class Matrix_Base
 ///     \brief Base class of Matrix
 //////////////////////////////////////
-class Matrix_Base
-{
-    
-    public:
-        
-        /// The MPI communicator
-        MPI_Comm world;
-        
-        /// The pe's Id within MPI environment
-        int     my_id;
-        
-        /// The number of pe's within MPI environment
-        int     num_procs;
-        
-        /// The number of columns to solve by this pe
-        int     my_nbr_cols;
-        
-        /// The start index of the first column to solve
-        /// within whole input matrix
-        int     my_start_idx;
+class Matrix_Base {
+public:
+    /// The MPI communicator
+    MPI_Comm world;
 
-        /// Number of columns
-        int     n;    
-                         
-        /// Number of rows
-        int     m;
+    /// The pe's Id within MPI environment
+    int my_id;
 
-        /// my_nbr_cols of each pe
-        int     *all_nbr_cols;
-        
-        /// my_start_index of each pe
-        int     *start_indices; 
-        
-        /// The len of all columns on every pe - 
-        /// will be filled with Allgatherv
-        int     *len_all_cols;
-        
-        /// The len of all rows on every pe - 
-        /// will be filled with Allgatherv
-        int     *len_all_rows;
-        
-        /// The maximum number of nnz of all columns 
-        /// on this pe
-        int     max_nnz;
-        
-        /// nnz in this pe
-        int     my_nnz;        
-        
-        /// processor assignment for every row 
-        /// and column
-        int     *pe;        
-        
-        /// Remote buffer for transferring the column 
-        /// indices between the pe's
-        int     *remote_col_idcs_buf;
-        
-        /// Remote buffer for transferring the row 
-        /// indices between the pe's
-        int     *remote_row_idcs_buf;
-                
-        /// The next column to process 
-        int     next_col;
-        
-        /// Whether the matrix is symmetric 
-        /// or not
-        bool    symmetric;
+    /// The number of pe's within MPI environment
+    int num_procs;
 
-        /// Block size of the matrix
-        int     block_size;
+    /// The number of columns to solve by this pe
+    int my_nbr_cols;
 
-        /// Largest block size
-        int     max_block_size;
+    /// The start index of the first column to solve
+    /// within whole input matrix
+    int my_start_idx;
 
-        /// Size of evrery diagonal block
-        int     *block_sizes;
+    /// Number of columns
+    int n;
+
+    /// Number of rows
+    int m;
+
+    /// my_nbr_cols of each pe
+    int* all_nbr_cols;
+
+    /// my_start_index of each pe
+    int* start_indices;
+
+    /// The len of all columns on every pe -
+    /// will be filled with Allgatherv
+    int* len_all_cols;
+
+    /// The len of all rows on every pe -
+    /// will be filled with Allgatherv
+    int* len_all_rows;
+
+    /// The maximum number of nnz of all columns
+    /// on this pe
+    int max_nnz;
+
+    /// nnz in this pe
+    int my_nnz;
+
+    /// processor assignment for every row
+    /// and column
+    int* pe;
+
+    /// Remote buffer for transferring the column
+    /// indices between the pe's
+    int* remote_col_idcs_buf;
+
+    /// Remote buffer for transferring the row
+    /// indices between the pe's
+    int* remote_row_idcs_buf;
+
+    /// The next column to process
+    int next_col;
+
+    /// Whether the matrix is symmetric
+    /// or not
+    bool symmetric;
+
+    /// Block size of the matrix
+    int block_size;
+
+    /// Largest block size
+    int max_block_size;
+
+    /// Size of evrery diagonal block
+    int* block_sizes;
 };
 
 #endif

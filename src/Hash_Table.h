@@ -30,163 +30,143 @@
     ======================================================================
 */
 
-
 #ifndef GUARD_HASH_TABLE_H
 #define GUARD_HASH_TABLE_H
-
-
 
 /// prime number for linear rehashing
 const int jump = 5;
 
-
 ///////////////////////////////////////////
 ///     \class Hash_Table
-///     \brief This class represents the 
+///     \brief This class represents the
 ///            hash table which stores all
 ///            remotely requested matrix columns.
 ///            This way the MPI traffic can
-///            be reduced. 
+///            be reduced.
 ///////////////////////////////////////////
 template <class T>
-class Hash_Table
-{
-  
-    public:
-        
-        
-        /// Empty Constructor
-        Hash_Table() { };
-        
-        /// Constructor
-        Hash_Table(int num);
-        
-        
-        /// Destructor
-        ~Hash_Table();
-        
+class Hash_Table {
+public:
+    /// Empty Constructor
+    Hash_Table(){};
 
-        // Member
-        
-        /// size of the hash table
-        int         size;
+    /// Constructor
+    Hash_Table(int num);
 
-        /// 2D array containing the column indices
-        int         **col_idcs_table;
-        
-        /// 2D array containing the row indices
-        int         **row_idcs_table;
-        
-        /// 2D array containing the column values
-        T           **vals_table;
-        
-        
-        // Methods
-        //============================================================
-        //========== Template methods - see Hash_Table.imp ===========
-        //============================================================
-                
-        ///////////////////////////////////////////////
-        ///     \brief Inserting column data into hash
-        ///            table.
-        ///
-        ///     \param idx Index of column to be inserted
-        ///     \param col_idcs_buf Column indices to be
-        ///                         inserted
-        ///     \param row_idcs_buf Row indices to be 
-        ///                         inserted
-        ///     \param col_buf Column values to be 
-        ///                    inserted
-        ///     \param col_len Lentgth of the column
-        ///                    which has to be inserted
-        ///     \param row_len Length of the row which
-        ///                    has to be inserted
-        ///     \return Data is not within hash table 
-        ///             if user set -hs 0, if hs > 0 
-        ///             then it is
-        /////////////////////////////////////////////// 
-        bool    Insert( int             idx, 
-                        int             *col_idcs_buf, 
-                        int             *row_idcs_buf, 
-                        T               *col_buf, 
-                        int             col_len,
-                        int             row_len);
-        
-bool 
-Insert_Block(  int             idx, 
-                        int             *col_idcs_buf, 
-                        int             *row_idcs_buf, 
-                        T               *col_buf, 
-                        int             col_len,
-                        int             scalar_len,
-                        int             row_len);
-        
-        ///////////////////////////////////////////////
-        ///     \brief Look up if element is in hash table
-        ///            and return data if so.
-        ///
-        ///     \param idx Index of column to be extraced
-        ///     \param col_idcs_buf Column indices to be
-        ///                         extraced
-        ///     \param row_idcs_buf Row indices to be 
-        ///                         extraced
-        ///     \param col_buf Column values to be 
-        ///                    extraced
-        ///     \param col_len Lentgth of the column
-        ///                    which has to be extraced
-        ///     \param row_len Length of the row which
-        ///                    has to be extraced
-        ///     \param loc Location of column within hashtable.
-        ///     \return Data is not within hash table 
-        ///             if user set -hs 0, if hs > 0 
-        ///             then it is
-        ///////////////////////////////////////////////
-        bool    Look_Up(int             idx, 
-                        int             *&col_idcs_buf,
-                        int             *&row_idcs_buf,
-                        T               *&col_buf,
-                        int&            col_len,
-                        int&            row_len,
-                        const int       loc);
-                
-        
-        ///////////////////////////////////////////////
-        ///     \brief  Searching for position within
-        ///             hash table. 
-        ///
-        ///     This will attempt at as many jumps as
-        ///     hash table size is not exceeded of 
-        ///     linear rehashing before returning a 
-        ///     location. If no location could be found
-        ///     -1 will be returned - element is not
-        ///     within hash table.
-        ///
-        ///     \param idx Index of column to be
-        ///                found
-        ///     \return The place where the column data
-        ///             is stored within hash table
-        //////////////////////////////////////////////
-        int     Get_Location(int idx);
-        
+    /// Destructor
+    ~Hash_Table();
 
-    private:
+    // Member
 
-        ///////////////////////////////////////////////
-        ///     \brief  Finds the location in which to 
-        ///             make an insertion.
-        ///
-        ///     This will attempt at most 5 jumps of 
-        ///     linear rehashing before returning a 
-        ///     location.  In that case, whatever was
-        ///     already in the location will be 
-        ///     discarded.
-        ///
-        ///     \param idx Index of column to be
-        ///                inserted
-        ///     \return Location where to insert the
-        ///             column
-        //////////////////////////////////////////////
-        int     Find_Location(int idx);
+    /// size of the hash table
+    int size;
+
+    /// 2D array containing the column indices
+    int** col_idcs_table;
+
+    /// 2D array containing the row indices
+    int** row_idcs_table;
+
+    /// 2D array containing the column values
+    T** vals_table;
+
+    // Methods
+    //============================================================
+    //========== Template methods - see Hash_Table.imp ===========
+    //============================================================
+
+    ///////////////////////////////////////////////
+    ///     \brief Inserting column data into hash
+    ///            table.
+    ///
+    ///     \param idx Index of column to be inserted
+    ///     \param col_idcs_buf Column indices to be
+    ///                         inserted
+    ///     \param row_idcs_buf Row indices to be
+    ///                         inserted
+    ///     \param col_buf Column values to be
+    ///                    inserted
+    ///     \param col_len Lentgth of the column
+    ///                    which has to be inserted
+    ///     \param row_len Length of the row which
+    ///                    has to be inserted
+    ///     \return Data is not within hash table
+    ///             if user set -hs 0, if hs > 0
+    ///             then it is
+    ///////////////////////////////////////////////
+    bool Insert(int idx, int* col_idcs_buf, int* row_idcs_buf, T* col_buf, int col_len, int row_len);
+
+    bool Insert_Block(int idx,
+                      int* col_idcs_buf,
+                      int* row_idcs_buf,
+                      T* col_buf,
+                      int col_len,
+                      int scalar_len,
+                      int row_len);
+
+    ///////////////////////////////////////////////
+    ///     \brief Look up if element is in hash table
+    ///            and return data if so.
+    ///
+    ///     \param idx Index of column to be extraced
+    ///     \param col_idcs_buf Column indices to be
+    ///                         extraced
+    ///     \param row_idcs_buf Row indices to be
+    ///                         extraced
+    ///     \param col_buf Column values to be
+    ///                    extraced
+    ///     \param col_len Lentgth of the column
+    ///                    which has to be extraced
+    ///     \param row_len Length of the row which
+    ///                    has to be extraced
+    ///     \param loc Location of column within hashtable.
+    ///     \return Data is not within hash table
+    ///             if user set -hs 0, if hs > 0
+    ///             then it is
+    ///////////////////////////////////////////////
+    bool Look_Up(int idx,
+                 int*& col_idcs_buf,
+                 int*& row_idcs_buf,
+                 T*& col_buf,
+                 int& col_len,
+                 int& row_len,
+                 const int loc);
+
+    ///////////////////////////////////////////////
+    ///     \brief  Searching for position within
+    ///             hash table.
+    ///
+    ///     This will attempt at as many jumps as
+    ///     hash table size is not exceeded of
+    ///     linear rehashing before returning a
+    ///     location. If no location could be found
+    ///     -1 will be returned - element is not
+    ///     within hash table.
+    ///
+    ///     \param idx Index of column to be
+    ///                found
+    ///     \return The place where the column data
+    ///             is stored within hash table
+    //////////////////////////////////////////////
+    int Get_Location(int idx);
+
+private:
+    ///////////////////////////////////////////////
+    ///     \brief  Finds the location in which to
+    ///             make an insertion.
+    ///
+    ///     This will attempt at most 5 jumps of
+    ///     linear rehashing before returning a
+    ///     location.  In that case, whatever was
+    ///     already in the location will be
+    ///     discarded.
+    ///
+    ///     \param idx Index of column to be
+    ///                inserted
+    ///     \return Location where to insert the
+    ///             column
+    //////////////////////////////////////////////
+    int Find_Location(int idx);
 };
 
 #include "Hash_Table.imp"

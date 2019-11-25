@@ -31,81 +31,79 @@
 */
 #include <cstring>
 
+template <class T>
+Compressed_Lines<T>::Compressed_Lines(int nbr_cols_m, const bool symmetric)
+{
+    A = NULL;
+    col_buf = NULL;
+    row_idcs = NULL;
+    row_idcs_buf = NULL;
+    col_idcs = NULL;
+    col_idcs_buf = NULL;
+    len_cols = NULL;
+    len_rows = NULL;
+    nbr_cols = nbr_cols_m;
 
-template <class T> 
-Compressed_Lines<T>::Compressed_Lines(int nbr_cols_m, 
-                                      const bool symmetric)
-{   
-    A               = NULL;
-    col_buf         = NULL;
-    row_idcs        = NULL;
-    row_idcs_buf    = NULL; 
-    col_idcs        = NULL;
-    col_idcs_buf    = NULL; 
-    len_cols        = NULL;
-    len_rows        = NULL;
-    nbr_cols        = nbr_cols_m;
-    
-    
     A = new T*[nbr_cols];
     for (int i = 0; i < nbr_cols; i++)
         A[i] = NULL;
-    
+
     col_idcs = new int*[nbr_cols];
     for (int i = 0; i < nbr_cols; i++)
         col_idcs[i] = NULL;
-    
-    if (!symmetric)
-    {
+
+    if (!symmetric) {
         row_idcs = new int*[nbr_cols];
         for (int i = 0; i < nbr_cols; i++)
             row_idcs[i] = NULL;
     }
-    
-    len_cols    = new int[nbr_cols];
-    memset(len_cols, 0, nbr_cols * sizeof(int));    
-    
-    len_rows    = new int[nbr_cols];
+
+    len_cols = new int[nbr_cols];
+    memset(len_cols, 0, nbr_cols * sizeof(int));
+
+    len_rows = new int[nbr_cols];
     memset(len_rows, 0, nbr_cols * sizeof(int));
 
-    len_scalar  = new int[nbr_cols];
-    memset(len_scalar, 0, nbr_cols * sizeof(int));    
-    
+    len_scalar = new int[nbr_cols];
+    memset(len_scalar, 0, nbr_cols * sizeof(int));
 }
-        
-    
-        
+
 template <class T>
 Compressed_Lines<T>::~Compressed_Lines()
-{       
-    if (col_buf)    
-        delete [] col_buf;
+{
+    if (col_buf)
+        delete[] col_buf;
     else
         for (int i = 0; i < nbr_cols; i++)
-            if (A[i])   
-                delete [] A[i];
-    
-    if (col_idcs_buf)   
-        delete [] col_idcs_buf;
+            if (A[i])
+                delete[] A[i];
+
+    if (col_idcs_buf)
+        delete[] col_idcs_buf;
     else
         for (int i = 0; i < nbr_cols; i++)
-            if (col_idcs[i])    
-                delete [] col_idcs[i];
-    
-    if (row_idcs)
-    {
-        if (row_idcs_buf)   
-            delete [] row_idcs_buf;
+            if (col_idcs[i])
+                delete[] col_idcs[i];
+
+    if (row_idcs) {
+        if (row_idcs_buf)
+            delete[] row_idcs_buf;
         else
             for (int i = 0; i < nbr_cols; i++)
-                if (row_idcs[i])    
-                    delete [] row_idcs[i];
+                if (row_idcs[i])
+                    delete[] row_idcs[i];
     }
-    
-    if (A)          delete [] A; 
-    if (col_idcs)   delete [] col_idcs;
-    if (row_idcs)   delete [] row_idcs;
-    if (len_cols)   delete [] len_cols;
-    if (len_rows)   delete [] len_rows;
-    if (len_scalar) delete [] len_scalar;
+
+    if (A)
+        delete[] A;
+    if (col_idcs)
+        delete[] col_idcs;
+    if (row_idcs)
+        delete[] row_idcs;
+    if (len_cols)
+        delete[] len_cols;
+    if (len_rows)
+        delete[] len_rows;
+    if (len_scalar)
+        delete[] len_scalar;
 }

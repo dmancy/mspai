@@ -30,42 +30,30 @@
     ======================================================================
 */
 
-
-//file includings
+// file includings
 #include "Timer.h"
 
-
-//C++ includings
+// C++ includings
 #include <iostream>
 
-
-
-//static definitions
-double  Timer::dbg_start_timers[dbg_timers];
-double  Timer::dbg_stop_timers[dbg_timers];
-double  Timer::dbg_sum_timers[dbg_timers];
-
-
+// static definitions
+double Timer::dbg_start_timers[dbg_timers];
+double Timer::dbg_stop_timers[dbg_timers];
+double Timer::dbg_sum_timers[dbg_timers];
 
 Timer::Timer()
 {
     start_timer = 0.0;
-    stop_timer  = 0.0;
-    sum_time    = 0.0;
+    stop_timer = 0.0;
+    sum_time = 0.0;
 }
 
-
-
-void 
-Timer::Start_Timer()
+void Timer::Start_Timer()
 {
     start_timer = MPI_Wtime();
 }
 
-
-
-void 
-Timer::Stop_Timer()
+void Timer::Stop_Timer()
 {
     double time_diff;
 
@@ -74,85 +62,63 @@ Timer::Stop_Timer()
     sum_time += time_diff;
 }
 
-
-
-void 
-Timer::Report_Time(MPI_Comm world) 
+void Timer::Report_Time(MPI_Comm world)
 {
+    double max;
 
-    double  max;
+    int num_procs, my_id;
 
-    int     num_procs,
-            my_id;
-    
-            
     MPI_Comm_size(world, &num_procs);
     MPI_Comm_rank(world, &my_id);
     MPI_Barrier(world);
 
     // Getting maximum time a pe spent within
     // this operation
-    MPI_Reduce( &sum_time, &max, 1,
-                MPI_DOUBLE, MPI_MAX, 0, world);
+    MPI_Reduce(&sum_time, &max, 1, MPI_DOUBLE, MPI_MAX, 0, world);
 
-    if (my_id == 0) 
-    {
+    if (my_id == 0) {
         std::cout.precision(10);
         std::cout << "  " << max << "\t[sec]" << std::endl;
     }
 }
 
-
-void 
-Timer::Dbg_Start_Timer(int id)
+void Timer::Dbg_Start_Timer(int id)
 {
     dbg_start_timers[id] = MPI_Wtime();
 }
 
-
-
-void 
-Timer::Dbg_Stop_Timer(int id)
+void Timer::Dbg_Stop_Timer(int id)
 {
     double diff;
-    
+
     dbg_stop_timers[id] = MPI_Wtime();
     diff = dbg_stop_timers[id] - dbg_start_timers[id];
-    
+
     dbg_sum_timers[id] += diff;
 }
 
-
-
-void 
-Timer::Dbg_Report_Times(MPI_Comm world) 
+void Timer::Dbg_Report_Times(MPI_Comm world)
 {
-    int     num_procs,
-            my_id;
-            
-    double  *sum = NULL;
-    
-            
+    int num_procs, my_id;
+
+    double* sum = NULL;
+
     MPI_Comm_size(world, &num_procs);
     MPI_Comm_rank(world, &my_id);
     MPI_Barrier(world);
 
     sum = new double[num_procs];
-    for(int id = 0; id < dbg_timers; id++) 
-    {   
+    for (int id = 0; id < dbg_timers; id++) {
         // Getting times of all operations from all pe's
-        MPI_Gather(&dbg_sum_timers[id],1,MPI_DOUBLE,
-                    sum,1,MPI_DOUBLE,0,world);
-        
-        if (my_id == 0) 
-        {
+        MPI_Gather(&dbg_sum_timers[id], 1, MPI_DOUBLE, sum, 1, MPI_DOUBLE, 0, world);
+
+        if (my_id == 0) {
             std::cout.precision(10);
             std::cout << "######## id: " << id << std::endl;
-            for (int i=0; i < num_procs; i++) 
-                std::cout << "  processor "<< i 
-                          << ":  sum: "<< sum[i] << std::endl;
+            for (int i = 0; i < num_procs; i++)
+                std::cout << "  processor " << i << ":  sum: " << sum[i] << std::endl;
             std::cout << std::endl;
         }
     }
-    delete [] sum;
+    delete[] sum;
 }

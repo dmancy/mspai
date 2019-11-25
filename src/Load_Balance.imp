@@ -30,41 +30,32 @@
     ======================================================================
 */
 
-
-template <class T>  int 
-Load_Balance<T>::Grab_M_Col(Matrix<T> *A,
-                            Matrix<T> *&M,
-                            Matrix<T> *B, 
-                            Pattern   *P,
-                            Pattern   *UP)
+template <class T>
+int Load_Balance<T>::Grab_M_Col(Matrix<T>* A, Matrix<T>*& M, Matrix<T>* B, Pattern* P, Pattern* UP)
 {
-    int     pe,
-            index,
-            col;
-            
-    //Com_Server<T>   o_comm;
-    
+    int pe, index, col;
+
+    // Com_Server<T>   o_comm;
 
     // Do I still have local columns to process?
-    if (P->next_col < P->my_nbr_cols) 
-    {
+    if (P->next_col < P->my_nbr_cols) {
         pe = P->my_id;
         index = P->next_col;
         col = index + P->start_indices[pe];
-        
+
         // Next column which must be computed
-        // This is necessary for the load 
+        // This is necessary for the load
         // balancing mechanism
         P->next_col++;
 
-        return col; // success 
+        return col; // success
     }
-    /*else // look for a column on another pe 
+    /*else // look for a column on another pe
     {
-        for (int i = 1; i < P->num_procs; i++) 
+        for (int i = 1; i < P->num_procs; i++)
         {
             pe = (P->my_id + i) % P->num_procs;
-            if (o_comm.Get_M_Col(A, M, B, P, UP, pe, index)) 
+            if (o_comm.Get_M_Col(A, M, B, P, UP, pe, index))
             {
                 col = index + P->start_indices[pe];
                 return col;
@@ -72,8 +63,7 @@ Load_Balance<T>::Grab_M_Col(Matrix<T> *A,
         }
     }
 */
-    
+
     // No one has any more columns - failure
     return -1;
 }
-

@@ -4,8 +4,6 @@
 /*          Routines for a user-defined shell preconditioner           */
 /***********************************************************************/
 
-
-
 /* ------------------------------------------------------------------- */
 /*
    SampleShellPCSetUp - This routine sets up a user-defined
@@ -22,17 +20,16 @@
 */
 PetscErrorCode SampleShellPCSetUp(PC pc)
 {
-  PC_MSPAI 	 *mspai = NULL;
-  PetscErrorCode ierr;
-  
+    PC_MSPAI* mspai = NULL;
+    PetscErrorCode ierr;
 
-  ierr = PCShellGetContext(pc,(void**)&mspai);CHKERRQ(ierr);
+    ierr = PCShellGetContext(pc, (void**)&mspai);
+    CHKERRQ(ierr);
 
-  ierr = mspai->PCSetUp_MSPAI(pc->pmat);
+    ierr = mspai->PCSetUp_MSPAI(pc->pmat);
 
-  return 0;
+    return 0;
 }
-
 
 /* ------------------------------------------------------------------- */
 /*
@@ -48,15 +45,17 @@ PetscErrorCode SampleShellPCSetUp(PC pc)
 
    Notes:
    This code implements the MSPAI preconditioner. */
-PetscErrorCode SampleShellPCApply(PC pc,Vec x,Vec y)
+PetscErrorCode SampleShellPCApply(PC pc, Vec x, Vec y)
 {
-  PC_MSPAI  *mspai = NULL;
-  PetscErrorCode ierr;
+    PC_MSPAI* mspai = NULL;
+    PetscErrorCode ierr;
 
-  ierr = PCShellGetContext(pc,(void**)&mspai);CHKERRQ(ierr);
-  ierr = mspai->Apply_MSPAI(x, y);CHKERRQ(ierr);
+    ierr = PCShellGetContext(pc, (void**)&mspai);
+    CHKERRQ(ierr);
+    ierr = mspai->Apply_MSPAI(x, y);
+    CHKERRQ(ierr);
 
-  return 0;
+    return 0;
 }
 /* ------------------------------------------------------------------- */
 /*
@@ -68,11 +67,11 @@ PetscErrorCode SampleShellPCApply(PC pc,Vec x,Vec y)
 */
 PetscErrorCode SampleShellPCDestroy(PC pc)
 {
-  PC_MSPAI	*mspai = NULL; 
-  PetscErrorCode ierr;
+    PC_MSPAI* mspai = NULL;
+    PetscErrorCode ierr;
 
-  ierr = PCShellGetContext(pc,(void**)&mspai);CHKERRQ(ierr);
-  //delete mspai;
-  return 0;
+    ierr = PCShellGetContext(pc, (void**)&mspai);
+    CHKERRQ(ierr);
+    // delete mspai;
+    return 0;
 }
-

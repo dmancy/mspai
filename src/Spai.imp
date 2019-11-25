@@ -30,170 +30,134 @@
     ======================================================================
 */
 
+template <class T>
+void Spai<T>::SPAI_Algorithm(Matrix<T>* A,
+                             Matrix<T>*& M,
+                             Matrix<T>* B,
+                             Pattern* P,
+                             Pattern* UP,
+                             double epsilon_param,
+                             int maxnew_param,
+                             int max_impr_steps,
+                             int hash_param,
+                             const int use_mean,
+                             int pre_k_param,
+                             const int pre_max_param,
+                             const int& verbose)
+{
+    int col, bitvec_size;
 
-template <class T>  void
-Spai<T>::SPAI_Algorithm(Matrix<T>   *A,
-                        Matrix<T>   *&M,
-                        Matrix<T>   *B,
-                        Pattern     *P,
-                        Pattern     *UP,
-                        double      epsilon_param,
-                        int         maxnew_param,
-                        int         max_impr_steps,
-                        int         hash_param,
-                        const int   use_mean,
-                        int         pre_k_param,
-                        const int   pre_max_param,
-			const int&  verbose)
-{   
-    int             col, 
-                    bitvec_size;
-    
-    unsigned int    *bitvec    = NULL,
-                    *reset_vec = NULL;
-        
+    unsigned int *bitvec = NULL, *reset_vec = NULL;
+
     Load_Balance<T> o_load;
-    
-    Com_Server<T>   o_comm;
-    
-    Spai_Sub<T>     o_sub;
-    
-    Timer           o_timer;
-    
-    Hash_Table<T>   *ht = NULL;
 
-    //union of all upper pattern index sets
-    Index_Set*      U_UP = NULL; 
-  
-    
+    Com_Server<T> o_comm;
+
+    Spai_Sub<T> o_sub;
+
+    Timer o_timer;
+
+    Hash_Table<T>* ht = NULL;
+
+    // union of all upper pattern index sets
+    Index_Set* U_UP = NULL;
+
     // Does the user want to use a hash table?
-    if (hash_param > 0) 
+    if (hash_param > 0)
         ht = new Hash_Table<T>(hash_param);
-    
+
     // Initializing local preconditioner chunk
     A->Init_Preconditioner(M, A->n, P->len);
-    
-    bitvec_size =  A->m <= A->n ? A->n : A->m;
-    
+
+    bitvec_size = A->m <= A->n ? A->n : A->m;
+
     // reset vector must have A->m or A->n positions
     // because more positions can be stored at once.
-    reset_vec   = new unsigned int[bitvec_size];
-    
-    // Only these positions are needed within 
+    reset_vec = new unsigned int[bitvec_size];
+
+    // Only these positions are needed within
     // the bitvec. 5: log n bits of int
-    bitvec_size = (bitvec_size >> 5) + 1;          
-    bitvec      = new unsigned int[bitvec_size];
+    bitvec_size = (bitvec_size >> 5) + 1;
+    bitvec = new unsigned int[bitvec_size];
 
     memset(bitvec, 0, bitvec_size * sizeof(unsigned int));
-    
-    // Creating union of all pattern sets this
-    // pe will have to compute if upper pattern 
-    // was requested
-    //printf("Fini \n");
-    o_comm.Init();
-//    UP = P;
 
-    if (UP)
-    {
-      if (verbose)
-      {
+    // Creating union of all pattern sets this
+    // pe will have to compute if upper pattern
+    // was requested
+    // printf("Fini \n");
+    o_comm.Init();
+    //    UP = P;
+
+    if (UP) {
+        if (verbose) {
+            // Start time measurement
+            o_timer = Timer();
+            o_timer.Start_Timer();
+        }
+        U_UP = o_sub.Union_UP(UP, A->n);
+        o_comm.Prereq_Col(A, M, B, P, UP, U_UP, ht, pre_k_param, true, pre_max_param);
+
+        o_comm.Say_Im_Done_Prefetching(A, M, B, P, UP);
+
+        // pe is not idle if other pe's work -
+        // he will test and communicate until
+        // every pe has finished.
+        do
+            o_comm.Communicate(A, M, B, P, UP);
+        while (!o_comm.Get_all_done_prefetching()); // all_done is testing
+                                                    // if everybody finished
+                                                    // his work
+        if (verbose) {
+            // Stop time measurement
+            o_timer.Stop_Timer();
+            o_timer.Report_Time(A->world);
+        }
+    }
+
+    MPI_Barrier(A->world);
+    if (verbose) {
         // Start time measurement
         o_timer = Timer();
         o_timer.Start_Timer();
-      }
-        U_UP = o_sub.Union_UP(UP, A->n );      
-      o_comm.Prereq_Col(A, 
-                        M,
-                        B,
-                        P,
-                        UP,
-                        U_UP,
-                        ht,
-                        pre_k_param,
-                        true,
-                        pre_max_param);
-      
-      o_comm.Say_Im_Done_Prefetching(A, M, B, P, UP);
+    }
 
-      // pe is not idle if other pe's work - 
-      // he will test and communicate until 
-      // every pe has finished.
-      do  
-          o_comm.Communicate(A, M, B, P, UP);
-      while (! o_comm.Get_all_done_prefetching()); // all_done is testing 
-                                       // if everybody finished 
-                                       // his work
-      if (verbose)
-      { 
-        // Stop time measurement
-        o_timer.Stop_Timer();
-        o_timer.Report_Time(A->world);
-      }
-    }
-    
-    MPI_Barrier(A->world);
-    if (verbose)
-    {
-	    // Start time measurement
-	    o_timer = Timer();
-	    o_timer.Start_Timer();
-    }
-    
-    
-    //MPI_Barrier(A->world);
-    
-    //Iterating over each column
-    while(true)
-    {       
+    // MPI_Barrier(A->world);
+
+    // Iterating over each column
+    while (true) {
         col = o_load.Grab_M_Col(A, M, B, P, UP);
-        if (col < 0) 
-            break; 
-        
-        SPAI_Column(A, 
-                    M, 
-                    B,
-                    P, 
-                    UP,
-                    U_UP,
-                    col, 
-                    epsilon_param, 
-                    maxnew_param, 
-                    max_impr_steps,
-                    ht,
-                    use_mean,
-                    pre_k_param,
-                    pre_max_param, 
-                    bitvec, 
-                    reset_vec);
-                    
+        if (col < 0)
+            break;
+
+        SPAI_Column(A, M, B, P, UP, U_UP, col, epsilon_param, maxnew_param, max_impr_steps,
+                    ht, use_mean, pre_k_param, pre_max_param, bitvec, reset_vec);
     }
-    
+
     o_comm.Say_Im_Done(A, M, B, P, UP);
 
-    // pe is not idle if other pe's work - 
-    // he will test and communicate until 
+    // pe is not idle if other pe's work -
+    // he will test and communicate until
     // every pe has finished.
-    do  
+    do
         o_comm.Communicate(A, M, B, P, UP);
-    while (! o_comm.Get_all_done()); // all_done is testing 
-                                     // if everybody finished 
-                                     // his work
-
+    while (!o_comm.Get_all_done()); // all_done is testing
+                                    // if everybody finished
+                                    // his work
 
     o_comm.Initialize_nbr_done();
     o_comm.Initialize_nbr_done_prefetching();
-    
-    MPI_Barrier(A->world);  
-   
-    if (verbose)
-    { 
-	    // Stop time measurement
-	    o_timer.Stop_Timer();
-	    o_timer.Report_Time(A->world);
+
+    MPI_Barrier(A->world);
+
+    if (verbose) {
+        // Stop time measurement
+        o_timer.Stop_Timer();
+        o_timer.Report_Time(A->world);
     }
-    
+
     delete ht;
     delete U_UP;
-    delete [] bitvec;
-    delete [] reset_vec;
+    delete[] bitvec;
+    delete[] reset_vec;
 }

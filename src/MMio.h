@@ -33,79 +33,68 @@
 #ifndef GUARD_MMIO_H
 #define GUARD_MMIO_H
 
-
-//C++ includings
+// C++ includings
 #include <iostream>
 
 // file includings
 #include "Macros.h"
 
-
 typedef char MM_typecode[4];
-
 
 ///////////////////////////////////////////
 ///     \class MMio
 ///     \brief Matrix Market input/output
 ///     is responsible that the input
-///     files, containing matrix data, are 
+///     files, containing matrix data, are
 ///     all in correct matrix market
-///     format. 
+///     format.
 ///////////////////////////////////////////
-class MMio
-{
-  
-    public:
-        
-        ///////////////////////////////////////////////
-        ///     Reading the banner of a matrix market 
-        ///     file.
-        ///
-        ///     If anything is not correct -> abort 
-        ///     and return with error. If alright,
-        ///     initialize the typecode due to the 
-        ///     banner
-        ///     \param f File pointer of file reading
-        ///              the banner from
-        ///     \param matcode The matcode to be set
-        ///     \return return/error code for this 
-        ///             method
-        /////////////////////////////////////////////// 
-        int MM_Read_Banner(FILE *f, MM_typecode *matcode);
-        
-        
-        ///////////////////////////////////////////////
-        ///     Reading the dimension and nnz line of 
-        ///     a matrix market file.
-        ///
-        ///     \param f File pointer of file reading
-        ///              the line from
-        ///     \param M The m-dimension of the matrix
-        ///              to be set
-        ///     \param N The n-dimension of the matrix
-        ///              to be set
-        ///     \param nz The number of nnz's of the 
-        ///               matrix to be set
-        ///////////////////////////////////////////////
-        void MM_Read_Mtx_Crd_Size(FILE *&f, 
-                                  int &M, 
-                                  int &N, 
-                                  int &nz);
-        
-        
-        ///////////////////////////////////////////////
-        ///     Reading the dimension and nnz line of 
-        ///     a matrix market pattern file.
-        ///
-        ///     \param f File pointer of pattern file
-        ///              reading the line from
-        ///     \param M The m-dimension of the pattern
-        ///              to be set
-        ///     \param N The n-dimension of the pattern
-        ///              to be set
-        ///     \param nz The number of nnz's of the 
-        ///               pattern to be set
-        ///////////////////////////////////////////////
-        void MM_Read_Pattern_Crd_Size(FILE *&f, int &M, int &N, int &nz);
+class MMio {
+public:
+    ///////////////////////////////////////////////
+    ///     Reading the banner of a matrix market
+    ///     file.
+    ///
+    ///     If anything is not correct -> abort
+    ///     and return with error. If alright,
+    ///     initialize the typecode due to the
+    ///     banner
+    ///     \param f File pointer of file reading
+    ///              the banner from
+    ///     \param matcode The matcode to be set
+    ///     \return return/error code for this
+    ///             method
+    ///////////////////////////////////////////////
+    int MM_Read_Banner(FILE* f, MM_typecode* matcode);
+
+    ///////////////////////////////////////////////
+    ///     Reading the dimension and nnz line of
+    ///     a matrix market file.
+    ///
+    ///     \param f File pointer of file reading
+    ///              the line from
+    ///     \param M The m-dimension of the matrix
+    ///              to be set
+    ///     \param N The n-dimension of the matrix
+    ///              to be set
+    ///     \param nz The number of nnz's of the
+    ///               matrix to be set
+    ///////////////////////////////////////////////
+    void MM_Read_Mtx_Crd_Size(FILE*& f, int& M, int& N, int& nz);
+
+    ///////////////////////////////////////////////
+    ///     Reading the dimension and nnz line of
+    ///     a matrix market pattern file.
+    ///
+    ///     \param f File pointer of pattern file
+    ///              reading the line from
+    ///     \param M The m-dimension of the pattern
+    ///              to be set
+    ///     \param N The n-dimension of the pattern
+    ///              to be set
+    ///     \param nz The number of nnz's of the
+    ///               pattern to be set
+    ///////////////////////////////////////////////
+    void MM_Read_Pattern_Crd_Size(FILE*& f, int& M, int& N, int& nz);
 };
 #endif

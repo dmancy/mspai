@@ -1,14 +1,14 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-//C++ includings
+// C++ includings
 #include <iostream>
-#include <stdexcept>
-#include <mpi.h>
 #include <mkl.h>
+#include <mpi.h>
+#include <stdexcept>
 
-//PETSc includings
-#include <petscksp.h>
+// PETSc includings
 #include "PetscShell.h"
+#include <petscksp.h>
 
 #endif

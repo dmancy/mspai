@@ -30,10 +30,8 @@
     ======================================================================
 */
 
-
 // file includings
 #include "Hash.h"
-
 
 //============================================================================
 //============================================================================
@@ -41,25 +39,20 @@
 //============================================================================
 //============================================================================
 
-
-template <> Key 
-Hash<double>::Compute_Key(  const double* vec, 
-                            size_t size) const
-{                    
-    //The mix value is necessary because of the zero elements. 
-    //without v1 = 0.0 0.0 1.0 and v2 = 0.0 0.0 0.0 1.0 would
-    //produce the same key
+template <>
+Key Hash<double>::Compute_Key(const double* vec, size_t size) const
+{
+    // The mix value is necessary because of the zero elements.
+    // without v1 = 0.0 0.0 1.0 and v2 = 0.0 0.0 0.0 1.0 would
+    // produce the same key
     Key ret = 0;
     Key mix = Hash_Double(0.13);
-    while(size--)
-    {
+    while (size--) {
         ret = (ret * 31) + mix + Hash_Double(*vec);
         vec++;
-    } 
+    }
     return ret;
 }
-
-
 
 //============================================================================
 //============================================================================
@@ -67,23 +60,20 @@ Hash<double>::Compute_Key(  const double* vec,
 //============================================================================
 //============================================================================
 
-
-template <> Key 
-Hash<COMPLEX>::Compute_Key( const COMPLEX* vec, 
-                            size_t size) const
-{                    
-    //The mix value is necessary because of the zero elements. 
-    //without v1 = 0.0 0.0 1.0 and v2 = 0.0 0.0 0.0 1.0 would
-    //produce the same key
+template <>
+Key Hash<COMPLEX>::Compute_Key(const COMPLEX* vec, size_t size) const
+{
+    // The mix value is necessary because of the zero elements.
+    // without v1 = 0.0 0.0 1.0 and v2 = 0.0 0.0 0.0 1.0 would
+    // produce the same key
     Key ret = 0;
     Key mix = Hash_Double(0.13);
     Key hd_x, hd_y;
-    while(size--)
-    {
+    while (size--) {
         hd_x = Hash_Double(vec->real);
-        hd_y = Hash_Double(vec->imag);  
-        ret = (ret * 31) + mix + Hash_Double(hd_x^hd_y);
+        hd_y = Hash_Double(vec->imag);
+        ret = (ret * 31) + mix + Hash_Double(hd_x ^ hd_y);
         vec++;
-    } 
+    }
     return ret;
 }

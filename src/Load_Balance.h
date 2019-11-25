@@ -30,48 +30,37 @@
     ======================================================================
 */
 
-
 #ifndef GUARD_LOAD_BALANCE_H
 #define GUARD_LOAD_BALANCE_H
 
-
-//file includings
-#include "Matrix.h"
+// file includings
 #include "Com_Server.h"
-
-
+#include "Matrix.h"
 
 ///////////////////////////////////////////
 ///     \class Load_Balance
 ///     \brief  This class is responsible for
 ///             balancing the work between
-///             all pes. 
+///             all pes.
 ///////////////////////////////////////////
 template <class T>
-class Load_Balance
-{
-    public:
-            
-        ///////////////////////////////////////////////
-        ///     \brief  Get the new column index for
-        ///             which preconditioner solution
-        ///             should be computed
-        ///
-        ///     \param A The input matrix chunk for this
-        ///              pe
-        ///     \param M The preconditioner chunk for 
-        ///              for this pe
-        ///     \param B The target matrix chunk for this
-        ///              pe
-        ///     \param P The local start pattern chunk
-        ///     \param UP The local upper pattern chunk
-        ///////////////////////////////////////////////
-        int     Grab_M_Col(Matrix<T> *A, 
-                           Matrix<T> *&M,
-                           Matrix<T> *B,
-                           Pattern   *P,
-                           Pattern   *UP);
-    
+class Load_Balance {
+public:
+    ///////////////////////////////////////////////
+    ///     \brief  Get the new column index for
+    ///             which preconditioner solution
+    ///             should be computed
+    ///
+    ///     \param A The input matrix chunk for this
+    ///              pe
+    ///     \param M The preconditioner chunk for
+    ///              for this pe
+    ///     \param B The target matrix chunk for this
+    ///              pe
+    ///     \param P The local start pattern chunk
+    ///     \param UP The local upper pattern chunk
+    ///////////////////////////////////////////////
+    int Grab_M_Col(Matrix<T>* A, Matrix<T>*& M, Matrix<T>* B, Pattern* P, Pattern* UP);
 };
 
 #include "Load_Balance.imp"

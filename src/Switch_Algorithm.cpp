@@ -30,8 +30,7 @@
     ======================================================================
 */
 
-
-//file includings
+// file includings
 #include "Switch_Algorithm.h"
 #include "Macros.h"
 #include <algorithm>
@@ -39,104 +38,98 @@
 // Notice: Template specification necessary because derived class
 // Spai_QRUpdate is only usuable for double values due to
 // qrupdates.c
-// The class Spai_QRUpdates must be a template class 
-// because it derives from the base class Spai. 
+// The class Spai_QRUpdates must be a template class
+// because it derives from the base class Spai.
 
-template <> void
-Switch_Algorithm<double>::Set_QR_Spec(Spai<double>*& QR_Templ_Spec, 
-                                      const int     my_id,
-                                      const int     qr_level,
-                                      const double  fillgrade_param)
+template <>
+void Switch_Algorithm<double>::Set_QR_Spec(Spai<double>*& QR_Templ_Spec,
+                                           const int my_id,
+                                           const int qr_level,
+                                           const double fillgrade_param)
 {
-    switch(qr_level)
-    {
-        case 1:
-            if (my_id == 0)
-            {
-                std::cout << "\t    CACHE:\t";
-                std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
-                std::cout << "\t    HASH:\t";
-                std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
-                std::cout << "\t    QR-UPDATES:\t";
-                std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
-                std::cout << "\t    QR-DECOMP.:\t";
-                std::cout << COLOR_GREEN << "switch  (dense<->sparse)" << std::endl;
-                std::cout << "\t\t\t\t(fillgrade: " << fillgrade_param << ")\n";
-                std::cout << COLOR_NORMAL << std::endl;
-            }
-            QR_Templ_Spec = new Spai_QRUpdate_Auto<double>(fillgrade_param);
-            break;
-            
-        case 2:
-            if (my_id == 0)
-            {
-                std::cout << "\t    CACHE:\t";
-                std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
-                std::cout << "\t    HASH:\t";
-                std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
-                std::cout << "\t    QR-UPDATES:\t";
-                std::cout << COLOR_GREEN << "yes" << COLOR_NORMAL << std::endl;
-                std::cout << "\t    QR-MODE:\t"; 
-                std::cout << COLOR_B_BLUE << "dense\n" << COLOR_NORMAL << std::endl;  
-            }
-            QR_Templ_Spec = new Spai_QRUpdate_Dense<double>();
-            break;
-            
-        case 3:
-            if (my_id == 0)
-            {
-                std::cout << "\t    CACHE:\t";
-                std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
-                std::cout << "\t    HASH:\t";
-                std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
-                std::cout << "\t    QR-UPDATES:\t";
-                std::cout << COLOR_GREEN << "yes" << COLOR_NORMAL << std::endl;
-                std::cout << "\t    QR-MODE:\t";
-                std::cout << COLOR_GREEN << "sparse\n" << COLOR_NORMAL <<std::endl;  
-            }
-            QR_Templ_Spec = new Spai_QRUpdate_Sparse<double>();
-            break;
-            
-        case 4:
-            if (my_id == 0)
-            {
-                std::cout << "\t    CACHE:\t";
-                std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
-                std::cout << "\t    HASH:\t";
-                std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
-                std::cout << "\t    QR-UPDATES:\t";
-                std::cout << COLOR_GREEN << "yes" << COLOR_NORMAL << std::endl;
-                std::cout << "\t    QR-MODE:\t";
-                std::cout << COLOR_PURPLE << "hybrid\n" << COLOR_NORMAL <<std::endl; 
-            }
-            QR_Templ_Spec = new Spai_QRUpdate_Hybrid<double>();
-            break;
+    switch (qr_level) {
+    case 1:
+        if (my_id == 0) {
+            std::cout << "\t    CACHE:\t";
+            std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+            std::cout << "\t    HASH:\t";
+            std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+            std::cout << "\t    QR-UPDATES:\t";
+            std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+            std::cout << "\t    QR-DECOMP.:\t";
+            std::cout << COLOR_GREEN << "switch  (dense<->sparse)" << std::endl;
+            std::cout << "\t\t\t\t(fillgrade: " << fillgrade_param << ")\n";
+            std::cout << COLOR_NORMAL << std::endl;
+        }
+        QR_Templ_Spec = new Spai_QRUpdate_Auto<double>(fillgrade_param);
+        break;
 
-        case 5:
-            if (my_id == 0)
-            {
-                std::cout << "\t    CACHE:\t";
-                std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
-                std::cout << "\t    HASH:\t";
-                std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
-                std::cout << "\t    QR-UPDATES:\t";
-                std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
-                std::cout << "\t    QR-DECOMP.:\t";
-                std::cout << COLOR_GREEN << "sparse\n" << COLOR_NORMAL << std::endl;
-            }
-            QR_Templ_Spec = new Spai_SD<double>();
-            break;
-            
-        //default case will not occur
+    case 2:
+        if (my_id == 0) {
+            std::cout << "\t    CACHE:\t";
+            std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+            std::cout << "\t    HASH:\t";
+            std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+            std::cout << "\t    QR-UPDATES:\t";
+            std::cout << COLOR_GREEN << "yes" << COLOR_NORMAL << std::endl;
+            std::cout << "\t    QR-MODE:\t";
+            std::cout << COLOR_B_BLUE << "dense\n" << COLOR_NORMAL << std::endl;
+        }
+        QR_Templ_Spec = new Spai_QRUpdate_Dense<double>();
+        break;
+
+    case 3:
+        if (my_id == 0) {
+            std::cout << "\t    CACHE:\t";
+            std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+            std::cout << "\t    HASH:\t";
+            std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+            std::cout << "\t    QR-UPDATES:\t";
+            std::cout << COLOR_GREEN << "yes" << COLOR_NORMAL << std::endl;
+            std::cout << "\t    QR-MODE:\t";
+            std::cout << COLOR_GREEN << "sparse\n" << COLOR_NORMAL << std::endl;
+        }
+        QR_Templ_Spec = new Spai_QRUpdate_Sparse<double>();
+        break;
+
+    case 4:
+        if (my_id == 0) {
+            std::cout << "\t    CACHE:\t";
+            std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+            std::cout << "\t    HASH:\t";
+            std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+            std::cout << "\t    QR-UPDATES:\t";
+            std::cout << COLOR_GREEN << "yes" << COLOR_NORMAL << std::endl;
+            std::cout << "\t    QR-MODE:\t";
+            std::cout << COLOR_PURPLE << "hybrid\n"
+                      << COLOR_NORMAL << std::endl;
+        }
+        QR_Templ_Spec = new Spai_QRUpdate_Hybrid<double>();
+        break;
+
+    case 5:
+        if (my_id == 0) {
+            std::cout << "\t    CACHE:\t";
+            std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+            std::cout << "\t    HASH:\t";
+            std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+            std::cout << "\t    QR-UPDATES:\t";
+            std::cout << COLOR_RED << "no" << COLOR_NORMAL << std::endl;
+            std::cout << "\t    QR-DECOMP.:\t";
+            std::cout << COLOR_GREEN << "sparse\n" << COLOR_NORMAL << std::endl;
+        }
+        QR_Templ_Spec = new Spai_SD<double>();
+        break;
+
+        // default case will not occur
     }
 }
 
-
-template <> void
-Switch_Algorithm<COMPLEX>::Set_QR_Spec(Spai<COMPLEX>*& QR_Templ_Spec,
-                                       const int my_id,
-                                       const int qr_level,
-                                       const double fillgrade_param)
+template <>
+void Switch_Algorithm<COMPLEX>::Set_QR_Spec(Spai<COMPLEX>*& QR_Templ_Spec,
+                                            const int my_id,
+                                            const int qr_level,
+                                            const double fillgrade_param)
 {
     QR_Templ_Spec = NULL;
 }

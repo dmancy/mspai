@@ -30,8 +30,6 @@
     ======================================================================
 */
 
-
-extern "C"
-{
-    #include "../CSparse/Include/cs.h"
+extern "C" {
+#include "../CSparse/Include/cs.h"
 }

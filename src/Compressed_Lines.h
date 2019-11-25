@@ -30,86 +30,74 @@
     ======================================================================
 */
 
-
 #ifndef GUARD_COMPRESSED_LINES_H
 #define GUARD_COMPRESSED_LINES_H
 
-
-//C++ includings
+// C++ includings
 #include <iostream>
-
 
 /////////////////////////////////////////////////////////
 ///     \class Compressed_Lines
-///     \brief Implementing the compressed 
+///     \brief Implementing the compressed
 ///            column storage (CCS)
 ///
-///     Each matrix has its own compressed lines 
-///     which holds all matrix data. 
+///     Each matrix has its own compressed lines
+///     which holds all matrix data.
 ///     Data is stored in compressed column storage (CCS).
-///     If the input matrix is not symmetric, its row 
+///     If the input matrix is not symmetric, its row
 ///     indices are stored additionally. This is useful
 ///     when generating the union set of all index sets
-///     Nl. 
+///     Nl.
 /////////////////////////////////////////////////////////
 template <class T>
-class Compressed_Lines
-{
-  
-    public:        
-        
-        /// Empty Constructor 
-        Compressed_Lines<T>() { };
-        
-        /// Constructor
-        Compressed_Lines<T>(int nbr_cols, 
-                            bool symmetric);
-                
-        
-        /// Destructor 
-        ~Compressed_Lines<T>();
-        
-        
-        
-        //Member variables
-        
-        /// 2D array holds column-arrays named col_buf
-        T** A;
-        
-        /// This is the buffer array which holds the values of the specific
-        /// column of the matrix, it is accessed via the pointers of A.
-        T*  col_buf;
+class Compressed_Lines {
+public:
+    /// Empty Constructor
+    Compressed_Lines<T>(){};
 
-        /// 2D array holds column specific pointers to col_idcs_buf
-        int **col_idcs;
-        
-        /// Buffer array which holds the row indices of the 
-        /// specific nnz elementes of each column of the matrix. 
-        /// It is accessed via the pointers of col_idcs.
-        int *col_idcs_buf; 
+    /// Constructor
+    Compressed_Lines<T>(int nbr_cols, bool symmetric);
 
-        /// Number of nonzeros in each column 
-        int *len_cols;
-        
-        /// 2D array holds row specific pointers to row_idcs_buf
-        int **row_idcs;
-        
-        /// Buffer array which holds the column indices of 
-        /// the specific nnz elements of each row of the matrix. 
-        /// It is accessed via the pointers of row_icds.
-        int *row_idcs_buf;
-        
-        /// Number of nonzeros in each row
-        int *len_rows;
+    /// Destructor
+    ~Compressed_Lines<T>();
 
-        /// Scalar length of the columns
-        int *len_scalar;
-        
-                
-    private:
-        
-        /// memory size of buffers
-        int nbr_cols;
+    // Member variables
+
+    /// 2D array holds column-arrays named col_buf
+    T** A;
+
+    /// This is the buffer array which holds the values of the specific
+    /// column of the matrix, it is accessed via the pointers of A.
+    T* col_buf;
+
+    /// 2D array holds column specific pointers to col_idcs_buf
+    int** col_idcs;
+
+    /// Buffer array which holds the row indices of the
+    /// specific nnz elementes of each column of the matrix.
+    /// It is accessed via the pointers of col_idcs.
+    int* col_idcs_buf;
+
+    /// Number of nonzeros in each column
+    int* len_cols;
+
+    /// 2D array holds row specific pointers to row_idcs_buf
+    int** row_idcs;
+
+    /// Buffer array which holds the column indices of
+    /// the specific nnz elements of each row of the matrix.
+    /// It is accessed via the pointers of row_icds.
+    int* row_idcs_buf;
+
+    /// Number of nonzeros in each row
+    int* len_rows;
+
+    /// Scalar length of the columns
+    int* len_scalar;
+
+private:
+    /// memory size of buffers
+    int nbr_cols;
 };
 
 #include "Compressed_Lines.imp"

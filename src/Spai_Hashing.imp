@@ -30,14 +30,11 @@
     ======================================================================
 */
 
-
 template <class T>
 Spai_Hashing<T>::Spai_Hashing()
 {
     hash = new Hash<T>();
 }
-
-
 
 template <class T>
 Spai_Hashing<T>::~Spai_Hashing()
@@ -45,440 +42,294 @@ Spai_Hashing<T>::~Spai_Hashing()
     delete hash;
 }
 
-
-
-template <class T>  void
-Spai_Hashing<T>::SPAI_Column(Matrix<T>       *A,
-                             Matrix<T>       *&M,
-                             Matrix<T>       *B,
-                             Pattern         *P,
-                             Pattern         *UP,
-                             Index_Set       *U_UP,
-                             const int       col,
-                             const double    epsilon_param,
-                             const int       maxnew_param,
-                             const int       max_impr_steps,
-                             Hash_Table<T>   *ht,
-                             const int       use_mean,
-                             int             pre_k_param,
-                             const int       pre_max_param,
-                             unsigned int    *&bitvec,
-                             unsigned int    *&reset_vec)
+template <class T>
+void Spai_Hashing<T>::SPAI_Column(Matrix<T>* A,
+                                  Matrix<T>*& M,
+                                  Matrix<T>* B,
+                                  Pattern* P,
+                                  Pattern* UP,
+                                  Index_Set* U_UP,
+                                  const int col,
+                                  const double epsilon_param,
+                                  const int maxnew_param,
+                                  const int max_impr_steps,
+                                  Hash_Table<T>* ht,
+                                  const int use_mean,
+                                  int pre_k_param,
+                                  const int pre_max_param,
+                                  unsigned int*& bitvec,
+                                  unsigned int*& reset_vec)
 {
-        
-    int             m = 0,  // y dimension of A_hat
-                    n = 0,  // x dimension of A_hat
-                    unit_idx = -1,
-                    nnz = 0;// number of nnz within A_Hat
-                
-    double          residual_norm = 1.0e+50; // appr. infinity
-                            
-    T               *A_Hat          = NULL,
-                    *mk_Hat         = NULL,
-                    *bk_Hat         = NULL,
-                    *residual_vals  = NULL;
-        
-    Spai_Sub<T>     o_sub;
-        
-    Com_Server<T>   o_comm;
-    
-    Index_Set       *J = NULL, 
-                    *I = NULL;
+    int m = 0, // y dimension of A_hat
+        n = 0, // x dimension of A_hat
+        unit_idx = -1,
+        nnz = 0; // number of nnz within A_Hat
 
-    Key             hash_key,
-                    bk_Hat_key;
-        
-    
+    double residual_norm = 1.0e+50; // appr. infinity
+
+    T *A_Hat = NULL, *mk_Hat = NULL, *bk_Hat = NULL, *residual_vals = NULL;
+
+    Spai_Sub<T> o_sub;
+
+    Com_Server<T> o_comm;
+
+    Index_Set *J = NULL, *I = NULL;
+
+    Key hash_key, bk_Hat_key;
+
     // J will be filled with the
     // new J values from pattern
-    // and will be updated each augmenting 
+    // and will be updated each augmenting
     // step.
-    J = new Index_Set(A->n);    
-    
-    // Extract pattern from pattern matrix  
+    J = new Index_Set(A->n);
+
+    // Extract pattern from pattern matrix
     // Create the Index Set J
     o_comm.Get_P_Col(A, M, B, P, UP, col, J);
-    
-    //step is -1 because the first improvement step is 
+
+    // step is -1 because the first improvement step is
     // only the static SPAI
-    for (int step = -1; step < max_impr_steps; step++)
-    {   
-        // Drive on communication between pes 
+    for (int step = -1; step < max_impr_steps; step++) {
+        // Drive on communication between pes
         o_comm.Communicate(A, M, B, P, UP);
-        
+
         // Get those row indices where at least one nnz
         // is available in row. Create Index Set I
-        I = o_sub.Get_I_Set(J, A, M, B, P, 
-                            UP, U_UP, ht, 
-                            pre_k_param, 
-                            pre_max_param,
-                            bitvec, reset_vec);   
+        I = o_sub.Get_I_Set(J, A, M, B, P, UP, U_UP, ht, pre_k_param,
+                            pre_max_param, bitvec, reset_vec);
 
         // Create the submatrix A_Hat = A(I;J) and
         // update the index of the unit vector
-        A_Hat = o_sub.Create_Submatrix_AHat(
-                                A, M, B, P, UP, 
-                                U_UP, J, I, 
-                                m, n, ht, nnz, 
-                                pre_k_param, 
-                                pre_max_param);
-                        
+        A_Hat = o_sub.Create_Submatrix_AHat(A, M, B, P, UP, U_UP, J, I, m, n,
+                                            ht, nnz, pre_k_param, pre_max_param);
+
         // Compute key from A_Hat
-        hash_key = hash->Compute_Key(A_Hat, m * n);        
-                            
+        hash_key = hash->Compute_Key(A_Hat, m * n);
+
         // Create the unit vector
-        // Notice that the name is the solution name already. 
+        // Notice that the name is the solution name already.
         if (B)
-            mk_Hat = o_sub.Create_bk_Hat(A, M, B, P, UP,  
-                                         I, I->len, col);
+            mk_Hat = o_sub.Create_bk_Hat(A, M, B, P, UP, I, I->len, col);
         else
-            mk_Hat = o_sub.Create_ek_Hat(I, I->len, 
-                                         col, unit_idx); 
-        
-        // Copy the right hand side vector. 
-        // This is used for computing the residual 
-        // vector later 
+            mk_Hat = o_sub.Create_ek_Hat(I, I->len, col, unit_idx);
+
+        // Copy the right hand side vector.
+        // This is used for computing the residual
+        // vector later
         bk_Hat = o_sub.Copy_Vector(mk_Hat, I->len);
-        
-        //Compute right hand side key
-        bk_Hat_key = hash->Compute_Key(mk_Hat, I->len);                
-        
+
+        // Compute right hand side key
+        bk_Hat_key = hash->Compute_Key(mk_Hat, I->len);
+
         // Computing solution m_k which is stored within
         // mk_Hat.
-        Approximative_Solution( A_Hat, m, n, mk_Hat, 
-                                I, J, col, hash_key, 
-                                bk_Hat_key);
-                
+        Approximative_Solution(A_Hat, m, n, mk_Hat, I, J, col, hash_key, bk_Hat_key);
+
         // Computing the residual vector
         // and the frobenius norm of it
-        residual_norm = o_sub.Residual_Norm(
-                                A_Hat, m, n, 
-                                mk_Hat, bk_Hat, 
-                                residual_vals);
-        
-        
+        residual_norm = o_sub.Residual_Norm(A_Hat, m, n, mk_Hat, bk_Hat, residual_vals);
+
         // Finishing conditions
-        if ( (residual_norm <= epsilon_param)   //residual good enough
-             || (step == (max_impr_steps - 1))  // Don't delete solution,
-           )                                    // Don't augment sparsity
-            break;  
-        
-        
-        // Solution is not good enough - augmenting 
-        // Finish augmenting if no new candidates found
-        if (!o_sub.Augment_Sparsity(
-                                A, M, B, P, I, 
-                                J, UP, U_UP, col, 
-                                residual_norm, 
-                                residual_vals, 
-                                maxnew_param, 
-                                ht, use_mean,
-                                pre_k_param, 
-                                pre_max_param,
-                                bitvec, reset_vec))
+        if ((residual_norm <= epsilon_param)  // residual good enough
+            || (step == (max_impr_steps - 1)) // Don't delete solution,
+            )                                 // Don't augment sparsity
             break;
 
-        
-        delete [] mk_Hat;
-        delete [] A_Hat;
-        delete [] bk_Hat;
+        // Solution is not good enough - augmenting
+        // Finish augmenting if no new candidates found
+        if (!o_sub.Augment_Sparsity(A, M, B, P, I, J, UP, U_UP, col, residual_norm,
+                                    residual_vals, maxnew_param, ht, use_mean,
+                                    pre_k_param, pre_max_param, bitvec, reset_vec))
+            break;
+
+        delete[] mk_Hat;
+        delete[] A_Hat;
+        delete[] bk_Hat;
         delete I;
     }
-    
-    //Inserting solution row into preconditioner
-    o_comm.Insert_Row_Solution(  A, M, B, P, UP,
-                                 col, mk_Hat, J);
 
-    
-    //Free heap storage last time
-    if (mk_Hat)     delete [] mk_Hat;
-    if (bk_Hat)     delete [] bk_Hat;
-    if (A_Hat)      delete [] A_Hat;
+    // Inserting solution row into preconditioner
+    o_comm.Insert_Row_Solution(A, M, B, P, UP, col, mk_Hat, J);
+
+    // Free heap storage last time
+    if (mk_Hat)
+        delete[] mk_Hat;
+    if (bk_Hat)
+        delete[] bk_Hat;
+    if (A_Hat)
+        delete[] A_Hat;
     delete I;
     delete J;
 }
 
-
-
-template <class T>  void
-Spai_Hashing<T>::Approximative_Solution(T*          A_Hat_orig, 
-                                        int&        m, 
-                                        int&        n, 
-                                        T*&         mk_Hat,
-                                        const       Index_Set* I,
-                                        Index_Set*  J,
-                                        const int   col, 
-                                        Key         hash_key, 
-                                        Key         bk_Hat_key)
+template <class T>
+void Spai_Hashing<T>::Approximative_Solution(T* A_Hat_orig,
+                                             int& m,
+                                             int& n,
+                                             T*& mk_Hat,
+                                             const Index_Set* I,
+                                             Index_Set* J,
+                                             const int col,
+                                             Key hash_key,
+                                             Key bk_Hat_key)
 {
-    int             lda             = 0,
-                    k               = 0,
-                    info            = 0,
-                    lwork           = 0,
-                    one             = 1;
-                    
-    bool            in_hash         = false;
-                            
-    T               *A_Hat          = NULL,
-                    *A_Hat_c        = NULL,
-                    *A_Hat_qr       = NULL,
-                    *tau            = NULL,
-                    *work_qr        = NULL,
-                    *work_qt        = NULL,
-                    *mk_Hat_cache   = NULL,
-                    *tau_cache      = NULL;
-        
-    Spai_Sub<T>     o_sub;
-        
-                    
-    const char      *SIDE   = "L", 
-                    *UPLO   = "U", 
-                    *TRANS  = "",
-                    *NCHAR  = "N";         // upper triangular matrix not transposed
-                
-    
-    HASH_DATA<T>    hd;
-    
-    std::pair< Key, HASH_DATA<T> >   hp;  
-                    
-    typename  hash_map< Key, 
-              HASH_DATA<T>, 
-              HASH_FUNCTION>::const_iterator h_it;
-              
-              
+    int lda = 0, k = 0, info = 0, lwork = 0, one = 1;
+
+    bool in_hash = false;
+
+    T *A_Hat = NULL, *A_Hat_c = NULL, *A_Hat_qr = NULL, *tau = NULL,
+      *work_qr = NULL, *work_qt = NULL, *mk_Hat_cache = NULL, *tau_cache = NULL;
+
+    Spai_Sub<T> o_sub;
+
+    const char *SIDE = "L", *UPLO = "U", *TRANS = "",
+               *NCHAR = "N"; // upper triangular matrix not transposed
+
+    HASH_DATA<T> hd;
+
+    std::pair<Key, HASH_DATA<T>> hp;
+
+    typename hash_map<Key, HASH_DATA<T>, HASH_FUNCTION>::const_iterator h_it;
+
     // Testing hash for possible previously computed values:
     // Was this A_hat previously computed?
     h_it = hash->Get_Hash_Map().find(hash_key);
-    
+
     if (h_it != hash->Get_Hash_Map().end())
         in_hash = true;
-    
-    
+
     // 2nd Check if every element is equal
-    if (in_hash)
-    {
+    if (in_hash) {
         // A_Hat was previously computed
         hp = *h_it;
         hd = hp.second;
-        
-        // Check if A_Hats are really equal - if not reset 
+
+        // Check if A_Hats are really equal - if not reset
         // cache element.
-        if (!o_sub.Compare_A_Hat(A_Hat_orig, hd.A_Hat, m*n))
+        if (!o_sub.Compare_A_Hat(A_Hat_orig, hd.A_Hat, m * n))
             in_hash = false;
     }
-        
-    
-    if (in_hash)
-    {
+
+    if (in_hash) {
         // A_Hat was previously computed
         hp = *h_it;
         hd = hp.second;
-        
-        // Testing if even the whole spai iteration was done 
+
+        // Testing if even the whole spai iteration was done
         // and mk_Hat already computed
-        if(hd.key_bk_Hat == bk_Hat_key)    //Best case
-        {   
-            // A_Hat is identically as well as bk_Hat 
+        if (hd.key_bk_Hat == bk_Hat_key) // Best case
+        {
+            // A_Hat is identically as well as bk_Hat
             // -> extract mk_Hat and finish iteration
             memcpy(mk_Hat, hd.mk_Hat, J->len * sizeof(T));
-            
+
             return;
         }
-        else
-        {   
+        else {
             // bk_hat is not the same - extract only A_hat and tau
-            // and proceed further in computation with lapack routines 
-            o_sub.Init_Lapack_Vals( m,
-                                    n,
-                                    k,
-                                    lda,
-                                    lwork,
-                                    &work_qr,
-                                    &tau);
-            
+            // and proceed further in computation with lapack routines
+            o_sub.Init_Lapack_Vals(m, n, k, lda, lwork, &work_qr, &tau);
+
             // Copy A_Hat because lapack routines change input
             // and the original A_Hat is used later as well
             A_Hat = new T[m * n];
-            
-            //Getting previously computed qr factorization of A_hat
-            memcpy (A_Hat, hd.A_Hat_qr, m * n * sizeof(T));
-            
-            //Getting previously computed tau data
-            memcpy (tau, hd.tau, k * sizeof(T));
-            
-            //Preprocessing step:
-            //Get the optimal lwork value for fastest 
-            //QT * vector multiplication. See lapack documentation for
-            //details.
-            lwork = o_sub.Opt_lwork_QTApply(SIDE, 
-                                            m, 
-                                            n, 
-                                            k, 
-                                            one,
-                                            lda,
-                                            A_Hat, 
-                                            tau, 
-                                            mk_Hat);
-            
-            
+
+            // Getting previously computed qr factorization of A_hat
+            memcpy(A_Hat, hd.A_Hat_qr, m * n * sizeof(T));
+
+            // Getting previously computed tau data
+            memcpy(tau, hd.tau, k * sizeof(T));
+
+            // Preprocessing step:
+            // Get the optimal lwork value for fastest
+            // QT * vector multiplication. See lapack documentation for
+            // details.
+            lwork = o_sub.Opt_lwork_QTApply(SIDE, m, n, k, one, lda, A_Hat, tau, mk_Hat);
+
             // Set new work array -> faster than realloc work_qr
             work_qt = new T[lwork];
-            memset(work_qt, 0, lwork * sizeof(T));  
-            
-        
-            // Computing :   Q^T * e_k_hat  
-            o_sub.QT_Apply( SIDE,
-                            TRANS,
-                            m,
-                            one,
-                            k,
-                            A_Hat,
-                            lda,
-                            tau,
-                            mk_Hat,
-                            work_qt,
-                            lwork,
-                            info);
-            
-            
-            //Getting the quadratic contingent of the matrix A_hat for 
-            //both cases:   m x n and n x m
-            o_sub.Ectract_Quadratic_Content(A_Hat, 
-                                            m, 
-                                            n);
-                
-                
-            //Solving the triangular system:
-            //Computing :   R^-1 * (Q^T * e_k_hat)
-            o_sub.Solve_Tr_System(  UPLO,
-                                    NCHAR,
-                                    n,
-                                    one,
-                                    A_Hat,
-                                    mk_Hat,
-                                    info);
-            
+            memset(work_qt, 0, lwork * sizeof(T));
+
+            // Computing :   Q^T * e_k_hat
+            o_sub.QT_Apply(SIDE, TRANS, m, one, k, A_Hat, lda, tau, mk_Hat,
+                           work_qt, lwork, info);
+
+            // Getting the quadratic contingent of the matrix A_hat for
+            // both cases:   m x n and n x m
+            o_sub.Ectract_Quadratic_Content(A_Hat, m, n);
+
+            // Solving the triangular system:
+            // Computing :   R^-1 * (Q^T * e_k_hat)
+            o_sub.Solve_Tr_System(UPLO, NCHAR, n, one, A_Hat, mk_Hat, info);
+
             mk_Hat = o_sub.Get_Solution_Vals(mk_Hat, J);
-        }       
+        }
     }
-    else    //in_hash == -1 no A_Hat found     //Worst case
-    {           
+    else // in_hash == -1 no A_Hat found     //Worst case
+    {
         // Copy A_Hat because lapack routines change input
         // and the original A_Hat is used later as well
         A_Hat = o_sub.Copy_Vector(A_Hat_orig, m * n);
-        
+
         // Make a cache copy
         A_Hat_c = o_sub.Copy_Vector(A_Hat_orig, m * n);
-        
-        //Preprocessing step:
-        //Get the optimal lwork value for fastest 
-        //QR decomposition. See lapack documentation for
-        //details.
+
+        // Preprocessing step:
+        // Get the optimal lwork value for fastest
+        // QR decomposition. See lapack documentation for
+        // details.
         lwork = o_sub.Opt_lwork_QRDecomp(A_Hat, m, n);
-        
+
         // Init lapack values necessary for lapack routines
-        o_sub.Init_Lapack_Vals( m,
-                                n,
-                                k,
-                                lda,
-                                lwork,
-                                &work_qr,
-                                &tau);
-        
-        //QR decomposition -> Computing :   A_Hat = QR
-        o_sub.QR_Decomposition( m,
-                                n,
-                                A_Hat,  
-                                lda,
-                                tau,
-                                work_qr,
-                                lwork,
-                                info);
-        
+        o_sub.Init_Lapack_Vals(m, n, k, lda, lwork, &work_qr, &tau);
+
+        // QR decomposition -> Computing :   A_Hat = QR
+        o_sub.QR_Decomposition(m, n, A_Hat, lda, tau, work_qr, lwork, info);
+
         // Creating new array which stores the current qr-factorization
         // of A_Hat. This is necessary because the following lapack
         // routines change A_Hat
         A_Hat_qr = new T[m * n];
-        memcpy (A_Hat_qr, A_Hat, m * n * sizeof(T));
-        
-        //Creating the tau cache array
-        tau_cache = new T[k];
-        memcpy(tau_cache, tau, k * sizeof(T)); 
+        memcpy(A_Hat_qr, A_Hat, m * n * sizeof(T));
 
-        //Preprocessing step:
-        //Get the optimal lwork value for fastest 
-        //QT * vector multiplication. See lapack documentation for
-        //details.
-        lwork = o_sub.Opt_lwork_QTApply(SIDE, 
-                                        m, 
-                                        n, 
-                                        k, 
-                                        one,
-                                        lda,
-                                        A_Hat, 
-                                        tau, 
-                                        mk_Hat);
-        
-        
+        // Creating the tau cache array
+        tau_cache = new T[k];
+        memcpy(tau_cache, tau, k * sizeof(T));
+
+        // Preprocessing step:
+        // Get the optimal lwork value for fastest
+        // QT * vector multiplication. See lapack documentation for
+        // details.
+        lwork = o_sub.Opt_lwork_QTApply(SIDE, m, n, k, one, lda, A_Hat, tau, mk_Hat);
+
         // Set new work array -> faster than realloc work_qr
         work_qt = new T[lwork];
-        memset(work_qt, 0, lwork * sizeof(T));  
-        
-    
-        // Computing :   Q^T * e_k_hat  
-        o_sub.QT_Apply( SIDE,
-                        TRANS,
-                        m,
-                        one,
-                        k,
-                        A_Hat,
-                        lda,
-                        tau,
-                        mk_Hat,
-                        work_qt,
-                        lwork,
-                        info);
-        
-        
-        //Getting the quadratic contingent of the matrix A_hat for 
-        //both cases:   m x n and n x m
-        o_sub.Ectract_Quadratic_Content(A_Hat, 
-                                        m, 
-                                        n);
-            
-            
-        //Solving the triangular system:
-        //Computing :   R^-1 * (Q^T * e_k_hat)
-        o_sub.Solve_Tr_System(  UPLO,
-                                NCHAR,
-                                n,
-                                one,
-                                A_Hat,
-                                mk_Hat,
-                                info);
-        
+        memset(work_qt, 0, lwork * sizeof(T));
+
+        // Computing :   Q^T * e_k_hat
+        o_sub.QT_Apply(SIDE, TRANS, m, one, k, A_Hat, lda, tau, mk_Hat, work_qt, lwork, info);
+
+        // Getting the quadratic contingent of the matrix A_hat for
+        // both cases:   m x n and n x m
+        o_sub.Ectract_Quadratic_Content(A_Hat, m, n);
+
+        // Solving the triangular system:
+        // Computing :   R^-1 * (Q^T * e_k_hat)
+        o_sub.Solve_Tr_System(UPLO, NCHAR, n, one, A_Hat, mk_Hat, info);
+
         mk_Hat = o_sub.Get_Solution_Vals(mk_Hat, J);
 
         // Make a solution copy and place it into cache
         mk_Hat_cache = o_sub.Copy_Vector(mk_Hat, J->len);
 
         // Inserting the current computed data at the last
-        // used position into cache. 
-        hash->Insert_Hash_Data(hash_key, 
-                               A_Hat_qr, 
-                               tau_cache, 
-                               mk_Hat_cache, 
-                               bk_Hat_key,
-                               A_Hat_c,
-                               n,
-                               m); 
+        // used position into cache.
+        hash->Insert_Hash_Data(hash_key, A_Hat_qr, tau_cache, mk_Hat_cache,
+                               bk_Hat_key, A_Hat_c, n, m);
     }
-    
-    delete [] work_qr;
-    delete [] work_qt;
-    delete [] tau;
-    delete [] A_Hat;
+
+    delete[] work_qr;
+    delete[] work_qt;
+    delete[] tau;
+    delete[] A_Hat;
 }
-
-
- 
