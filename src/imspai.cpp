@@ -37,6 +37,7 @@ PetscErrorCode PC_MSPAI::PCSetUp_MSPAI(Mat A)
     else {
         A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, &A);
     }
+        A_REAL->Write_Matrix_To_File("A.mtx");
 
     if (block_size != 1) {
         Matrix<double>* B;
@@ -782,6 +783,7 @@ int PC_MSPAI::bspai(void)
         M_REAL = Scalar;
     }
 
+        M_REAL->Write_Matrix_To_File("precond.mtx");
     Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL, &(PM));
     // printf("id : %d, columns got : %d\n", A_REAL->my_id, A_REAL->send);
 

@@ -34,6 +34,9 @@
 #define GUARD_INDEX_SET_H
 
 #include <algorithm>
+#include <bits/stdc++.h>
+
+typedef std::pair<int, std::pair<int, int>> ppi;
 
 ///////////////////////////////////////////
 ///     \class Index_Set
@@ -134,6 +137,8 @@ public:
     Index_Set* Set_Union(Index_Set* is_a, Index_Set* is_b);
 
     void Set_Union(Index_Set* is_a, const int& start_column, const int& end_column);
+
+    void Set_Union(Index_Set** jsets, int jsets_len);
 
     ///////////////////////////////////////////////
     ///     \brief Get index of element in index set.

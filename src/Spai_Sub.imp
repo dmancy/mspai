@@ -48,11 +48,13 @@ Index_Set* Spai_Sub<T>::Union_UP(Pattern* UP, const int max_arg)
 {
     Index_Set* U_UP = new Index_Set(max_arg);
     U_UP->len = 0;
-
+/*
     for (int i = 0; i < UP->my_nbr_cols; i++) {
         U_UP->Set_Union(UP->j_sets[i], UP->my_start_idx, UP->my_start_idx + UP->my_nbr_cols);
     }
-
+*/
+    U_UP->Set_Union(UP->j_sets, UP->my_nbr_cols);
+    U_UP->Print_Index_Set("UUP");
     return U_UP;
 }
 
