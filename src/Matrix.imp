@@ -277,16 +277,13 @@ Pattern* Matrix<T>::To_Pattern_Powers(Matrix<double>* mtx, const int nb_pw, cons
     Pattern* P = NULL;
 
     Index_Set* i_set = NULL;
-    Matrix* B = NULL;
 
     int len, curr_len, start_idx;
 
     Matrix<double>* C = NULL;
     Mat* C_petsc = NULL;
-    PetscErrorCode ierr;
     MatInfo matinfo;
-    PetscInt N, *List_lfill = NULL;
-    double moy = 0;
+    PetscInt* List_lfill = NULL;
 
     int sum = 0;
 
@@ -301,23 +298,23 @@ Pattern* Matrix<T>::To_Pattern_Powers(Matrix<double>* mtx, const int nb_pw, cons
 
     for (int k = 0; k < nb_pw; k++) {
         if (k >= 1) {
-            ierr = C->Convert_Mat_to_Matrix(world, &C, C_petsc);
+            C->Convert_Mat_to_Matrix(world, &C, C_petsc);
             C->Sparsify(&C, List_lfill);
         }
 
-        ierr = C->Convert_Matrix_to_Mat(world, C, &C_petsc);
+        C->Convert_Matrix_to_Mat(world, C, &C_petsc);
 
-        ierr = MatMatMult(*C_petsc, *C_petsc, MAT_INITIAL_MATRIX, PETSC_DEFAULT, C_petsc);
+        MatMatMult(*C_petsc, *C_petsc, MAT_INITIAL_MATRIX, PETSC_DEFAULT, C_petsc);
 
         MatGetInfo(*C_petsc, MAT_GLOBAL_SUM, &matinfo);
     }
     MatGetInfo(*C_petsc, MAT_GLOBAL_SUM, &matinfo);
 
-    ierr = C->Convert_Mat_to_Matrix(world, &C, C_petsc);
+    C->Convert_Mat_to_Matrix(world, &C, C_petsc);
 
     C->Sparsify(&C, List_lfill);
 
-    ierr = Convert_Matrix_to_Mat(world, C, &C_petsc);
+    Convert_Matrix_to_Mat(world, C, &C_petsc);
 
     P = new Pattern(C->n, C->my_nbr_cols, world);
     P->all_nbr_cols = new int[P->num_procs];
@@ -377,7 +374,7 @@ Pattern* Matrix<T>::To_Pattern_Powers(Matrix<double>* mtx, const int nb_pw, cons
     MPI_Allreduce(&C->max_nnz, &P->max_nnz, 1, MPI_INT, MPI_MAX, world);
 
     // P->Print_Pattern_Data();
-    ierr = MatDestroy(C_petsc);
+    MatDestroy(C_petsc);
     delete C;
     delete[] List_lfill;
 
@@ -432,7 +429,6 @@ void Matrix<T>::Sparsify(Matrix<T>** Mat_pattern, const int* List_lfill)
 
     for (Ii = 0; Ii < my_nbr_cols; Ii++) {
         val_diag = 0;
-        // lfill = (int)moy*.2+2;
         lfill = List_lfill[Ii];
         //	lfill = 2;
         len_row = std::min(lfill, c_lines->len_cols[Ii]);
@@ -456,8 +452,9 @@ void Matrix<T>::Sparsify(Matrix<T>** Mat_pattern, const int* List_lfill)
         //
         //		for (i=0; i<len_row; i++)
         //		{
-        //			printf(" Ii : %d, col: %d, val : %f\n", Ii, row_sparsify[i].col,
-        //row_sparsify[i].val);
+        //			printf(" Ii : %d, col: %d, val : %f\n", Ii,
+        // row_sparsify[i].col,
+        // row_sparsify[i].val);
         //		}
         //	}
 
@@ -815,6 +812,9 @@ PetscErrorCode Matrix<T>::Convert_Mat_to_Matrix(MPI_Comm comm, Matrix<double>** 
     M->remote_col_buf = new double[M->max_nnz];
     memset(M->remote_col_buf, 0, M->max_nnz * sizeof(double));
 
+    M->remote_col_send = new double[M->max_nnz];
+    memset(M->remote_col_send, 0, M->max_nnz * sizeof(double));
+
     M->remote_col_idcs_buf = new int[M->max_nnz];
     memset(M->remote_col_idcs_buf, 0, M->max_nnz * sizeof(int));
 
@@ -825,8 +825,8 @@ PetscErrorCode Matrix<T>::Convert_Mat_to_Matrix(MPI_Comm comm, Matrix<double>** 
 
     M->block_size = 1;
     M->max_block_size = 1;
-    M->block_sizes = new int[n];
-    for (int k = 0; k < n; k++)
+    M->block_sizes = new int[M->n];
+    for (int k = 0; k < M->n; k++)
         M->block_sizes[k] = 1;
 
     delete *B;

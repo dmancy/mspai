@@ -38,19 +38,14 @@ PetscErrorCode PC_MSPAI::PCSetUp_MSPAI(Mat A)
         A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, &A);
     }
 
-    // A_REAL->Write_Matrix_To_File(A_REAL, "A.mtx");
+    if (block_size != 1) {
+        Matrix<double>* B;
 
-    // if (block_size != 1)
-    //{
-    Matrix<double>* B;
+        B = Matrix<double>::Convert_Block_Matrix(A_REAL, block_size, 1000000, 0);
 
-    B = Matrix<double>::Convert_Block_Matrix(A_REAL, block_size, 1000000, 0);
-
-    // B->Write_Matrix_To_File(B, "B.mtx");
-
-    delete A_REAL;
-    A_REAL = B;
-    //}
+        delete A_REAL;
+        A_REAL = B;
+    }
 
     bspai();
 
@@ -85,7 +80,7 @@ PetscErrorCode PC_MSPAI::PCSetFromOptions_SPAI(PetscOptionItems* PetscOptionsObj
 
     PetscFunctionBegin;
     //	PetscOptionsBegin(PETSC_COMM_WORLD, "", "Options for the MSPAI
-    //Preconditioner", "MSPAI");
+    // Preconditioner", "MSPAI");
     ierr = PetscOptionsHead(PetscOptionsObject, "MSPAI options");
     CHKERRQ(ierr);
     // ierr =

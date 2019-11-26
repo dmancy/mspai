@@ -49,6 +49,7 @@ void Com_Server<double>::Initialize_nbr_done_prefetching(void)
 {
     nbr_done_pre_fetching = 0;
 }
+
 template <>
 void Com_Server<double>::Handle_Get_Col(const Matrix<double>* A, const int requestor)
 {
@@ -56,8 +57,6 @@ void Com_Server<double>::Handle_Get_Col(const Matrix<double>* A, const int reque
 
     int idx, len_col = 0, slen_col = 0, len_row = 0, next = 0, index = 0,
              *col_idcs_buf = NULL, *row_idcs_buf = NULL;
-
-    double *col_buf = NULL, *ptr_buf = NULL;
 
     MPI_Status status;
     MPI_Comm world;
@@ -78,7 +77,6 @@ void Com_Server<double>::Handle_Get_Col(const Matrix<double>* A, const int reque
     len_col = lines->len_cols[idx];
     slen_col = lines->len_scalar[idx] * A->block_sizes[idx + A->my_start_idx];
     col_idcs_buf = lines->col_idcs[idx];
-    col_buf = lines->A[idx];
     if (A->c_lines->row_idcs) {
         row_idcs_buf = lines->row_idcs[idx];
         len_row = lines->len_rows[idx];

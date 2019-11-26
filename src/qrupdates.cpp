@@ -210,9 +210,9 @@ qrs* qrupdate_voll(qrs* QR,
         b_perm[index] = b[neuezeilen[j]];
         index++;
     }
-    worksize = getOptWork_dgeqrf(
-        R_HH, B2_zeilen, neueSpalten); /* Bestimmen des optimalen temp.
-                                          Speichers f�r die Zerlegung  */
+    worksize = getOptWork_dgeqrf(R_HH, B2_zeilen,
+                                 neueSpalten); /* Bestimmen des optimalen temp.
+                                                  Speichers f�r die Zerlegung */
     if (worksize > ahut_zeilen) {
         work = (double*)malloc(worksize * sizeof(double));
     }

@@ -33,16 +33,16 @@
 #ifndef GUARD_COM_SERVER_H
 #define GUARD_COM_SERVER_H
 
+// C++ includings
+#include <iostream>
+#include <mpi.h>
+#include <stdexcept>
+
 // file includings
 #include "Hash_Table.h"
 #include "Index_Set.h"
 #include "Matrix.h"
 #include "Pattern.h"
-
-// C++ includings
-#include <iostream>
-#include <mpi.h>
-#include <stdexcept>
 
 // Messages with these tags are
 // handled by com_server

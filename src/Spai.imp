@@ -87,7 +87,6 @@ void Spai<T>::SPAI_Algorithm(Matrix<T>* A,
     // was requested
     // printf("Fini \n");
     o_comm.Init();
-    //    UP = P;
 
     if (UP) {
         if (verbose) {

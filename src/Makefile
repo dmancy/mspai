@@ -1,7 +1,7 @@
 include ${PETSC_DIR}/lib/petsc/conf/variables
 #include ${PETSC_DIR}/lib/petsc/conf/rules
 LIBS 	 :=  ../CSparse/Lib/libcsparse.a -lrt # -lg2c -mkl
-CXXFLAGS := -O2 -Wall -fstrict-aliasing -fshort-enums -finline-limit=10000000000 --param large-function-growth=10000000000 --param max-inline-insns-single=10000000000 -DMPICH_IGNORE_CXX_SEEK
+CXXFLAGS := -O3 -Wall -fstrict-aliasing -fshort-enums -finline-limit=10000000000 --param large-function-growth=10000000000 --param max-inline-insns-single=10000000000 -DMPICH_IGNORE_CXX_SEEK
 CXXFLAGSDEBUG := -O0 -g -Wall -Wstrict-aliasing -fstrict-aliasing -fshort-enums -finline-limit=10000000000 --param large-function-growth=10000000000 --param max-inline-insns-single=10000000000 -DMPICH_IGNORE_CXX_SEEK
 
 CXX      := mpicxx

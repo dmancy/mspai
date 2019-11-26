@@ -186,11 +186,6 @@ void Command_Line::Parameters(int argc,
                               int& bs,
                               char*& output_file)
 {
-    int k = 0, hash_sizes[7];
-
-    static char m_file[128], p_file[128], u_p_file[128], prob_Ce_file[128],
-        prob_Be_file[128], targ_file[128], o_file[128];
-
     std::stringstream out_str;
 
     // set default values

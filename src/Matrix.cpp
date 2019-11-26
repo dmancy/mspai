@@ -235,7 +235,7 @@ PetscErrorCode Matrix<double>::Convert_Matrix_Block_to_Mat_Block(MPI_Comm comm,
 
     ierr = MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
     ierr = MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
-    PetscFunctionReturn(0);
+    PetscFunctionReturn(ierr);
 }
 
 template <>

@@ -247,62 +247,67 @@ bool Spai_Sub<double>::Compare_aij(double d1, double d2)
 
 template <>
 int Spai_Sub<COMPLEX>::Opt_lwork_QRDecomp(COMPLEX* A_hat, int m, int n)
-{
-    int info = 0, lwork = -1, lda = std::max(1, m);
+{ /*
+     int info = 0, lwork = -1, lda = std::max(1, m);
 
-    COMPLEX *work = new COMPLEX[1], *tau = NULL;
+     COMPLEX *work = new COMPLEX[1], *tau = NULL;
 
-    // No QR factorization will be computet due to
-    // lwork value = -1. Only the optimal work size will
-    // be calculated.
-    /*
-    zgeqrf_(&m,
-            &n,
-            A_hat,
-            &lda,
-            tau,
-            work,
-            &lwork,
-            &info);
-    */
-    lwork = static_cast<int>(work[0].real);
+     // No QR factorization will be computet due to
+     // lwork value = -1. Only the optimal work size will
+     // be calculated.
 
-    delete[] work;
+     zgeqrf_(&m,
+             &n,
+             A_hat,
+             &lda,
+             tau,
+             work,
+             &lwork,
+             &info);
+
+     lwork = static_cast<int>(work[0].real);
+
+     delete[] work;
+     */
+    int lwork = -1;
     return lwork;
 }
 
 template <>
 int Spai_Sub<COMPLEX>::Opt_lwork_QTApply(
     const char* SIDE, int& m, int& n, int& k, int& one, int& lda, COMPLEX* A_Hat, COMPLEX* tau, COMPLEX* ek_Hat)
-{
-    int info = 0, lwork = -1;
+{ /*
+     int info = 0, lwork = -1;
 
-    COMPLEX* work = new COMPLEX[1];
+     COMPLEX* work = new COMPLEX[1];
 
-    const char* TRANS = "C";
+     const char* TRANS = "C";
 
-    // No Q^T multiplication will be computed due to
-    // lwork value = -1. Only the optimal work size will
-    // be calculated.
-    /*
-    zunmqr_(SIDE,
-            TRANS,
-            &m,
-            &one,
-            &k,
-            A_Hat,
-            &lda,
-            tau,
-            ek_Hat,
-            &lda,
-            work,
-            &lwork,
-            &info);
-    */
-    lwork = static_cast<int>(work[0].real);
-    lwork = std::max(1, lwork);
+     // No Q^T multiplication will be computed due to
+     // lwork value = -1. Only the optimal work size will
+     // be calculated.
 
-    delete[] work;
+
+     zunmqr_(SIDE,
+             TRANS,
+             &m,
+             &one,
+             &k,
+             A_Hat,
+             &lda,
+             tau,
+             ek_Hat,
+             &lda,
+             work,
+             &lwork,
+             &info);
+
+     lwork = static_cast<int>(work[0].real);
+     lwork = std::max(1, lwork);
+
+     delete[] work;
+     */
+    int lwork = -1;
     return lwork;
 }
 
@@ -315,17 +320,16 @@ void Spai_Sub<COMPLEX>::Set_Unit_Idx(COMPLEX*& vec, int unit_idx)
 template <>
 void Spai_Sub<COMPLEX>::QR_Decomposition(
     int& m, int& n, COMPLEX* A_hat, int& lda, COMPLEX* tau, COMPLEX* work, int& lw, int& info)
-{
-    /*
-      zgeqrf_(&m,
-              &n,
-              A_hat,
-              &lda,
-              tau,
-              work,
-              &lw,
-              &info);
-              */
+{ /*
+       zgeqrf_(&m,
+               &n,
+               A_hat,
+               &lda,
+               tau,
+               work,
+               &lw,
+               &info);
+       */
 }
 
 template <>
@@ -341,43 +345,41 @@ void Spai_Sub<COMPLEX>::QT_Apply(const char* SIDE,
                                  COMPLEX* work,
                                  int& lwork,
                                  int& info)
-{
-    TRANS = "C";
-    /*
-    zunmqr_(SIDE,
-            TRANS,
-            &m,
-            &one,
-            &k,
-            A_Hat,
-            &lda,
-            tau,
-            ek_Hat,
-            &lda,
-            work,
-            &lwork,
-            &info);
-            */
+{ /*
+     TRANS = "C";
+     zunmqr_(SIDE,
+             TRANS,
+             &m,
+             &one,
+             &k,
+             A_Hat,
+             &lda,
+             tau,
+             ek_Hat,
+             &lda,
+             work,
+             &lwork,
+             &info);
+     */
 }
 
 template <>
 void Spai_Sub<COMPLEX>::Solve_Tr_System(
     const char* UPLO, const char* NCHAR, int& n, int& one, COMPLEX* A_Hat, COMPLEX* ek_Hat, int& info)
-{
-    int lda = std::max(1, n);
+{ /*
+     int lda = std::max(1, n);
 
-    /*
-    ztrtrs_(UPLO,
-            NCHAR,
-            NCHAR,
-            &n,
-            &one,
-            A_Hat,
-            &lda,
-            ek_Hat,
-            &lda,
-            &info);
-            */
+     ztrtrs_(UPLO,
+             NCHAR,
+             NCHAR,
+             &n,
+             &one,
+             A_Hat,
+             &lda,
+             ek_Hat,
+             &lda,
+             &info);
+     */
 }
 
 template <>
@@ -392,29 +394,28 @@ void Spai_Sub<COMPLEX>::Matrix_Vector_Product(const char* TRANS,
                                               double& beta_val,
                                               COMPLEX* ek_Hat,
                                               int& incy)
-{
-    COMPLEX alpha, beta;
+{ /*
+     COMPLEX alpha, beta;
 
-    alpha.real = alpha_val;
-    alpha.imag = 0.0;
-    beta.real = beta_val;
-    beta.imag = 0.0;
+     alpha.real = alpha_val;
+     alpha.imag = 0.0;
+     beta.real = beta_val;
+     beta.imag = 0.0;
 
-    // Computing r = A*v - w; where A is a matrix
-    // v, w are vectors.
-    /*
-    zgemv_(TRANS,
-           &m,
-           &n,
-           &alpha,
-           A,
-           &lda,
-           mk_Hat,
-           &incx,
-           &beta,
-           ek_Hat,
-           &incy);
-           */
+     // Computing r = A*v - w; where A is a matrix
+     // v, w are vectors.
+     zgemv_(TRANS,
+            &m,
+            &n,
+            &alpha,
+            A,
+            &lda,
+            mk_Hat,
+            &incx,
+            &beta,
+            ek_Hat,
+            &incy);
+     */
 }
 
 template <>
