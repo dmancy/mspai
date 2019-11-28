@@ -160,7 +160,7 @@ public:
     ///
     ///     \param cp Cache element to be deleted.
     ////////////////////////////////////////////////////////
-    void Delete_Element_Data(std::pair<Key, CACHE_DATA<T>> cp);
+    void Delete_Element_Data(std::pair<Key, CACHE_DATA<T> > cp);
 
     ////////////////////////////////////////////////////////
     ///     \brief  Getting the requested cache element
@@ -168,7 +168,7 @@ public:
     ///
     ///     \return The requested cache element
     ////////////////////////////////////////////////////////
-    std::pair<Key, CACHE_DATA<T>> Get_Cache_Element() const;
+    std::pair<Key, CACHE_DATA<T> > Get_Cache_Element() const;
 
     ////////////////////////////////////////////////////////
     ///     \brief  Inserting cache element into cache
@@ -262,7 +262,7 @@ public:
 
 private:
     /// The cache
-    std::list<std::pair<Key, CACHE_DATA<T>>> m_cache;
+    std::list<std::pair<Key, CACHE_DATA<T> > > m_cache;
 
     /// Dimension of the cache and
     /// priority arrays.

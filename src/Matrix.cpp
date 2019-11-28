@@ -80,6 +80,15 @@ void Matrix<double>::Print_Matrix_Data(Matrix<double>* matrix)
         std::cout << pe[i] << " ";
     std::cout << std::endl;
 
+    std::cout << "\tblock sizes:\t\t";
+    for (int i = 0; i < n; i++)
+        std::cout << block_sizes[i] << " ";
+    std::cout << std::endl;
+
+    std::cout << "\tmax block sizes:\t\t";
+    std::cout << max_block_size << " ";
+    std::cout << std::endl;
+
     for (int i = 0; i < my_nbr_cols; i++) {
         int l = c_lines->len_cols[i];
         std::cout << "\n\tlen_cols[" << i << "]:\t" << l << std::endl;

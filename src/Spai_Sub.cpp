@@ -155,6 +155,27 @@ void Spai_Sub<double>::Matrix_Vector_Product(const char* TRANS,
 }
 
 template <>
+void Spai_Sub<double>::Matrix_Matrix_Product(const char* TRANSA,
+                                             const char* TRANSB,
+                                             int& M,
+                                             int& N,
+                                             int& K,
+                                             double& alpha,
+                                             double* A,
+                                             int& lda,
+                                             double* mk_Hat,
+                                             int& ldb,
+                                             double& beta,
+                                             double* ek_Hat,
+                                             int& ldc)
+{
+    // Computing r = A*mk_Hat - ek_Hat; where A is a matrix
+
+    dgemm(TRANSA, TRANSB, &M, &N, &K, &alpha, A, &lda, mk_Hat, &ldb, &beta, ek_Hat, &ldc); 
+}
+
+
+template <>
 double Spai_Sub<double>::Sqrt_Sum(double* vals, int nbr_elems)
 {
     double sum = 0.0, val;
@@ -166,6 +187,20 @@ double Spai_Sub<double>::Sqrt_Sum(double* vals, int nbr_elems)
 
     return sum;
 }
+
+template <>
+double Spai_Sub<double>::Sqrt_Sum_Matrix(double* vals, const int& m, const int& n)
+{
+    double sum = 0.0, val;
+
+    for (int el = 0; el < m*n; el++) {
+        val = vals[el];
+        sum += val * val;
+    }
+
+    return sum;
+}
+
 
 template <>
 void Spai_Sub<double>::Print_A_Hat(const double* A_Hat, const int n, const int m)

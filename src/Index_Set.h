@@ -36,7 +36,7 @@
 #include <algorithm>
 #include <bits/stdc++.h>
 
-typedef std::pair<int, std::pair<int, int>> ppi;
+typedef std::pair<int, std::pair<int, int> > ppi;
 
 ///////////////////////////////////////////
 ///     \class Index_Set

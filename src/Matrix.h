@@ -385,7 +385,8 @@ public:
     static int Check_Next_Run(Matrix<T>* A, int i, int i_next, int bs);
 
     Matrix<T>* Convert_To_Block_Matrix(int nblocks_local, int* block_sizes_local);
-    Matrix<T>* Scalar_Matrix(void);
+    Matrix<T>* Convert_To_Block_Matrix_2(int nblocks_local, int* block_sizes_local);
+    Matrix<T>* Scalar_Matrix(const int& verbose);
 
     //    private:
 

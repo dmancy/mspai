@@ -48,13 +48,7 @@ Index_Set* Spai_Sub<T>::Union_UP(Pattern* UP, const int max_arg)
 {
     Index_Set* U_UP = new Index_Set(max_arg);
     U_UP->len = 0;
-/*
-    for (int i = 0; i < UP->my_nbr_cols; i++) {
-        U_UP->Set_Union(UP->j_sets[i], UP->my_start_idx, UP->my_start_idx + UP->my_nbr_cols);
-    }
-*/
     U_UP->Set_Union(UP->j_sets, UP->my_nbr_cols);
-    U_UP->Print_Index_Set("UUP");
     return U_UP;
 }
 
@@ -861,6 +855,53 @@ double Spai_Sub<T>::Residual_Norm(T* A_Hat, int& m, int& n, T* mk_Hat, T* ek_Hat
 }
 
 template <class T>
+double Spai_Sub<T>::Residual_Norm_Block(Matrix<T>*M, T* A_Hat, int& m, int& n, int& k, T* mk_Hat, T* ek_Hat, T*& residual_vals)
+{
+
+    // Lapack input parameters
+    const char *SIDE = "L", *UPLO = "U",  *NCHAR = "N";
+
+    double residual_norm = 0.0, alpha = 1.0, beta = -1.0;
+
+    const char* TRANS = "N";
+
+    int lda, ldb, ldc;
+
+    lda = std::max(m, 1);
+    ldb = std::max(k, 1);
+    ldc = lda;
+
+    // Get the residual values.
+    // The whole vector is not needed. Just the values
+    // for the frobenius calculation. If the whole
+    // vector is needed the Index_Set I would give
+    // the position of the value within the residual.
+    // Here the smaller subproblem is faster for computation.
+
+    printf("\nNew\n");
+    for (int i = 0; i < m*k; i++)
+      printf("A[%d] = %.12e\n", i, A_Hat[i]);
+    for (int i = 0; i < k*n; i++)
+      printf("m[%d] = %.12e\n", i, mk_Hat[i]);
+    for (int i = 0; i < m*n; i++)
+      printf("ek[%d] = %.12e\n", i, ek_Hat[i]);
+    Matrix_Matrix_Product(TRANS, TRANS, m, n, k, alpha, A_Hat, lda, mk_Hat, ldb, beta, ek_Hat, ldc);
+
+    for (int i = 0; i < m*n; i++)
+      printf("res[%d] = %.12e\n", i, ek_Hat[i]);
+
+
+    // Just a new name
+    residual_vals = ek_Hat;
+
+    // Compute the residual norm
+    residual_norm = Frobenius_Norm(residual_vals, m, n);
+
+    return residual_norm;
+}
+
+
+template <class T>
 double Spai_Sub<T>::Euclidean_Norm(T* residual_vals, const int nbr_elems)
 {
     if (!residual_vals)
@@ -872,6 +913,23 @@ double Spai_Sub<T>::Euclidean_Norm(T* residual_vals, const int nbr_elems)
     // Computing the whole sum under the sqrt specific to
     // Template.
     sum = Sqrt_Sum(residual_vals, nbr_elems);
+
+    return sqrt(sum);
+}
+
+template <class T>
+double Spai_Sub<T>::Frobenius_Norm(T* residual_vals, const int& block_width, const int& slen)
+{
+    if (!residual_vals)
+        return 0.0;
+
+    double sum = 0.0;
+
+    // Sqrt_Sum has to be a template specification
+    // Computing the whole sum under the sqrt specific to
+    // Template.
+
+    sum = Sqrt_Sum_Matrix(residual_vals, block_width, slen);
 
     return sqrt(sum);
 }
@@ -1026,6 +1084,7 @@ RHO_IDX* Spai_Sub<T>::Compute_Rhos(Matrix<T>* A,
                        row_idcs_buf, col_buf, ht, pre_k_param, true, pre_max_param);
 
         // ||aj||_2
+        // ***Precompute them
         aj_norm = Euclidean_Norm(col_buf, col_len);
 
         // avoiding memset for small size of indices and

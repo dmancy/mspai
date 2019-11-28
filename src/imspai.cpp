@@ -37,16 +37,7 @@ PetscErrorCode PC_MSPAI::PCSetUp_MSPAI(Mat A)
     else {
         A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, &A);
     }
-        A_REAL->Write_Matrix_To_File("A.mtx");
-
-    if (block_size != 1) {
-        Matrix<double>* B;
-
-        B = Matrix<double>::Convert_Block_Matrix(A_REAL, block_size, 1000000, 0);
-
-        delete A_REAL;
-        A_REAL = B;
-    }
+    // A_REAL->Write_Matrix_To_File("A.mtx");
 
     bspai();
 
@@ -665,6 +656,12 @@ int PC_MSPAI::bspai(void)
 
     bool symmetric_system = A_REAL->symmetric;
 
+    // Start time measurement
+    if (verbose) {
+        o_timer = Timer();
+        o_timer.Start_Timer();
+    }
+
     if (verbose) {
         if (my_id == 0) {
             o_cm.Print_Short_License();
@@ -676,12 +673,6 @@ int PC_MSPAI::bspai(void)
                       << std::endl;
         }
 
-        // Start time measurement
-        if (verbose) {
-            o_timer = Timer();
-            o_timer.Start_Timer();
-        }
-
         // Reading data input and generating the matrix A
         if (my_id == 0) {
             std::cout << "\t  Input is REAL!" << std::endl;
@@ -691,10 +682,22 @@ int PC_MSPAI::bspai(void)
                 std::cout << "\t\t     preserve symmetry.";
                 std::cout << std::endl;
             }
-            std::cout << "\n\t* Reading matrix data...\t\t ";
+            if (block_size != 1)
+                std::cout << "\n\t* Conversion scalar to block...\t\t ";
             std::cout.flush();
         }
     }
+
+    if (block_size != 1) {
+        Matrix<double>* B;
+
+        B = Matrix<double>::Convert_Block_Matrix(A_REAL, block_size, 1000000, verbose);
+
+        delete A_REAL;
+        A_REAL = B;
+        // A_REAL->Write_Matrix_To_File("B.mtx");
+    }
+
     Read_mm_Matrix o_rm;
     if (verbose) {
         // Reading data input and generating the
@@ -777,13 +780,20 @@ int PC_MSPAI::bspai(void)
     Matrix<double>* Scalar = NULL;
 
     if (A_REAL->block_size != 1) {
-        Scalar = M_REAL->Scalar_Matrix();
-        delete M_REAL;
+        if (verbose) {
+            // Write preconditioner to file
+            if (my_id == 0) {
+                std::cout << "\n\t* Conversion block to scalar...\t ";
+                std::cout.flush();
+            }
 
-        M_REAL = Scalar;
+            Scalar = M_REAL->Scalar_Matrix(verbose);
+            delete M_REAL;
+
+            M_REAL = Scalar;
+        }
     }
 
-        M_REAL->Write_Matrix_To_File("precond.mtx");
     Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL, &(PM));
     // printf("id : %d, columns got : %d\n", A_REAL->my_id, A_REAL->send);
 

@@ -472,6 +472,8 @@ public:
     //////////////////////////////////////////////////////////////
     double Residual_Norm(T* A_Hat, int& m, int& n, T* mk_Hat, T* ek_Hat, T*& residual_vals);
 
+    double Residual_Norm_Block(Matrix<T>*M, T* A_Hat, int& m, int& n, int& k, T* mk_Hat, T* ek_Hat, T*& residual_vals);
+
     //////////////////////////////////////////////////////////////
     ///     \brief Computing the euclidean norm of a vector
     ///
@@ -482,6 +484,8 @@ public:
     ///     \return The euclidean norm
     //////////////////////////////////////////////////////////////
     double Euclidean_Norm(T* residual_vals, const int nbr_elems);
+
+    double Frobenius_Norm(T* residual_vals, const int& block_width, const int& slen);
 
     //////////////////////////////////////////////////////////////
     ///     \brief Augmenting index set J with new indices wich
@@ -811,6 +815,20 @@ public:
                                double* ek_Hat,
                                int& incy);
 
+    void Matrix_Matrix_Product(const char* TRANSA,
+                               const char* TRANSB,
+                               int& M,
+                               int& N,
+                               int& K,
+                               double& alpha,
+                               double* A,
+                               int& lda,
+                               double* mk_Hat,
+                               int& ldb,
+                               double& beta,
+                               double* ek_Hat,
+                               int& ldc);
+
     //////////////////////////////////////////////////////////////
     ///     \brief  Computes the sum of squares which is used
     ///             for the sqrt computation if a norm is
@@ -821,6 +839,8 @@ public:
     ///     \return The sum of all single values squares
     //////////////////////////////////////////////////////////////
     double Sqrt_Sum(double* vals, int nbr_elems);
+
+    double Sqrt_Sum_Matrix(double* vals, const int& m, const int& n);
 
     //////////////////////////////////////////////////////////////
     ///     \brief  Printing an array

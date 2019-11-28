@@ -40,14 +40,14 @@ Cache<T>::Cache(const int dimension)
 template <class T>
 Cache<T>::~Cache()
 {
-    typename std::list<std::pair<Key, CACHE_DATA<T>>>::iterator pos;
+    typename std::list<std::pair<Key, CACHE_DATA<T> > >::iterator pos;
 
     for (pos = m_cache.begin(); pos != m_cache.end(); ++pos)
         Delete_Element_Data(*pos);
 }
 
 template <class T>
-void Cache<T>::Delete_Element_Data(std::pair<Key, CACHE_DATA<T>> cp)
+void Cache<T>::Delete_Element_Data(std::pair<Key, CACHE_DATA<T> > cp)
 {
     struct CACHE_DATA<T> cd;
     cd = cp.second;
@@ -77,20 +77,20 @@ void Cache<T>::Insert_Cache_Data_LRU(
     cd.n = n;
 
     if (m_cache.size() < m_dimension)
-        m_cache.push_front(std::pair<Key, CACHE_DATA<T>>(key, cd));
+        m_cache.push_front(std::pair<Key, CACHE_DATA<T> >(key, cd));
     else // cache is full, remove last element
     {
-        std::pair<Key, CACHE_DATA<T>> cp = m_cache.back();
+        std::pair<Key, CACHE_DATA<T> > cp = m_cache.back();
         Delete_Element_Data(cp);
         m_cache.pop_back();
-        m_cache.push_front(std::pair<Key, CACHE_DATA<T>>(key, cd));
+        m_cache.push_front(std::pair<Key, CACHE_DATA<T> >(key, cd));
     }
 }
 
 template <class T>
 bool Cache<T>::In_Cache(const Key pattern_key)
 {
-    typename std::list<std::pair<Key, CACHE_DATA<T>>>::iterator pos;
+    typename std::list<std::pair<Key, CACHE_DATA<T> > >::iterator pos;
 
     for (pos = m_cache.begin(); pos != m_cache.end(); ++pos)
         if (pattern_key == (*pos).first) {
@@ -120,7 +120,7 @@ void Cache<T>::Update_Cache_Key()
 {
     // Updating the cache key is just the ORing
     // between all cache elements.
-    std::pair<Key, CACHE_DATA<T>> cp;
+    std::pair<Key, CACHE_DATA<T> > cp;
     m_cache_key = 0;
     for (int i = 0; i < m_dimension; i++) {
         cp = m_cache[i];
@@ -129,7 +129,7 @@ void Cache<T>::Update_Cache_Key()
 }
 
 template <class T>
-std::pair<Key, CACHE_DATA<T>> Cache<T>::Get_Cache_Element() const
+std::pair<Key, CACHE_DATA<T> > Cache<T>::Get_Cache_Element() const
 {
     return *m_cache.begin();
 }
@@ -137,13 +137,13 @@ std::pair<Key, CACHE_DATA<T>> Cache<T>::Get_Cache_Element() const
 template <class T>
 void Cache<T>::Print_Cache()
 {
-    std::pair<Key, CACHE_DATA<T>> cp;
+    std::pair<Key, CACHE_DATA<T> > cp;
 
     CACHE_DATA<T> cd;
 
     Spai_Sub<T> o_sub;
 
-    typename std::list<std::pair<Key, CACHE_DATA<T>>>::iterator pos;
+    typename std::list<std::pair<Key, CACHE_DATA<T> > >::iterator pos;
 
     std::cout << "\tPRINTING NEW CACHE             " << std::endl;
     std::cout << "\tCachesize: " << m_cache.size() << "\n" << std::endl;

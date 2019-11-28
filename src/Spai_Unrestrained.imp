@@ -89,6 +89,7 @@ void Spai_Unrestrained<T>::SPAI_Column(Matrix<T>* A,
         // The index of the unit vector
         A_Hat = o_sub.Create_Submatrix_AHat_Block(
             A, M, B, P, UP, U_UP, J, I, col, m, n, ht, nnz, pre_k_param, pre_max_param);
+
         // Create the unit vector
         // Notice that the name is the solution name already.
 
@@ -99,7 +100,7 @@ void Spai_Unrestrained<T>::SPAI_Column(Matrix<T>* A,
         // computing the residual vector later
         // bk_Hat = o_sub.Copy_Vector(mk_Hat, I->slen * A->block_sizes[col]);
         bk_Hat = M->bk_Hat;
-        memcpy(bk_Hat, mk_Hat, I->slen * A->block_sizes[col]);
+        memcpy(bk_Hat, mk_Hat, I->slen * A->block_sizes[col] * sizeof(double));
 
         // Computing solution m_k which is stored within
         // mk_Hat.
@@ -110,20 +111,25 @@ void Spai_Unrestrained<T>::SPAI_Column(Matrix<T>* A,
         // Extract solution values
         // mk_Hat = o_sub.Get_Solution_Vals(mk_Hat, J);
 
-        //// A REMETTRE  changer la boucle dans la focntion ci dessous
         memcpy(M->mk_Hat_buffer, mk_Hat, I->slen * A->block_sizes[col] * sizeof(T));
 
         o_sub.Get_Solution_Vals_Block(M->mk_Hat_buffer, mk_Hat, M, A, col, J, I->slen);
+        // Copy  M->mk_Hat_buffer back into mk_Hat
+        // Use dormqr to compute A_hat * mk_hat
+        // compute the residual R = Ek - A_hat * mk_hat
+        // Convert res to resb
+        // Compute resnorm
 
         // Computing the residual vector
         // and the frobenius norm of it
-
-        /*
-        residual_norm = o_sub.Residual_Norm(
-                                A_Hat, m, n,
+        residual_norm = o_sub.Residual_Norm_Block(M,
+                                A_Hat, m, A->block_sizes[col], n,
                                 mk_Hat, bk_Hat,
                                 residual_vals);
-*/
+
+        
+        printf("residual norm = %f\n", residual_norm);
+
         // Finishing conditions
 
         if ((residual_norm <= epsilon_param)  // residual good enough

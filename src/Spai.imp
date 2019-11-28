@@ -114,7 +114,6 @@ void Spai<T>::SPAI_Algorithm(Matrix<T>* A,
         }
     }
 
-    MPI_Barrier(A->world);
     if (verbose) {
         // Start time measurement
         o_timer = Timer();
@@ -146,8 +145,6 @@ void Spai<T>::SPAI_Algorithm(Matrix<T>* A,
 
     o_comm.Initialize_nbr_done();
     o_comm.Initialize_nbr_done_prefetching();
-
-    MPI_Barrier(A->world);
 
     if (verbose) {
         // Stop time measurement
