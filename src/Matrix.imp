@@ -140,10 +140,10 @@ int Matrix<T>::Count_NNZ()
 template <class T>
 void Matrix<T>::Init_Preconditioner(Matrix<T>*& M, const int m_dim, const int n_dim)
 {
-    int max_arg = 3000; // Length of buffers
+    int max_arg = 7000; // Length of buffers
     int TAU_SIZE = 1000;
-    int QR_SIZE = 1000;
-    int QT_SIZE = 1000;
+    int QR_SIZE = 10;
+    int QT_SIZE = 10;
 
     M = new Matrix<T>(world);
 

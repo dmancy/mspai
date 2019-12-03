@@ -190,7 +190,7 @@ void Spai_Caching<T>::Approximative_Solution(T* A_Hat_orig,
 
     CACHE_DATA<T> cd;
 
-    std::pair<Key, CACHE_DATA<T> > cp;
+    std::pair<Key, CACHE_DATA<T>> cp;
 
     // 2nd Check if every element is equal
     if (in_cache) {

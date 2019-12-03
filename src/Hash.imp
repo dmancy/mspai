@@ -41,7 +41,7 @@ Hash<T>::~Hash()
 {
     typename hash_map<Key, HASH_DATA<T>, HASH_FUNCTION>::iterator it;
 
-    std::pair<Key, HASH_DATA<T> > hp;
+    std::pair<Key, HASH_DATA<T>> hp;
     HASH_DATA<T> hd;
     for (it = m_hash_map.begin(); it != m_hash_map.end(); it++) {
         hp = *it;
@@ -68,7 +68,7 @@ void Hash<T>::Insert_Hash_Data(
     hd.m = m;
 
     const Key kp(key);
-    m_hash_map.insert(std::pair<Key, HASH_DATA<T> >(kp, hd));
+    m_hash_map.insert(std::pair<Key, HASH_DATA<T>>(kp, hd));
 }
 
 template <class T>

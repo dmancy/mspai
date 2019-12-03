@@ -56,6 +56,7 @@ void Spai_Unrestrained<T>::SPAI_Column(Matrix<T>* A,
     double residual_norm = 1.0e+50; // appr. infinity
 
     T *A_Hat = NULL, *mk_Hat = NULL, *bk_Hat = NULL, *residual_vals = NULL;
+    T* residual_vals_b = new T[3000];
 
     Spai_Sub<T> o_sub;
 
@@ -85,6 +86,7 @@ void Spai_Unrestrained<T>::SPAI_Column(Matrix<T>* A,
         // is available in row. Create Index Set I
         I = o_sub.Get_I_Set(J, A, M, B, P, UP, U_UP, ht, pre_k_param,
                             pre_max_param, bitvec, reset_vec);
+
         // Create the submatrix A_Hat = A(I;J) and update the
         // The index of the unit vector
         A_Hat = o_sub.Create_Submatrix_AHat_Block(
@@ -120,16 +122,37 @@ void Spai_Unrestrained<T>::SPAI_Column(Matrix<T>* A,
         // Convert res to resb
         // Compute resnorm
 
+        //    I->Print_Index_Set("I residual");
+
         // Computing the residual vector
         // and the frobenius norm of it
-        residual_norm = o_sub.Residual_Norm_Block(M,
-                                A_Hat, m, A->block_sizes[col], n,
-                                mk_Hat, bk_Hat,
-                                residual_vals);
+        residual_norm = o_sub.Residual_Norm_Block(
+            M, A_Hat, m, A->block_sizes[col], n, mk_Hat, bk_Hat, residual_vals);
 
-        
-        printf("residual norm = %f\n", residual_norm);
+        o_sub.Convert_To_Block(M, I, col, residual_vals, residual_vals_b);
+        /*
+                std::cout << "Augment sparsity :" << col << std::endl;
+                std::cout << "Residual" << std::endl;
+                for (int kk = 0; kk < I->slen*A->block_sizes[col]; kk++)
+                  std::cout << "r_sca = " << residual_vals[kk] << std::endl;
 
+                std::cout << "Residual" << std::endl;
+                for (int kk = 0; kk < I->slen*A->block_sizes[col]; kk++)
+                  std::cout << "r_b = " << residual_vals_b[kk] << std::endl;
+
+
+                std::cout.precision(17);
+
+        */
+
+        //      J->Print_Index_Set("J ");
+        /*
+        o_sub.Augment_Sparsity(A, M, B, P, I, J, UP, U_UP, col, residual_norm,
+                                    residual_vals_b, maxnew_param, ht, use_mean,
+                                    pre_k_param, pre_max_param, bitvec,
+        reset_vec);
+        J->Print_Index_Set("J2");
+        */
         // Finishing conditions
 
         if ((residual_norm <= epsilon_param)  // residual good enough
@@ -140,7 +163,7 @@ void Spai_Unrestrained<T>::SPAI_Column(Matrix<T>* A,
         // Solution is not good enough - augmenting
         // Finish augmenting if no new candidates found
         if (!o_sub.Augment_Sparsity(A, M, B, P, I, J, UP, U_UP, col, residual_norm,
-                                    residual_vals, maxnew_param, ht, use_mean,
+                                    residual_vals_b, maxnew_param, ht, use_mean,
                                     pre_k_param, pre_max_param, bitvec, reset_vec))
             break;
     }
@@ -212,9 +235,4 @@ void Spai_Unrestrained<T>::Approximative_Solution_Block(T* A_Hat_orig,
     // Solving the triangular system:
     // Computing :   R^-1 * (Q^T * e_k_hat)
     o_sub.Solve_Tr_System_Block(UPLO, NCHAR, n, one, I->slen, A_Hat, mk_Hat, info);
-
-    // delete [] work_qr;
-    // delete [] work_qt;
-    // delete [] tau;
-    // delete [] A_Hat;
 }

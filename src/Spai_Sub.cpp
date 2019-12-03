@@ -33,7 +33,6 @@
 // file includings
 #include "Spai_Sub.h"
 //#include "Lapack.h"
-#include <mkl.h>
 
 // C++ includings
 #include <iostream>
@@ -171,9 +170,8 @@ void Spai_Sub<double>::Matrix_Matrix_Product(const char* TRANSA,
 {
     // Computing r = A*mk_Hat - ek_Hat; where A is a matrix
 
-    dgemm(TRANSA, TRANSB, &M, &N, &K, &alpha, A, &lda, mk_Hat, &ldb, &beta, ek_Hat, &ldc); 
+    dgemm(TRANSA, TRANSB, &M, &N, &K, &alpha, A, &lda, mk_Hat, &ldb, &beta, ek_Hat, &ldc);
 }
-
 
 template <>
 double Spai_Sub<double>::Sqrt_Sum(double* vals, int nbr_elems)
@@ -193,7 +191,7 @@ double Spai_Sub<double>::Sqrt_Sum_Matrix(double* vals, const int& m, const int& 
 {
     double sum = 0.0, val;
 
-    for (int el = 0; el < m*n; el++) {
+    for (int el = 0; el < m * n; el++) {
         val = vals[el];
         sum += val * val;
     }
@@ -201,7 +199,31 @@ double Spai_Sub<double>::Sqrt_Sum_Matrix(double* vals, const int& m, const int& 
     return sum;
 }
 
+template <>
+void Spai_Sub<double>::Mult_Blocks_TN(const double* const a,
+                                      const double* const b,
+                                      const int& m,
+                                      const int& n,
+                                      const int& k,
+                                      double* c)
+{
+    int jj1 = 0;
+    int jjj1 = 0;
+    int ii1 = 0;
 
+    for (int i1 = 0; i1 < m; i1++) {
+        jj1 = 0;
+        jjj1 = 0;
+        for (int j1 = 0; j1 < n; j1++) {
+            for (int k1 = 0; k1 < k; k1++) {
+                c[i1 + jjj1] += a[k1 + ii1] * b[k1 + jj1];
+            }
+            jj1 += k;
+            jjj1 += m;
+        }
+        ii1 += k;
+    }
+}
 template <>
 void Spai_Sub<double>::Print_A_Hat(const double* A_Hat, const int n, const int m)
 {
@@ -266,6 +288,91 @@ double Spai_Sub<double>::Compute_Numerator(double* residual,
 
     num *= num;
     return num;
+}
+
+template <>
+double* Spai_Sub<double>::Compute_Numerator_Block(double* residual,
+                                                  double* aj,
+                                                  const Matrix<double>* const M,
+                                                  const int& col,
+                                                  const int& j,
+                                                  const Index_Set* const I,
+                                                  int* col_idcs_buf,
+                                                  int& col_len)
+{
+    double* sum_block = NULL;
+    int ia = 0, ir = 0; // indices of I and col_idcs_buf
+    int bj, bk;
+    int start_aj = 0, start_r = 0, idx_r = 0, idx_A = 0;
+
+    const char *TRANSA = "T", *TRANSB = "N";
+    const double alpha = 1.0, beta = 1.0;
+
+    bj = M->block_sizes[j];   // Block size of the column Aj
+    bk = M->block_sizes[col]; // Block size of the processed column
+
+    sum_block = new double[bj * bk];
+    memset(sum_block, 0, bj * bk * sizeof(double));
+
+    double temp = 0.0;
+
+    //    for (int i = 0; i < col_len; i++)
+    //      std::cout << "Index pour Aj : "<< col_idcs_buf[i] << std::endl;
+
+    while ((ir < I->len) && (ia < col_len)) {
+        idx_r = I->idcs[ir];
+        idx_A = col_idcs_buf[ia];
+        //     std::cout << "idx_r = "<< idx_r << " idx_A = " << idx_A <<
+        //     std::endl;
+
+        while ((idx_A < idx_r) && (ia < col_len)) {
+            ia++;
+            start_aj += bj * M->block_sizes[idx_A];
+
+            idx_A = col_idcs_buf[ia];
+            //   std::cout << "idx_r = "<< idx_r << " idx_A = " << idx_A <<
+            //   std::endl;
+        }
+
+        if ((idx_A == idx_r) && (ia < col_len) && (ir < I->len)) {
+            //   std::cout << "Meme indice : " << idx_A << std::endl;
+            // std::cout << "idx_r = "<< idx_r << " idx_A = " << idx_A <<
+            // std::endl;
+
+            // Add the block participation sum_block in (Aj^T)*r
+            dgemm(TRANSA, TRANSB, &bj, &bk, &(M->block_sizes[idx_A]), &alpha,
+                  &(aj[start_aj]), &(M->block_sizes[idx_A]), &(residual[start_r]),
+                  &(M->block_sizes[idx_A]), &beta, sum_block, &bj);
+            temp += aj[ia] * residual[ir];
+            ir++;
+            start_r += bk * M->block_sizes[idx_r];
+        }
+        else {
+            while ((idx_r < idx_A) && (ir < I->len)) {
+                ir++;
+                start_r += bk * M->block_sizes[idx_r];
+
+                idx_r = I->idcs[ir];
+                // std::cout << "idx_r = "<< idx_r << " idx_A = " << idx_A <<
+                // std::endl;
+            }
+            if ((idx_A == idx_r) && (ia < col_len) && (ir < I->len)) {
+                //     std::cout << "Meme indice : " << idx_A << std::endl;
+                // std::cout << "idx_r = "<< idx_r << " idx_A = " << idx_A <<
+                // std::endl;
+
+                // Add the block participation sum_block in (Aj^T)*r
+                dgemm(TRANSA, TRANSB, &bj, &bk, &(M->block_sizes[idx_A]), &alpha,
+                      &(aj[start_aj]), &(M->block_sizes[idx_A]), &(residual[start_r]),
+                      &(M->block_sizes[idx_A]), &beta, sum_block, &bj);
+                temp += aj[ia] * residual[ir];
+                ir++;
+                start_r += bk * M->block_sizes[idx_r];
+            }
+        }
+    }
+
+    return sum_block;
 }
 
 template <>

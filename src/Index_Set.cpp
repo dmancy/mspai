@@ -244,7 +244,7 @@ int Index_Set::Get_El_Idx(Index_Set* is, const int el)
 
 void Index_Set::Set_Union(Index_Set** jsets, int jsets_len)
 {
-    std::priority_queue<ppi, std::vector<ppi>, std::greater<ppi> > pq;
+    std::priority_queue<ppi, std::vector<ppi>, std::greater<ppi>> pq;
 
     for (int i = 0; i < jsets_len; i++) {
         pq.push({jsets[i]->idcs[0], {i, 0}});

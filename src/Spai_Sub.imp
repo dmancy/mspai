@@ -91,6 +91,7 @@ Index_Set* Spai_Sub<T>::Get_I_Set(Index_Set* J,
             if (!Bit_Test(bitvec[pos], bit)) {
                 Set_Bit(&bitvec[pos], bit);
                 I->idcs[i_len++] = r_idx;
+                I->slen += A->block_sizes[r_idx];
                 reset_vec[reset_len++] = pos;
             }
         }
@@ -803,6 +804,27 @@ void Spai_Sub<T>::Get_Solution_Vals_Block(T* mk_Hat_in,
 }
 
 template <class T>
+void Spai_Sub<T>::Convert_To_Block(const Matrix<T>* const A,
+                                   const Index_Set* const I,
+                                   const int& col,
+                                   const T* const x,
+                                   T* xb)
+{
+    int start_x = 0, start_xb = 0, m, idx_block, bs_col = A->block_sizes[col];
+
+    for (int k = 0; k < I->len; k++) {
+        idx_block = I->idcs[k];
+        m = A->block_sizes[idx_block];
+
+        for (int j = 0; j < bs_col; j++) {
+            for (int i = 0; i < m; i++) {
+                xb[start_xb++] = x[A->first_index_row[k] + j * I->slen + i];
+            }
+        }
+    }
+}
+
+template <class T>
 bool Spai_Sub<T>::Compare_A_Hat(T* A1, T* A2, int dim)
 {
     for (int i = 0; i < dim; i++)
@@ -855,12 +877,10 @@ double Spai_Sub<T>::Residual_Norm(T* A_Hat, int& m, int& n, T* mk_Hat, T* ek_Hat
 }
 
 template <class T>
-double Spai_Sub<T>::Residual_Norm_Block(Matrix<T>*M, T* A_Hat, int& m, int& n, int& k, T* mk_Hat, T* ek_Hat, T*& residual_vals)
+double Spai_Sub<T>::Residual_Norm_Block(
+    Matrix<T>* M, T* A_Hat, int& m, int& n, int& k, T* mk_Hat, T* ek_Hat, T*& residual_vals)
 {
-
     // Lapack input parameters
-    const char *SIDE = "L", *UPLO = "U",  *NCHAR = "N";
-
     double residual_norm = 0.0, alpha = 1.0, beta = -1.0;
 
     const char* TRANS = "N";
@@ -877,20 +897,10 @@ double Spai_Sub<T>::Residual_Norm_Block(Matrix<T>*M, T* A_Hat, int& m, int& n, i
     // vector is needed the Index_Set I would give
     // the position of the value within the residual.
     // Here the smaller subproblem is faster for computation.
+    // Matrix_Matrix_Product(TRANS, TRANS, m, k, n, alpha, A_Hat, lda, mk_Hat,
+    // ldb, beta, ek_Hat, ldc);
 
-    printf("\nNew\n");
-    for (int i = 0; i < m*k; i++)
-      printf("A[%d] = %.12e\n", i, A_Hat[i]);
-    for (int i = 0; i < k*n; i++)
-      printf("m[%d] = %.12e\n", i, mk_Hat[i]);
-    for (int i = 0; i < m*n; i++)
-      printf("ek[%d] = %.12e\n", i, ek_Hat[i]);
-    Matrix_Matrix_Product(TRANS, TRANS, m, n, k, alpha, A_Hat, lda, mk_Hat, ldb, beta, ek_Hat, ldc);
-
-    for (int i = 0; i < m*n; i++)
-      printf("res[%d] = %.12e\n", i, ek_Hat[i]);
-
-
+    dgemm(TRANS, TRANS, &m, &n, &k, &alpha, A_Hat, &lda, mk_Hat, &ldb, &beta, ek_Hat, &ldc);
     // Just a new name
     residual_vals = ek_Hat;
 
@@ -899,7 +909,6 @@ double Spai_Sub<T>::Residual_Norm_Block(Matrix<T>*M, T* A_Hat, int& m, int& n, i
 
     return residual_norm;
 }
-
 
 template <class T>
 double Spai_Sub<T>::Euclidean_Norm(T* residual_vals, const int nbr_elems)
@@ -915,6 +924,49 @@ double Spai_Sub<T>::Euclidean_Norm(T* residual_vals, const int nbr_elems)
     sum = Sqrt_Sum(residual_vals, nbr_elems);
 
     return sqrt(sum);
+}
+
+template <class T>
+double* Spai_Sub<T>::Column_Square_Inverse(
+    T* col_buf, int* col_idcs_buf, const int& len, const int& block_size, Matrix<T>* A)
+{
+    double* Aj_sq_inv = new T[block_size * block_size];
+    int* ipiv = new int[block_size];
+
+    int lwork = -1;
+    double *work = new double[1000], work_db = 0.0;
+
+    int m, info = 0;
+
+    //    for (int i = 0; i < len*4; i++)
+    //      std::cout << "aj = " << col_buf[i] << std::endl;
+
+    int start_block = 0;
+    for (int i = 0; i < len; i++) {
+        m = A->block_sizes[col_idcs_buf[i]];
+        Mult_Blocks_TN(&(col_buf[start_block]), &(col_buf[start_block]),
+                       block_size, block_size, m, Aj_sq_inv);
+
+        start_block += (block_size * m);
+    }
+
+    dgetrf_(&block_size, &block_size, Aj_sq_inv, &block_size, ipiv, &info);
+
+    dgetri_(&block_size, Aj_sq_inv, &block_size, ipiv, &work_db, &lwork, &info);
+
+    lwork = static_cast<int>(work_db);
+    lwork = std::max(1, lwork);
+
+    dgetri_(&block_size, Aj_sq_inv, &block_size, ipiv, work, &lwork, &info);
+
+    //  std::cout << " Block" << std::endl;
+    //  for (int i = 0; i < 4; i++)
+    //   std::cout << "aj_inv = " << Aj_sq_inv[i] << std::endl;
+
+    delete[] ipiv;
+    delete[] work;
+
+    return Aj_sq_inv;
 }
 
 template <class T>
@@ -1022,14 +1074,16 @@ bool Spai_Sub<T>::Augment_Sparsity(Matrix<T>* A,
     }
 
     // Compute rho values for all elements of J_tilde
-    rhos = Compute_Rhos(A, M, B, P, UP, U_UP, I, residual_norm, residual_vals,
-                        J_tilde, mean_val, ht, use_mean, pre_k_param, pre_max_param);
+    rhos = Compute_Rhos_Block(A, M, B, P, UP, U_UP, I, col, residual_norm,
+                              residual_vals, J_tilde, mean_val, ht, use_mean,
+                              pre_k_param, pre_max_param);
 
     // Augment J with new indices which improves residual
     for (int el = 0;
          (el < maxnew_param) && (el < J_tilde->len) && (rhos[el].rho <= mean_val); el++) {
         J->idcs[J->len] = rhos[el].idx;
         J->len++;
+        J->slen += M->block_sizes[rhos[el].idx];
     }
 
     // Sorting the new augmented Index_Set J
@@ -1045,33 +1099,42 @@ bool Spai_Sub<T>::Augment_Sparsity(Matrix<T>* A,
 }
 
 template <class T>
-RHO_IDX* Spai_Sub<T>::Compute_Rhos(Matrix<T>* A,
-                                   Matrix<T>*& M,
-                                   Matrix<T>* B,
-                                   Pattern* P,
-                                   Pattern* UP,
-                                   Index_Set* U_UP,
-                                   Index_Set* I,
-                                   double residual_norm,
-                                   T* residual_vals,
-                                   Index_Set* J_tilde,
-                                   double& mean_val,
-                                   Hash_Table<T>*& ht,
-                                   const int use_mean,
-                                   const int& pre_k_param,
-                                   const int pre_max_param)
+RHO_IDX* Spai_Sub<T>::Compute_Rhos_Block(Matrix<T>* A,
+                                         Matrix<T>*& M,
+                                         Matrix<T>* B,
+                                         Pattern* P,
+                                         Pattern* UP,
+                                         Index_Set* U_UP,
+                                         Index_Set* I,
+                                         const int& col,
+                                         double residual_norm,
+                                         T* residual_vals,
+                                         Index_Set* J_tilde,
+                                         double& mean_val,
+                                         Hash_Table<T>*& ht,
+                                         const int use_mean,
+                                         const int& pre_k_param,
+                                         const int pre_max_param)
 {
     bool first_set = false;
 
-    int col_len, row_len, res_len, j, *col_idcs_buf = NULL, *row_idcs_buf = NULL;
+    int col_len, row_len, res_len, j, colj, colk, *col_idcs_buf = NULL,
+                                                  *row_idcs_buf = NULL;
 
-    double norm_square, rho_j, num, aj_norm = 0.0;
+    double norm_square, rho_j, num, aj_norm = 0.0, term, alpha = 1.0, beta = 0.0;
+
+    double *num_block = NULL, *B_minus = NULL;
+
+    const char* TRANS = "N";
 
     RHO_IDX* rhos = NULL;
 
-    T *aj = NULL, *residual = NULL, *residual_sorted = NULL, *col_buf = NULL;
+    T *aj = NULL, *residual_sorted = NULL, *col_buf = NULL;
+    T* Aj_sq_inv = NULL;
 
     Com_Server<T> o_comm;
+
+    B_minus = new double[M->max_block_size * M->max_block_size];
 
     rhos = new RHO_IDX[J_tilde->len];
     norm_square = residual_norm * residual_norm;
@@ -1085,54 +1148,33 @@ RHO_IDX* Spai_Sub<T>::Compute_Rhos(Matrix<T>* A,
 
         // ||aj||_2
         // ***Precompute them
-        aj_norm = Euclidean_Norm(col_buf, col_len);
+        // aj_norm = Euclidean_Norm(col_buf, col_len);
+        Aj_sq_inv = Column_Square_Inverse(col_buf, col_idcs_buf, col_len,
+                                          A->block_sizes[j], A);
 
-        // avoiding memset for small size of indices and
-        // nnz in specific column. For large matrices with
-        // a small product this is much faster. Memset for
-        // A->m is a great bottleneck in case of updates
-        // with a high sparsity relative to dimension.
-        // This (1200) is an arbitrary choice but
-        // experiments showed faster runtimes.
-        if ((col_len * I->len) <= 1200) {
-            residual = residual_vals;
+        num_block = Compute_Numerator_Block(residual_vals, col_buf, M, col, j,
+                                            I, col_idcs_buf, col_len);
 
-            // Compute the numerator
-            // In real:    (r^T * aj)^2
-            // In complex: Re[r^H * aj]^2
-            num = Compute_Numerator(residual, aj, I, false, col_buf, col_idcs_buf, col_len);
-        }
-        else {
-            if (!first_set) {
-                res_len = A->m;
+        Matrix_Matrix_Product(TRANS, TRANS, A->block_sizes[j],
+                              A->block_sizes[col], A->block_sizes[j], alpha,
+                              Aj_sq_inv, A->block_sizes[j], num_block,
+                              A->block_sizes[j], beta, B_minus, A->block_sizes[j]);
 
-                // Create sorted residual vector out of
-                // residual values.
-                residual_sorted = new T[res_len];
-                memset(residual_sorted, 0, res_len * sizeof(T));
-                for (int i = 0; i < I->len; i++)
-                    residual_sorted[I->idcs[i]] = residual_vals[i];
+        term = 0.0;
+        colj = 0;
+        colk = 0;
 
-                // Create vector aj == A* e_j
-                // Will have as well dimension of A
-                aj = new T[res_len];
-                memset(aj, 0, res_len * sizeof(T));
-                first_set = true;
+        for (int q = 0; q < M->block_sizes[col]; q++) {
+            for (int ii = 0; ii < A->block_sizes[j]; ii++) {
+                term += B_minus[ii + colj] * num_block[ii + colk];
             }
-            // Fill aj with values of A
-            // The j idx is the j column of matrix A
-            memcpy(aj, col_buf, col_len * sizeof(T));
-
-            // Compute the numerator
-            // In real:    (r^T * aj)^2
-            // In complex: Re[r^H * aj]^2
-            num = Compute_Numerator(residual_sorted, aj, I, true, col_buf,
-                                    col_idcs_buf, col_len);
+            colj += A->block_sizes[j];
+            colk += M->block_sizes[col];
         }
 
         // Computing in real: ||r||^2 - (r^T * aj)^2 / ||aj||^2
         // Computing in complex: ||r||^2 - Re[r^H * aj]^2 / ||aj||^2
-        rho_j = (residual_norm * residual_norm) - (num / (aj_norm * aj_norm));
+        rho_j = residual_norm * residual_norm - term;
 
         rho_j = sqrt(rho_j);
         mean_val += rho_j;
@@ -1140,6 +1182,8 @@ RHO_IDX* Spai_Sub<T>::Compute_Rhos(Matrix<T>* A,
         // Filling result to RHO_IDX array
         rhos[idx].idx = j;
         rhos[idx].rho = rho_j;
+        // std::cout << "col : " << col << std::endl;
+        // std::cout << "rho: " << rho_j << std::endl;
     }
     // Computing mean value of rho indices
     if (use_mean)
@@ -1152,6 +1196,8 @@ RHO_IDX* Spai_Sub<T>::Compute_Rhos(Matrix<T>* A,
         delete[] aj;
     if (residual_sorted)
         delete[] residual_sorted;
+    delete[] num_block;
+    delete[] B_minus;
 
     return rhos;
 }

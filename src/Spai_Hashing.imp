@@ -187,7 +187,7 @@ void Spai_Hashing<T>::Approximative_Solution(T* A_Hat_orig,
 
     HASH_DATA<T> hd;
 
-    std::pair<Key, HASH_DATA<T> > hp;
+    std::pair<Key, HASH_DATA<T>> hp;
 
     typename hash_map<Key, HASH_DATA<T>, HASH_FUNCTION>::const_iterator h_it;
 

@@ -43,6 +43,7 @@
 
 // C++ includings
 #include <math.h>
+#include <mkl.h>
 #include <unistd.h>
 
 /// values smaller than null_eps will ar
@@ -472,7 +473,8 @@ public:
     //////////////////////////////////////////////////////////////
     double Residual_Norm(T* A_Hat, int& m, int& n, T* mk_Hat, T* ek_Hat, T*& residual_vals);
 
-    double Residual_Norm_Block(Matrix<T>*M, T* A_Hat, int& m, int& n, int& k, T* mk_Hat, T* ek_Hat, T*& residual_vals);
+    double Residual_Norm_Block(
+        Matrix<T>* M, T* A_Hat, int& m, int& n, int& k, T* mk_Hat, T* ek_Hat, T*& residual_vals);
 
     //////////////////////////////////////////////////////////////
     ///     \brief Computing the euclidean norm of a vector
@@ -486,6 +488,11 @@ public:
     double Euclidean_Norm(T* residual_vals, const int nbr_elems);
 
     double Frobenius_Norm(T* residual_vals, const int& block_width, const int& slen);
+    double* Column_Square_Inverse(T* col_buf,
+                                  int* col_idcs_buf,
+                                  const int& len,
+                                  const int& block_size,
+                                  Matrix<T>* A);
 
     //////////////////////////////////////////////////////////////
     ///     \brief Augmenting index set J with new indices wich
@@ -600,6 +607,22 @@ public:
                           const int& pre_k_param,
                           const int pre_max_param);
 
+    RHO_IDX* Compute_Rhos_Block(Matrix<T>* A,
+                                Matrix<T>*& M,
+                                Matrix<T>* B,
+                                Pattern* P,
+                                Pattern* UP,
+                                Index_Set* U_UP,
+                                Index_Set* I,
+                                const int& col,
+                                double residual_norm,
+                                T* residual_vals,
+                                Index_Set* J_tilde,
+                                double& mean_val,
+                                Hash_Table<T>*& ht,
+                                const int use_mean,
+                                const int& pre_k_param,
+                                const int pre_max_param);
     //////////////////////////////////////////////////////////////
     ///     \brief Comparing two A_Hats bitwise
     ///
@@ -842,6 +865,15 @@ public:
 
     double Sqrt_Sum_Matrix(double* vals, const int& m, const int& n);
 
+    void Mult_Blocks_TN(
+        const T* const a, const T* const b, const int& m, const int& n, const int& k, T* c);
+
+    void Convert_To_Block(const Matrix<T>* const A,
+                          const Index_Set* const I,
+                          const int& col,
+                          const T* const x,
+                          T* xb);
+
     //////////////////////////////////////////////////////////////
     ///     \brief  Printing an array
     ///
@@ -852,6 +884,14 @@ public:
     //////////////////////////////////////////////////////////////
     void Print_Vector(const double* vector, const int len, const char* str);
 
+    double* Compute_Numerator_Block(double* residual,
+                                    double* aj,
+                                    const Matrix<double>* const M,
+                                    const int& col,
+                                    const int& j,
+                                    const Index_Set* const I,
+                                    int* col_idcs_buf,
+                                    int& col_len);
     //////////////////////////////////////////////////////////////
     ///     \brief  Computing (r^T * aj)^2
     ///
