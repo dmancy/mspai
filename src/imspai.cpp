@@ -688,6 +688,7 @@ int PC_MSPAI::bspai(void)
         }
     }
 
+    // If block algorithm then convert A_REAL into a block matrix
     if (block_size != 1) {
         Matrix<double>* B;
 
@@ -697,7 +698,6 @@ int PC_MSPAI::bspai(void)
         A_REAL = B;
         // A_REAL->Write_Matrix_To_File("B.mtx");
     }
-    A_REAL->Write_Matrix_To_File("A.mtx");
 
     Read_mm_Matrix o_rm;
     if (verbose) {

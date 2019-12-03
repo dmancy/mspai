@@ -130,29 +130,24 @@ void Spai_Unrestrained<T>::SPAI_Column(Matrix<T>* A,
             M, A_Hat, m, A->block_sizes[col], n, mk_Hat, bk_Hat, residual_vals);
 
         o_sub.Convert_To_Block(M, I, col, residual_vals, residual_vals_b);
+
         /*
-                std::cout << "Augment sparsity :" << col << std::endl;
-                std::cout << "Residual" << std::endl;
-                for (int kk = 0; kk < I->slen*A->block_sizes[col]; kk++)
-                  std::cout << "r_sca = " << residual_vals[kk] << std::endl;
+                 std::cout << "Augment sparsity :" << col << std::endl;
+                 std::cout << "Residual" << std::endl;
+                 for (int kk = 0; kk < I->slen*A->block_sizes[col]; kk++)
+                   std::cout << "r_sca = " << residual_vals[kk] << std::endl;
 
-                std::cout << "Residual" << std::endl;
-                for (int kk = 0; kk < I->slen*A->block_sizes[col]; kk++)
-                  std::cout << "r_b = " << residual_vals_b[kk] << std::endl;
+                 std::cout << "Residual" << std::endl;
+                 for (int kk = 0; kk < I->slen*A->block_sizes[col]; kk++)
+                   std::cout << "r_b = " << residual_vals_b[kk] << std::endl;
 
 
-                std::cout.precision(17);
+                 std::cout.precision(17);
 
-        */
 
-        //      J->Print_Index_Set("J ");
-        /*
-        o_sub.Augment_Sparsity(A, M, B, P, I, J, UP, U_UP, col, residual_norm,
-                                    residual_vals_b, maxnew_param, ht, use_mean,
-                                    pre_k_param, pre_max_param, bitvec,
-        reset_vec);
-        J->Print_Index_Set("J2");
-        */
+             J->Print_Index_Set("J");
+         */
+
         // Finishing conditions
 
         if ((residual_norm <= epsilon_param)  // residual good enough

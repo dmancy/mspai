@@ -930,7 +930,7 @@ template <class T>
 double* Spai_Sub<T>::Column_Square_Inverse(
     T* col_buf, int* col_idcs_buf, const int& len, const int& block_size, Matrix<T>* A)
 {
-    double* Aj_sq_inv = new T[block_size * block_size];
+    double* Aj_sq_inv = new T[block_size * block_size]();
     int* ipiv = new int[block_size];
 
     int lwork = -1;
@@ -1182,8 +1182,10 @@ RHO_IDX* Spai_Sub<T>::Compute_Rhos_Block(Matrix<T>* A,
         // Filling result to RHO_IDX array
         rhos[idx].idx = j;
         rhos[idx].rho = rho_j;
-        // std::cout << "col : " << col << std::endl;
-        // std::cout << "rho: " << rho_j << std::endl;
+        /*
+         std::cout << "col : " << col << " j : " << j << std::endl;
+         std::cout << "rho: " << rho_j << std::endl;
+        */
     }
     // Computing mean value of rho indices
     if (use_mean)
