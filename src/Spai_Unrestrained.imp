@@ -54,6 +54,7 @@ void Spai_Unrestrained<T>::SPAI_Column(Matrix<T>* A,
         nnz = 0; // number of nnz within A_Hat
 
     double residual_norm = 1.0e+50; // appr. infinity
+    double adjust_epsilon;
 
     T *A_Hat = NULL, *mk_Hat = NULL, *bk_Hat = NULL, *residual_vals = NULL;
     T* residual_vals_b = new T[3000];
@@ -63,6 +64,8 @@ void Spai_Unrestrained<T>::SPAI_Column(Matrix<T>* A,
     Com_Server<T> o_comm;
 
     Index_Set *J = NULL, *I = NULL;
+
+    adjust_epsilon = epsilon_param * sqrt((double)A->block_sizes[col]);
 
     // J will be filled with the
     // new J values from pattern
@@ -130,27 +133,32 @@ void Spai_Unrestrained<T>::SPAI_Column(Matrix<T>* A,
             M, A_Hat, m, A->block_sizes[col], n, mk_Hat, bk_Hat, residual_vals);
 
         o_sub.Convert_To_Block(M, I, col, residual_vals, residual_vals_b);
-
         /*
-                 std::cout << "Augment sparsity :" << col << std::endl;
-                 std::cout << "Residual" << std::endl;
-                 for (int kk = 0; kk < I->slen*A->block_sizes[col]; kk++)
-                   std::cout << "r_sca = " << residual_vals[kk] << std::endl;
 
-                 std::cout << "Residual" << std::endl;
-                 for (int kk = 0; kk < I->slen*A->block_sizes[col]; kk++)
-                   std::cout << "r_b = " << residual_vals_b[kk] << std::endl;
+                         std::cout << "Augment sparsity :" << col << std::endl;
+                         std::cout << "Residual" << std::endl;
+                         for (int kk = 0; kk < I->slen*A->block_sizes[col];
+           kk++)
+                           std::cout << "r_sca = " << residual_vals[kk] <<
+           std::endl;
+                           */
+        /*
+                         std::cout << "Residual" << std::endl;
+                         for (int kk = 0; kk < I->slen*A->block_sizes[col];
+           kk++)
+                           std::cout << "r_b = " << residual_vals_b[kk] <<
+           std::endl;
 
 
-                 std::cout.precision(17);
+                         std::cout.precision(17);
 
 
-             J->Print_Index_Set("J");
-         */
+                     J->Print_Index_Set("J");
+                 */
 
         // Finishing conditions
 
-        if ((residual_norm <= epsilon_param)  // residual good enough
+        if ((residual_norm <= adjust_epsilon) // residual good enough
             || (step == (max_impr_steps - 1)) // Don't delete solution,
             )                                 // No augment sparsity
             break;

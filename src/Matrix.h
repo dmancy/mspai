@@ -219,12 +219,10 @@ public:
     /// Augmenting pattern buffers
     // Index Set L of non zeros in the residual
     Index_Set* L_set;
-    Index_Set* J_tilde;
+    Index_Set* J_tilde_set;
     Index_Set* U_Nls;
 
-    double* B_minus;
     RHO_IDX* rhos;
-    double* residual_sorted;
     double* num_block;
 
     int send;

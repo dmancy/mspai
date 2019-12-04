@@ -311,7 +311,7 @@ double* Spai_Sub<double>::Compute_Numerator_Block(double* residual,
     bj = M->block_sizes[j];   // Block size of the column Aj
     bk = M->block_sizes[col]; // Block size of the processed column
 
-    sum_block = new double[bj * bk];
+    sum_block = M->mk_Hat_buffer;
     memset(sum_block, 0, bj * bk * sizeof(double));
 
     double temp = 0.0;

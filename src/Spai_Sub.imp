@@ -964,12 +964,14 @@ bool Spai_Sub<T>::Augment_Sparsity(Matrix<T>* A,
                                    unsigned int*& reset_vec)
 {
     int idx, pe;
+    int* last_j = NULL;
+    int len_j;
 
     bool found = false;
 
     double mean_val = 0.0;
 
-    Index_Set *L = NULL, *J_tilde = NULL, *U_Nls = NULL, *U = NULL;
+    Index_Set *L = NULL, *U_Nls = NULL, *U = NULL, *J_tilde = NULL;
 
     RHO_IDX* rhos = NULL;
 
@@ -979,6 +981,7 @@ bool Spai_Sub<T>::Augment_Sparsity(Matrix<T>* A,
     // if col in I, if not place it into L
     L = M->L_set;
     L->len = I->len;
+    J_tilde = M->J_tilde_set;
 
     for (int i = 0; i < I->len; i++) {
         idx = I->idcs[i];
@@ -996,36 +999,41 @@ bool Spai_Sub<T>::Augment_Sparsity(Matrix<T>* A,
                           pre_max_param, bitvec, reset_vec);
 
     // Compute set J_tilde by set difference with U_Nls
-    J_tilde = J_tilde->Set_Difference(U_Nls, J);
+    // J_tilde = J_tilde->Set_Difference(U_Nls, J);
+
+    last_j = std::set_difference(U_Nls->idcs, U_Nls->idcs + U_Nls->len, J->idcs,
+                                 J->idcs + J->len, J_tilde->idcs);
+    len_j = (((char*)last_j) - ((char*)J_tilde->idcs)) / (sizeof(int));
+    J_tilde->len = len_j;
 
     // does the user want to use the upper pattern?
-    if (UP) {
-        pe = P->pe[col];
-        idx = col - P->start_indices[pe];
+    /*
+     if (UP) {
+         pe = P->pe[col];
+         idx = col - P->start_indices[pe];
 
-        // Doing if statement here because
-        // always allocating U and filling with
-        // indices costs too much time.
-        // Allocating U only when this pe
-        // is load balancing is is much faster.
-        if (pe == P->my_id) {
-            J_tilde = J_tilde->Set_Intersection(J_tilde, UP->j_sets[idx]);
-        }
-        else {
-            // Setting U to maximum possible size
-            // because of the load balancing mechanism
-            U = new Index_Set(A->m);
+         // Doing if statement here because
+         // always allocating U and filling with
+         // indices costs too much time.
+         // Allocating U only when this pe
+         // is load balancing is is much faster.
+         if (pe == P->my_id) {
+             J_tilde = J_tilde->Set_Intersection(J_tilde, UP->j_sets[idx]);
+         }
+         else {
+             // Setting U to maximum possible size
+             // because of the load balancing mechanism
+             U = new Index_Set(A->m);
 
-            o_comm.Get_UP_Col(A, M, B, P, UP, pe, idx, U);
-            J_tilde = J_tilde->Set_Intersection(J_tilde, U);
+             o_comm.Get_UP_Col(A, M, B, P, UP, pe, idx, U);
+             J_tilde = J_tilde->Set_Intersection(J_tilde, U);
 
-            delete U;
-        }
-    }
+             delete U;
+         }
+     }*/
 
     // No new candidates to augment
     if (J_tilde->len == 0) {
-        delete J_tilde;
         return false;
     }
 
@@ -1044,8 +1052,6 @@ bool Spai_Sub<T>::Augment_Sparsity(Matrix<T>* A,
 
     // Sorting the new augmented Index_Set J
     std::sort(J->idcs, J->idcs + J->len);
-
-    delete J_tilde;
 
     return true;
 }
@@ -1086,7 +1092,7 @@ RHO_IDX* Spai_Sub<T>::Compute_Rhos_Block(Matrix<T>* A,
 
     Com_Server<T> o_comm;
 
-    B_minus = new double[M->max_block_size * M->max_block_size];
+    B_minus = M->A_Hat_buffer; // Just reuse of a former buffer
 
     rhos = M->rhos;
     norm_square = residual_norm * residual_norm;
@@ -1100,7 +1106,6 @@ RHO_IDX* Spai_Sub<T>::Compute_Rhos_Block(Matrix<T>* A,
 
         // ||aj||_2
         // ***Precompute them
-        // aj_norm = Euclidean_Norm(col_buf, col_len);
         Aj_sq_inv = &(M->Aj_sq_inv_buffer[M->start_indices_Aj_sq_inv[j]]);
 
         num_block = Compute_Numerator_Block(residual_vals, col_buf, M, col, j,
@@ -1121,23 +1126,25 @@ RHO_IDX* Spai_Sub<T>::Compute_Rhos_Block(Matrix<T>* A,
             }
             colj += A->block_sizes[j];
             colk += A->block_sizes[j];
-            //colk += M->block_sizes[col];
+            // colk += M->block_sizes[col];
         }
-/*
-        std::cout << "bj : " << A->block_sizes[j] << " bk : " << A->block_sizes[col] << " j : " << j <<  std::endl;
-        std::cout << "Aj_squ_inv : " << std::endl;
-        for (int i = 0; i < A->block_sizes[j]*A->block_sizes[j]; i++)
-          std::cout << "Aj_sq = " << Aj_sq_inv[i] << std::endl;
+        /*
+                std::cout << "bj : " << A->block_sizes[j] << " bk : " <<
+           A->block_sizes[col] << " j : " << j <<  std::endl;
+                std::cout << "Aj_squ_inv : " << std::endl;
+                for (int i = 0; i < A->block_sizes[j]*A->block_sizes[j]; i++)
+                  std::cout << "Aj_sq = " << Aj_sq_inv[i] << std::endl;
 
-        std::cout << "residual" << std::endl;
-        for (int i = 0; i < A->block_sizes[j] * A->block_sizes[col]; i++)
-            std::cout << "Residual : " << residual_vals[i] << std::endl;
+                std::cout << "residual" << std::endl;
+                for (int i = 0; i < A->block_sizes[j] * A->block_sizes[col];
+           i++)
+                    std::cout << "Residual : " << residual_vals[i] << std::endl;
 
-        std::cout << "Aj " << std::endl;
-        for (int i = 0; i < col_len * A->block_sizes[j]; i++)
-          std::cout << "Aj : " << col_buf[i] << std::endl;
+                std::cout << "Aj " << std::endl;
+                for (int i = 0; i < col_len * A->block_sizes[j]; i++)
+                  std::cout << "Aj : " << col_buf[i] << std::endl;
 
-*/
+        */
         // Computing in real: ||r||^2 - (r^T * aj)^2 / ||aj||^2
         // Computing in complex: ||r||^2 - Re[r^H * aj]^2 / ||aj||^2
         rho_j = residual_norm * residual_norm - term;
@@ -1162,8 +1169,6 @@ RHO_IDX* Spai_Sub<T>::Compute_Rhos_Block(Matrix<T>* A,
 
     if (residual_sorted)
         delete[] residual_sorted;
-    delete[] num_block;
-    delete[] B_minus;
 
     return rhos;
 }
