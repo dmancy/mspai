@@ -1088,7 +1088,6 @@ RHO_IDX* Spai_Sub<T>::Compute_Rhos_Block(Matrix<T>* A,
 
     B_minus = new double[M->max_block_size * M->max_block_size];
 
-    //    rhos = new RHO_IDX[J_tilde->len];
     rhos = M->rhos;
     norm_square = residual_norm * residual_norm;
 
@@ -1121,9 +1120,24 @@ RHO_IDX* Spai_Sub<T>::Compute_Rhos_Block(Matrix<T>* A,
                 term += B_minus[ii + colj] * num_block[ii + colk];
             }
             colj += A->block_sizes[j];
-            colk += M->block_sizes[col];
+            colk += A->block_sizes[j];
+            //colk += M->block_sizes[col];
         }
+/*
+        std::cout << "bj : " << A->block_sizes[j] << " bk : " << A->block_sizes[col] << " j : " << j <<  std::endl;
+        std::cout << "Aj_squ_inv : " << std::endl;
+        for (int i = 0; i < A->block_sizes[j]*A->block_sizes[j]; i++)
+          std::cout << "Aj_sq = " << Aj_sq_inv[i] << std::endl;
 
+        std::cout << "residual" << std::endl;
+        for (int i = 0; i < A->block_sizes[j] * A->block_sizes[col]; i++)
+            std::cout << "Residual : " << residual_vals[i] << std::endl;
+
+        std::cout << "Aj " << std::endl;
+        for (int i = 0; i < col_len * A->block_sizes[j]; i++)
+          std::cout << "Aj : " << col_buf[i] << std::endl;
+
+*/
         // Computing in real: ||r||^2 - (r^T * aj)^2 / ||aj||^2
         // Computing in complex: ||r||^2 - Re[r^H * aj]^2 / ||aj||^2
         rho_j = residual_norm * residual_norm - term;

@@ -37,7 +37,7 @@ PetscErrorCode PC_MSPAI::PCSetUp_MSPAI(Mat A)
     else {
         A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, &A);
     }
-    //     A_REAL->Write_Matrix_To_File("A.mtx");
+      //   A_REAL->Write_Matrix_To_File("A.mtx");
 
     bspai();
 
@@ -696,7 +696,7 @@ int PC_MSPAI::bspai(void)
 
         delete A_REAL;
         A_REAL = B;
-        // A_REAL->Write_Matrix_To_File("B.mtx");
+         A_REAL->Write_Matrix_To_File("B.mtx");
     }
 
     Read_mm_Matrix o_rm;
