@@ -132,7 +132,7 @@ Index_Set* Spai_Sub<T>::Union_Nl_Sets(Matrix<T>* A,
 
     Com_Server<T> o_comm;
 
-    U_Nl = new Index_Set(A->n);
+    U_Nl = M->U_Nls;
 
     if (A->symmetric) // symmetric input matrix
     {
@@ -927,49 +927,6 @@ double Spai_Sub<T>::Euclidean_Norm(T* residual_vals, const int nbr_elems)
 }
 
 template <class T>
-double* Spai_Sub<T>::Column_Square_Inverse(
-    T* col_buf, int* col_idcs_buf, const int& len, const int& block_size, Matrix<T>* A)
-{
-    double* Aj_sq_inv = new T[block_size * block_size]();
-    int* ipiv = new int[block_size];
-
-    int lwork = -1;
-    double *work = new double[1000], work_db = 0.0;
-
-    int m, info = 0;
-
-    //    for (int i = 0; i < len*4; i++)
-    //      std::cout << "aj = " << col_buf[i] << std::endl;
-
-    int start_block = 0;
-    for (int i = 0; i < len; i++) {
-        m = A->block_sizes[col_idcs_buf[i]];
-        Mult_Blocks_TN(&(col_buf[start_block]), &(col_buf[start_block]),
-                       block_size, block_size, m, Aj_sq_inv);
-
-        start_block += (block_size * m);
-    }
-
-    dgetrf_(&block_size, &block_size, Aj_sq_inv, &block_size, ipiv, &info);
-
-    dgetri_(&block_size, Aj_sq_inv, &block_size, ipiv, &work_db, &lwork, &info);
-
-    lwork = static_cast<int>(work_db);
-    lwork = std::max(1, lwork);
-
-    dgetri_(&block_size, Aj_sq_inv, &block_size, ipiv, work, &lwork, &info);
-
-    //  std::cout << " Block" << std::endl;
-    //  for (int i = 0; i < 4; i++)
-    //   std::cout << "aj_inv = " << Aj_sq_inv[i] << std::endl;
-
-    delete[] ipiv;
-    delete[] work;
-
-    return Aj_sq_inv;
-}
-
-template <class T>
 double Spai_Sub<T>::Frobenius_Norm(T* residual_vals, const int& block_width, const int& slen)
 {
     if (!residual_vals)
@@ -1020,7 +977,8 @@ bool Spai_Sub<T>::Augment_Sparsity(Matrix<T>* A,
 
     // Copy Index set I into L and looking
     // if col in I, if not place it into L
-    L = new Index_Set(I->len);
+    L = M->L_set;
+    L->len = I->len;
 
     for (int i = 0; i < I->len; i++) {
         idx = I->idcs[i];
@@ -1067,9 +1025,7 @@ bool Spai_Sub<T>::Augment_Sparsity(Matrix<T>* A,
 
     // No new candidates to augment
     if (J_tilde->len == 0) {
-        delete L;
         delete J_tilde;
-        delete U_Nls;
         return false;
     }
 
@@ -1089,11 +1045,7 @@ bool Spai_Sub<T>::Augment_Sparsity(Matrix<T>* A,
     // Sorting the new augmented Index_Set J
     std::sort(J->idcs, J->idcs + J->len);
 
-    if (rhos)
-        delete[] rhos;
-    delete L;
     delete J_tilde;
-    delete U_Nls;
 
     return true;
 }
@@ -1129,14 +1081,15 @@ RHO_IDX* Spai_Sub<T>::Compute_Rhos_Block(Matrix<T>* A,
 
     RHO_IDX* rhos = NULL;
 
-    T *aj = NULL, *residual_sorted = NULL, *col_buf = NULL;
+    T *residual_sorted = NULL, *col_buf = NULL;
     T* Aj_sq_inv = NULL;
 
     Com_Server<T> o_comm;
 
     B_minus = new double[M->max_block_size * M->max_block_size];
 
-    rhos = new RHO_IDX[J_tilde->len];
+    //    rhos = new RHO_IDX[J_tilde->len];
+    rhos = M->rhos;
     norm_square = residual_norm * residual_norm;
 
     for (int idx = 0; idx < J_tilde->len; idx++) {
@@ -1149,8 +1102,7 @@ RHO_IDX* Spai_Sub<T>::Compute_Rhos_Block(Matrix<T>* A,
         // ||aj||_2
         // ***Precompute them
         // aj_norm = Euclidean_Norm(col_buf, col_len);
-        Aj_sq_inv = Column_Square_Inverse(col_buf, col_idcs_buf, col_len,
-                                          A->block_sizes[j], A);
+        Aj_sq_inv = &(M->Aj_sq_inv_buffer[M->start_indices_Aj_sq_inv[j]]);
 
         num_block = Compute_Numerator_Block(residual_vals, col_buf, M, col, j,
                                             I, col_idcs_buf, col_len);
@@ -1194,8 +1146,6 @@ RHO_IDX* Spai_Sub<T>::Compute_Rhos_Block(Matrix<T>* A,
     // Ascending sort of rhos
     std::sort(rhos, rhos + J_tilde->len, RHO_Comparator());
 
-    if (aj)
-        delete[] aj;
     if (residual_sorted)
         delete[] residual_sorted;
     delete[] num_block;

@@ -48,13 +48,14 @@ int main(int argc, char** args)
     PetscViewer fd;
     PetscPrintf(PETSC_COMM_WORLD, "Loading matrix...\n");
     //   ierr =
-    //  PetscViewerBinaryOpen(PETSC_COMM_WORLD,"orsirr_2_T.dat",FILE_MODE_READ,&fd);CHKERRQ(ierr);
-    ierr = PetscViewerBinaryOpen(
-        PETSC_COMM_WORLD, "shyy161.mtx_76480x76480_329762nnz.gz", FILE_MODE_READ, &fd);
-    CHKERRQ(ierr);
+    // PetscViewerBinaryOpen(PETSC_COMM_WORLD,"orsirr_2_T.dat",FILE_MODE_READ,&fd);CHKERRQ(ierr);
+    // ierr = PetscViewerBinaryOpen(
+    //     PETSC_COMM_WORLD, "shyy161.mtx_76480x76480_329762nnz.gz",
+    //     FILE_MODE_READ, &fd);
+    // CHKERRQ(ierr);
 
-    //    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD, "visc-naca_lhs.pmat",
-    //                                FILE_MODE_READ, &fd);
+    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD, "visc-naca_lhs.pmat",
+                                 FILE_MODE_READ, &fd);
     CHKERRQ(ierr);
     ierr = MatCreate(PETSC_COMM_WORLD, &A);
     CHKERRQ(ierr);
@@ -93,8 +94,8 @@ int main(int argc, char** args)
     ierr = PetscViewerDestroy(&fd);
     CHKERRQ(ierr);
     VecGetSize(solution, &n);
+*/
 
-      */
     ierr = MatGetSize(A, &n, NULL);
     // ierr = MatTranspose(A,MAT_INPLACE_MATRIX,&A);
     ierr = VecCreate(PETSC_COMM_WORLD, &u);

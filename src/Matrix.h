@@ -41,6 +41,7 @@
 
 // C++ includings
 #include <cmath>
+#include <mkl.h>
 #include <mpi.h>
 #include <stdlib.h>
 
@@ -123,6 +124,27 @@ inline double abs_complex(const double& a)
     return a;
 }
 
+//////////////////////////////////////////
+///     \brief Representing a pair of
+///            index and double
+//////////////////////////////////////////
+struct RHO_IDX {
+    int idx;
+    double rho;
+};
+
+//////////////////////////////////////////
+///     \brief How to sort the RHO_IDX
+///            within an array - this is
+///            ascending order
+//////////////////////////////////////////
+struct RHO_Comparator {
+    bool operator()(const RHO_IDX& a, const RHO_IDX& b)
+    {
+        return a.rho < b.rho;
+    }
+};
+
 inline int comp(const void* elem1, const void* elem2);
 
 inline void kLargest(Row_sparsify arr[], int n, int k);
@@ -192,8 +214,24 @@ public:
     double* Tau_ptr;
     double* Work_qt_ptr;
     double* Work_qr_ptr;
+    int* ipiv;
+
+    /// Augmenting pattern buffers
+    // Index Set L of non zeros in the residual
+    Index_Set* L_set;
+    Index_Set* J_tilde;
+    Index_Set* U_Nls;
+
+    double* B_minus;
+    RHO_IDX* rhos;
+    double* residual_sorted;
+    double* num_block;
 
     int send;
+
+    // Aj_sq_inverses buffers
+    double* Aj_sq_inv_buffer;
+    int* start_indices_Aj_sq_inv;
 
     // Methods
     //================================================================
@@ -388,6 +426,20 @@ public:
     Matrix<T>* Convert_To_Block_Matrix_2(int nblocks_local, int* block_sizes_local);
     Matrix<T>* Scalar_Matrix(const int& verbose);
 
+    void Precomputation_Column_Square_Inverses(Matrix<T>* A);
+
+    void Compute_Square_Inverse(const double* const col_buf,
+                                const int* const col_idcs_buf,
+                                const int len,
+                                const int block_size,
+                                T* const A_sq_inv);
+
+    void Mult_Blocks_TN(const double* const a,
+                        const double* const b,
+                        const int& m,
+                        const int& n,
+                        const int& k,
+                        double* c);
     //    private:
 
     /////////////////////////////////////////////////////////

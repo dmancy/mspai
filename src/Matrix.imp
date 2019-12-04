@@ -70,6 +70,11 @@ Matrix<T>::Matrix(MPI_Comm world_m)
     first_index_set = NULL;
     first_index_row = NULL;
     send = 0;
+    L_set = NULL;
+    rhos = NULL;
+    U_Nls = NULL;
+    Aj_sq_inv_buffer = NULL;
+    start_indices_Aj_sq_inv = NULL;
 }
 
 template <class T>
@@ -121,6 +126,17 @@ Matrix<T>::~Matrix()
         delete[] first_index_set;
     if (first_index_row)
         delete[] first_index_row;
+    if (L_set)
+        delete L_set;
+    if (rhos)
+        delete[] rhos;
+    if (U_Nls)
+        delete U_Nls;
+
+    if (Aj_sq_inv_buffer)
+        delete[] Aj_sq_inv_buffer;
+    if (start_indices_Aj_sq_inv)
+        delete[] start_indices_Aj_sq_inv;
 }
 
 template <class T>
@@ -194,6 +210,10 @@ void Matrix<T>::Init_Preconditioner(Matrix<T>*& M, const int m_dim, const int n_
 
     M->first_index_set = new int[max_arg];
     M->first_index_row = new int[max_arg];
+
+    M->L_set = new Index_Set(max_arg);
+    M->rhos = new RHO_IDX[max_arg];
+    M->U_Nls = new Index_Set(max_arg);
 }
 
 template <class T>
@@ -2480,6 +2500,91 @@ Matrix<T>* Matrix<T>::Scalar_Matrix(const int& verbose)
     }
 
     return S;
+}
+
+template <typename T>
+void Matrix<T>::Precomputation_Column_Square_Inverses(Matrix<T>* A)
+{
+    int local_buf_size = 0;
+    int square_inverse_buf_size = 0;
+    double* local_square_inverse_buffer =
+        new double[max_block_size * max_block_size * my_nbr_cols]();
+    int* len_all_square_inv = new int[num_procs];
+    int* start_indices_square_inverse = new int[n];
+
+    for (int col = 0; col < my_nbr_cols; col++) {
+        Compute_Square_Inverse(A->c_lines->A[col], A->c_lines->col_idcs[col],
+                               A->c_lines->len_cols[col],
+                               A->block_sizes[my_start_idx + col],
+                               &(local_square_inverse_buffer[local_buf_size]));
+
+        local_buf_size +=
+            A->block_sizes[my_start_idx + col] * A->block_sizes[my_start_idx + col];
+    }
+
+    // Filling len_all_square_inv
+    MPI_Barrier(world);
+    MPI_Allgather(static_cast<void*>(&local_buf_size), 1, MPI_INT,
+                  static_cast<void*>(len_all_square_inv), 1, MPI_INT, world);
+
+    MPI_Barrier(world);
+    MPI_Allreduce(static_cast<void*>(&local_buf_size),
+                  static_cast<void*>(&square_inverse_buf_size), 1, MPI_INT, MPI_SUM, world);
+
+    double* square_inverse_buffer = new double[square_inverse_buf_size];
+
+    start_indices_square_inverse[0] = 0;
+    for (int pe = 1; pe < num_procs; pe++)
+        start_indices_square_inverse[pe] =
+            start_indices_square_inverse[pe - 1] + len_all_square_inv[pe - 1];
+
+    MPI_Barrier(world);
+    MPI_Allgatherv(static_cast<void*>(local_square_inverse_buffer), local_buf_size,
+                   MPI_DOUBLE, static_cast<void*>(square_inverse_buffer),
+                   len_all_square_inv, start_indices_square_inverse, MPI_DOUBLE, world);
+
+    for (int col = 1; col < n; col++)
+        start_indices_square_inverse[col] = start_indices_square_inverse[col - 1] +
+                                            block_sizes[col - 1] * block_sizes[col - 1];
+
+    delete[] local_square_inverse_buffer;
+    delete[] len_all_square_inv;
+
+    Aj_sq_inv_buffer = square_inverse_buffer;
+    start_indices_Aj_sq_inv = start_indices_square_inverse;
+}
+
+template <typename T>
+void Matrix<T>::Compute_Square_Inverse(const double* const col_buf,
+                                       const int* const col_idcs_buf,
+                                       const int len,
+                                       const int block_size,
+                                       T* const Aj_sq_inv)
+{
+    int* ipiv = first_index_set;
+
+    int lwork = -1;
+    double *work = Work_qr_ptr, work_db = 0.0;
+
+    int block_size_h, info = 0;
+
+    int start_block = 0;
+    for (int i = 0; i < len; i++) {
+        block_size_h = block_sizes[col_idcs_buf[i]];
+        Mult_Blocks_TN(&(col_buf[start_block]), &(col_buf[start_block]),
+                       block_size, block_size, block_size_h, Aj_sq_inv);
+
+        start_block += (block_size * block_size_h);
+    }
+
+    dgetrf_(&block_size, &block_size, Aj_sq_inv, &block_size, ipiv, &info);
+
+    dgetri_(&block_size, Aj_sq_inv, &block_size, ipiv, &work_db, &lwork, &info);
+
+    lwork = static_cast<int>(work_db);
+    lwork = std::max(1, lwork);
+
+    dgetri_(&block_size, Aj_sq_inv, &block_size, ipiv, work, &lwork, &info);
 }
 
 inline int comp(const void* elem1, const void* elem2)

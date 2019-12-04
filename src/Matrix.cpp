@@ -552,6 +552,32 @@ void Matrix<COMPLEX>::Write_Matrix_To_File(Matrix<COMPLEX>* matrix, char* file)
     o_timer.Report_Time(world);
 }
 
+template <>
+void Matrix<double>::Mult_Blocks_TN(const double* const a,
+                                    const double* const b,
+                                    const int& m,
+                                    const int& n,
+                                    const int& k,
+                                    double* c)
+{
+    int jj1 = 0;
+    int jjj1 = 0;
+    int ii1 = 0;
+
+    for (int i1 = 0; i1 < m; i1++) {
+        jj1 = 0;
+        jjj1 = 0;
+        for (int j1 = 0; j1 < n; j1++) {
+            for (int k1 = 0; k1 < k; k1++) {
+                c[i1 + jjj1] += a[k1 + ii1] * b[k1 + jj1];
+            }
+            jj1 += k;
+            jjj1 += m;
+        }
+        ii1 += k;
+    }
+}
+
 void write_block(FILE* fptr, double* a, int m, int n)
 {
     double val;

@@ -67,7 +67,24 @@ void Spai<T>::SPAI_Algorithm(Matrix<T>* A,
         ht = new Hash_Table<T>(hash_param);
 
     // Initializing local preconditioner chunk
+    if (verbose) {
+        // Start time measurement
+        o_timer = Timer();
+        o_timer.Start_Timer();
+    }
+
     A->Init_Preconditioner(M, A->n, P->len);
+
+    if (verbose) {
+        // Stop time measurement
+        o_timer.Stop_Timer();
+        o_timer.Report_Time(A->world);
+    }
+
+    /// Precomputation of square inverses of columns of A
+
+    if (max_impr_steps > 0)
+        M->Precomputation_Column_Square_Inverses(A);
 
     bitvec_size = A->m <= A->n ? A->n : A->m;
 

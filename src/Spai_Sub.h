@@ -50,27 +50,6 @@
 /// conciedered as 0. For doule-comparison
 const double null_eps = 1e-50;
 
-//////////////////////////////////////////
-///     \brief Representing a pair of
-///            index and double
-//////////////////////////////////////////
-struct RHO_IDX {
-    int idx;
-    double rho;
-};
-
-//////////////////////////////////////////
-///     \brief How to sort the RHO_IDX
-///            within an array - this is
-///            ascending order
-//////////////////////////////////////////
-struct RHO_Comparator {
-    bool operator()(const RHO_IDX& a, const RHO_IDX& b)
-    {
-        return a.rho < b.rho;
-    }
-};
-
 ///////////////////////////////////////////////////
 ///     \class Spai_Sub
 ///     \brief Implementing all sub routines used
@@ -488,11 +467,6 @@ public:
     double Euclidean_Norm(T* residual_vals, const int nbr_elems);
 
     double Frobenius_Norm(T* residual_vals, const int& block_width, const int& slen);
-    double* Column_Square_Inverse(T* col_buf,
-                                  int* col_idcs_buf,
-                                  const int& len,
-                                  const int& block_size,
-                                  Matrix<T>* A);
 
     //////////////////////////////////////////////////////////////
     ///     \brief Augmenting index set J with new indices wich
