@@ -244,7 +244,6 @@ public:
                                    const int pre_max_param);
 
     T* Create_ek_Hat_Block(const Index_Set* I,
-                           const Matrix<T>* A,
                            const Matrix<T>* M,
                            const int len,
                            const int col,
@@ -398,7 +397,7 @@ public:
     ///                     set
     ///     \return The compressed unit vector
     //////////////////////////////////////////////////////////////
-    T* Create_ek_Hat(const Index_Set* I, const int len, const int col, int& unit_idx);
+    T* Create_ek_Hat(const Index_Set* I, const Matrix<T>* M, const int len, const int col, int& unit_idx);
 
     //////////////////////////////////////////////////////////////
     ///     \brief Creating a compressed unit vector
@@ -529,6 +528,25 @@ public:
                           const int pre_max_param,
                           unsigned int*& bitvec,
                           unsigned int*& reset_vec);
+
+    bool Augment_Sparsity_Block(Matrix<T>* A,
+                                Matrix<T>*& M,
+                                Matrix<T>* B,
+                                Pattern* P,
+                                Index_Set* I,
+                                Index_Set*& J,
+                                Pattern* UP,
+                                Index_Set* U_UP,
+                                const int col,
+                                double residual_norm,
+                                T* residual_vals,
+                                const int maxnew_param,
+                                Hash_Table<T>*& ht,
+                                const int use_mean,
+                                const int& pre_k_param,
+                                const int pre_max_param,
+                                unsigned int*& bitvec,
+                                unsigned int*& reset_vec);
 
     //////////////////////////////////////////////////////////////
     ///     \brief Computing rho values for possible candidates

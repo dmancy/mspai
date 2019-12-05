@@ -30,8 +30,8 @@
     ======================================================================
 */
 
-#ifndef GUARD_SPAI_STANDARD_H
-#define GUARD_SPAI_STANDARD_H
+#ifndef GUARD_SPAI_STANDARD_B_H
+#define GUARD_SPAI_STANDARD_B_H
 
 // file includings
 #include "Spai.h"
@@ -65,7 +65,7 @@
 ///     11) Return the solution and continue augmenting J \n
 /////////////////////////////////////////////////////////////
 template <class T>
-class Spai_Unrestrained : public Spai<T> {
+class Spai_Unrestrained_Block : public Spai<T> {
 private:
     ///////////////////////////////////////////////////////////
     ///     \brief  Solving one Least-Squares-Problem
@@ -78,14 +78,14 @@ private:
     ///     \param col For which column this LS-Problem has to
     ///                be solved
     ///////////////////////////////////////////////////////////
-    void Approximative_Solution(T* A_Hat_orig,
-                                T* A_Hat_of_M,
-                                Matrix<T>* M,
-                                int& m,
-                                int& n,
-                                T*& mk_Hat,
-                                const Index_Set* I,
-                                const int col);
+    void Approximative_Solution_Block(T* A_Hat_orig,
+                                      T* A_Hat,
+                                      Matrix<T>* M,
+                                      int& m,
+                                      int& n,
+                                      T*& mk_Hat,
+                                      const Index_Set* I,
+                                      const int block_size_col);
 
 protected:
     ///////////////////////////////////////////////////////////
@@ -139,6 +139,6 @@ protected:
                      unsigned int*& reset_vec);
 };
 
-#include "Spai_Unrestrained.imp"
+#include "Spai_Unrestrained_Block.imp"
 
 #endif

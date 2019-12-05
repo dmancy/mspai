@@ -111,7 +111,7 @@ void Spai_Hashing<T>::SPAI_Column(Matrix<T>* A,
         if (B)
             mk_Hat = o_sub.Create_bk_Hat(A, M, B, P, UP, I, I->len, col);
         else
-            mk_Hat = o_sub.Create_ek_Hat(I, I->len, col, unit_idx);
+            mk_Hat = o_sub.Create_ek_Hat(I, M, I->len, col, unit_idx);
 
         // Copy the right hand side vector.
         // This is used for computing the residual

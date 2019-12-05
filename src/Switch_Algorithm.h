@@ -40,6 +40,7 @@
 #include "Spai_QRUpdate.h"
 #include "Spai_SD.h"
 #include "Spai_Unrestrained.h"
+#include "Spai_Unrestrained_Block.h"
 
 // C++ includings
 #include <iostream>
@@ -91,6 +92,7 @@ public:
                            const int cache_param,
                            const int qr_level,
                            const double fillgrade_param,
+                           const int& bs,
                            const int& verbose);
 
     /////////////////////////////////////////////////////////

@@ -94,7 +94,7 @@ void Spai_QRUpdate<T>::SPAI_Column(Matrix<T>* A,
 
     // Copy the unit vector. This is used for
     // computing the residual vector later
-    ek_Hat = o_sub.Create_ek_Hat(I, I->len, col, unit_idx);
+    ek_Hat = o_sub.Create_ek_Hat(I, M, I->len, col, unit_idx);
 
     // Create the submatrix A_Hat = A(I;J) and update the
     // The index of the unit vector
@@ -157,7 +157,7 @@ void Spai_QRUpdate<T>::SPAI_Column(Matrix<T>* A,
 
         // Copy the unit vector. This is used for
         // computing the residual vector later
-        ek_Hat = o_sub.Create_ek_Hat(I, I->len, col, unit_idx);
+        ek_Hat = o_sub.Create_ek_Hat(I, M, I->len, col, unit_idx);
 
         // Get the index set I_aug which contains only the
         // new augmenting i indices.

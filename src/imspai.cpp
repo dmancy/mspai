@@ -748,8 +748,8 @@ int PC_MSPAI::bspai(void)
             std::cout << "\n\t* Checking opimization level... " << std::endl;
     }
     Switch_Algorithm<double> o_alg;
-    Spai<double>* alg_ptr = o_alg.Get_Algorithm(my_id, opt_level, cache_param,
-                                                qr, fillgrade_param, verbose);
+    Spai<double>* alg_ptr = o_alg.Get_Algorithm(
+        my_id, opt_level, cache_param, qr, fillgrade_param, block_size, verbose);
 
     // Compute the preconditioner with requested
     // SPAI algorithm for real matrices

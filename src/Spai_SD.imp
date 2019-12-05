@@ -92,8 +92,7 @@ void Spai_SD<T>::SPAI_Column(Matrix<T>* A,
         // Create the unit vector
         // Notice that the name is the solution name already.
 
-        mk_Hat = o_sub.Create_ek_Hat_Block(
-            I, A, M, I->slen * A->block_sizes[col], col, unit_idx);
+        mk_Hat = o_sub.Create_ek_Hat_Block(I, M, I->slen * A->block_sizes[col], col, unit_idx);
 
         // Copy the unit vector. This is used for
         // computing the residual vector later

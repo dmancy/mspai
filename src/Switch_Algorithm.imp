@@ -39,6 +39,7 @@ Spai<T>* Switch_Algorithm<T>::Get_Algorithm(const int my_id,
                                             const int cache_param,
                                             const int qr_level,
                                             const double fillgrade_param,
+                                            const int& bs,
                                             const int& verbose)
 {
     if (verbose) {
@@ -62,7 +63,10 @@ Spai<T>* Switch_Algorithm<T>::Get_Algorithm(const int my_id,
                           << COLOR_NORMAL << std::endl;
             }
         }
-        return new Spai_Unrestrained<T>();
+        if (bs == 1)
+            return new Spai_Unrestrained<T>();
+        else
+            return new Spai_Unrestrained_Block<T>();
 
     case caching:
         // use cache for runtime optimization within SPAI
