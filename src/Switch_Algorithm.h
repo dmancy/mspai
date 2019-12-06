@@ -39,6 +39,7 @@
 #include "Spai_Hashing.h"
 #include "Spai_QRUpdate.h"
 #include "Spai_SD.h"
+#include "Spai_SD_Block.h"
 #include "Spai_Unrestrained.h"
 #include "Spai_Unrestrained_Block.h"
 
@@ -114,6 +115,7 @@ public:
     void Set_QR_Spec(Spai<double>*& QR_Templ_Spec,
                      const int my_id,
                      const int qr_level,
+                     const int& bs,
                      const double fillgrade_param);
 
     /////////////////////////////////////////////////////////

@@ -109,7 +109,7 @@ Spai<T>* Switch_Algorithm<T>::Get_Algorithm(const int my_id,
         // Spai_QRUpdate is only usuable for double values due to
         // qrupdates.c
         Spai<T>* QR_Templ_Spec = NULL;
-        Set_QR_Spec(QR_Templ_Spec, my_id, qr_level, fillgrade_param);
+        Set_QR_Spec(QR_Templ_Spec, my_id, qr_level, bs, fillgrade_param);
         return QR_Templ_Spec;
 
         // no default case

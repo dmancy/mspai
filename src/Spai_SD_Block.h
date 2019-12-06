@@ -30,8 +30,8 @@
     ======================================================================
 */
 
-#ifndef GUARD_SPAI_SPARSE_H
-#define GUARD_SPAI_SPARSE_H
+#ifndef GUARD_SPAI_SPARSE_B_H
+#define GUARD_SPAI_SPARSE_B_H
 
 // file includings
 #include "Spai.h"
@@ -41,7 +41,7 @@
 #include <iostream>
 
 /////////////////////////////////////////////////////////////
-///     \class Spai_SD
+///     \class Spai_SD_Block
 ///     \brief  SPAI algorithm using sparse decompositions
 ///
 ///     This is the spai algorithm implementation.
@@ -65,7 +65,7 @@
 ///     11) Return the solution and continue augmenting J \n
 /////////////////////////////////////////////////////////////
 template <class T>
-class Spai_SD : public Spai<T> {
+class Spai_SD_Block : public Spai<T> {
 private:
     ///////////////////////////////////////////////////////////
     ///     \brief  Solving one Least-Squares-Problem
@@ -81,7 +81,6 @@ private:
     ///////////////////////////////////////////////////////////
     void Approximative_Solution(T* A_Hat_orig,
                                 T* A_Hat_of_M,
-                                Matrix<T>* M,
                                 int& m,
                                 int& n,
                                 T*& mk_Hat,
@@ -141,6 +140,6 @@ protected:
                      unsigned int*& reset_vec);
 };
 
-#include "Spai_SD.imp"
+#include "Spai_SD_Block.imp"
 
 #endif

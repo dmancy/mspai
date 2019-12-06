@@ -31,22 +31,22 @@
 */
 
 template <class T>
-void Spai_Unrestrained<T>::SPAI_Column(Matrix<T>* A,
-                                       Matrix<T>*& M,
-                                       Matrix<T>* B,
-                                       Pattern* P,
-                                       Pattern* UP,
-                                       Index_Set* U_UP,
-                                       const int col,
-                                       const double epsilon_param,
-                                       const int maxnew_param,
-                                       const int max_impr_steps,
-                                       Hash_Table<T>* ht,
-                                       const int use_mean,
-                                       int pre_k_param,
-                                       const int pre_max_param,
-                                       unsigned int*& bitvec,
-                                       unsigned int*& reset_vec)
+void Spai_SD_Block<T>::SPAI_Column(Matrix<T>* A,
+                                   Matrix<T>*& M,
+                                   Matrix<T>* B,
+                                   Pattern* P,
+                                   Pattern* UP,
+                                   Index_Set* U_UP,
+                                   const int col,
+                                   const double epsilon_param,
+                                   const int maxnew_param,
+                                   const int max_impr_steps,
+                                   Hash_Table<T>* ht,
+                                   const int use_mean,
+                                   int pre_k_param,
+                                   const int pre_max_param,
+                                   unsigned int*& bitvec,
+                                   unsigned int*& reset_vec)
 {
     int m = 0, // y dimension of A_hat
         n = 0, // x dimension of A_hat
@@ -67,6 +67,8 @@ void Spai_Unrestrained<T>::SPAI_Column(Matrix<T>* A,
     // new J values from pattern
     // and will be updated each augmenting
     // step.
+    // J = new Index_Set(A->n);
+
     J = M->J_set;
 
     // Extract pattern from pattern matrix
@@ -83,36 +85,31 @@ void Spai_Unrestrained<T>::SPAI_Column(Matrix<T>* A,
         // is available in row. Create Index Set I
         I = o_sub.Get_I_Set(J, A, M, B, P, UP, U_UP, ht, pre_k_param,
                             pre_max_param, bitvec, reset_vec);
-
         // Create the submatrix A_Hat = A(I;J) and update the
         // The index of the unit vector
-        A_Hat = o_sub.Create_Submatrix_AHat(A, M, B, P, UP, U_UP, J, I, m, n,
-                                            ht, nnz, pre_k_param, pre_max_param);
-
+        A_Hat = o_sub.Create_Submatrix_AHat_Block(
+            A, M, B, P, UP, U_UP, J, I, col, m, n, ht, nnz, pre_k_param, pre_max_param);
         // Create the unit vector
         // Notice that the name is the solution name already.
-        // if (B)
-        //    mk_Hat = o_sub.Create_bk_Hat(A, M, B, P, UP,
-        //                                  I, I->len, col);
-        // else
-        mk_Hat = o_sub.Create_ek_Hat(I, M, I->len, col, unit_idx);
+
+        mk_Hat = o_sub.Create_ek_Hat_Block(I, M, I->slen * A->block_sizes[col], col, unit_idx);
 
         // Copy the unit vector. This is used for
         // computing the residual vector later
+        // bk_Hat = o_sub.Copy_Vector(mk_Hat, I->slen * A->block_sizes[col]);
         bk_Hat = M->bk_Hat;
-        memcpy(bk_Hat, mk_Hat, I->len * sizeof(T));
+        memcpy(bk_Hat, mk_Hat, I->slen * A->block_sizes[col]);
 
         // Computing solution m_k which is stored within
         // mk_Hat.
-        Approximative_Solution(A_Hat, M->A_Hat_buffer, M, m, n, mk_Hat, I, col);
+
+        Approximative_Solution(A_Hat, M->A_Hat_buffer, m, n, mk_Hat, I, col, nnz);
 
         // Extract solution values
-        // mk_Hat = o_sub.Get_Solution_Vals(mk_Hat, J);
 
-        // Computing the residual vector
-        // and the frobenius norm of it
+        memcpy(M->mk_Hat_buffer, mk_Hat, I->slen * A->block_sizes[col] * sizeof(T));
 
-        residual_norm = o_sub.Residual_Norm(A_Hat, m, n, mk_Hat, bk_Hat, residual_vals);
+        o_sub.Get_Solution_Vals_Block(M->mk_Hat_buffer, mk_Hat, M, A, col, J, I->slen);
 
         // Finishing conditions
         if ((residual_norm <= epsilon_param)  // residual good enough
@@ -129,67 +126,33 @@ void Spai_Unrestrained<T>::SPAI_Column(Matrix<T>* A,
     }
 
     // Inserting solution row into preconditioner
-    o_comm.Insert_Row_Solution(A, M, B, P, UP, col, mk_Hat, J);
+    o_comm.Insert_Row_Solution_Block(A, M, B, P, UP, col, mk_Hat, J);
 }
 
 template <class T>
-void Spai_Unrestrained<T>::Approximative_Solution(T* A_Hat_orig,
-                                                  T* A_Hat_of_M,
-                                                  Matrix<T>* M,
-                                                  int& m,
-                                                  int& n,
-                                                  T*& mk_Hat,
-                                                  const Index_Set* I,
-                                                  const int col)
+void Spai_SD_Block<T>::Approximative_Solution(T* A_Hat_orig,
+                                              T* A_Hat_of_M,
+                                              int& m,
+                                              int& n,
+                                              T*& mk_Hat,
+                                              const Index_Set* I,
+                                              const int col,
+                                              const int nnz)
 {
-    int lda = 0, k = 0, info = 0, lwork = 0, one = 1;
-
-    T *A_Hat = NULL, *tau = NULL, *work_qr = NULL, *work_qt = NULL;
+    int order;
 
     Spai_Sub<T> o_sub;
 
-    // Lapack input parameters
-    const char *SIDE = "L", *UPLO = "U", *TRANS = "", *NCHAR = "N";
-
-    // Copy A_Hat because lapack routines change input
-    // and the original A_Hat is used later as well
-    A_Hat = A_Hat_of_M;
+    T* A_Hat = A_Hat_of_M;
     memcpy(A_Hat, A_Hat_orig, m * n * sizeof(T));
 
-    tau = M->Tau_ptr;
-    work_qt = M->Work_qt_ptr;
-    work_qr = M->Work_qr_ptr;
+    cs* A_Hat_cs = o_sub.Convert_Matrix_toCS(A_Hat, m, n, nnz);
 
-    // Preprocessing step:
-    // Get the optimal lwork value for fastest
-    // QR decomposition. See lapack documentation for
-    // details.
-    lwork = o_sub.Opt_lwork_QRDecomp(A_Hat, m, n);
+    // If fillgrade < 15 % then use AMD else original arrangement
+    order = static_cast<double>(nnz) / (m * n) > 0.15 ? 0 : 3;
 
-    // Init lapack values necessary for lapack routines
-    o_sub.Init_Lapack_Vals(m, n, k, lda, lwork, &work_qr, &tau);
+    // Solve system
+    cs_qrsol(order, A_Hat_cs, mk_Hat);
 
-    // QR decomposition -> Computing :   A_hat = QR
-    o_sub.QR_Decomposition(m, n, A_Hat, lda, tau, work_qr, lwork, info);
-
-    // Preprocessing step:
-    // Get the optimal lwork value for fastest
-    // QT * vector multiplication. See lapack documentation for
-    // details.
-    lwork = o_sub.Opt_lwork_QTApply(SIDE, m, n, k, one, lda, A_Hat, tau, mk_Hat);
-
-    // Set new work array -> faster than realloc work_qr
-    memset(work_qt, 0, lwork * sizeof(T));
-
-    // Computing :   Q^T * e_k_hat
-    o_sub.QT_Apply(SIDE, TRANS, m, one, k, A_Hat, lda, tau, mk_Hat, work_qt, lwork, info);
-
-    // Getting the quadratic contingent of
-    // the matrix A_hat for both cases:
-    // m x n and n x m
-    o_sub.Ectract_Quadratic_Content(A_Hat, m, n);
-
-    // Solving the triangular system:
-    // Computing :   R^-1 * (Q^T * e_k_hat)
-    o_sub.Solve_Tr_System(UPLO, NCHAR, n, one, A_Hat, mk_Hat, info);
+    *cs_spfree(A_Hat_cs);
 }

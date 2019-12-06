@@ -78,14 +78,14 @@ private:
     ///     \param col For which column this LS-Problem has to
     ///                be solved
     ///////////////////////////////////////////////////////////
-    void Approximative_Solution_Block(T* A_Hat_orig,
-                                      T* A_Hat,
-                                      Matrix<T>* M,
-                                      int& m,
-                                      int& n,
-                                      T*& mk_Hat,
-                                      const Index_Set* I,
-                                      const int block_size_col);
+    void Approximative_Solution(T* A_Hat_orig,
+                                T* A_Hat,
+                                Matrix<T>* M,
+                                int& m,
+                                int& n,
+                                T*& mk_Hat,
+                                const Index_Set* I,
+                                const int block_size_col);
 
 protected:
     ///////////////////////////////////////////////////////////

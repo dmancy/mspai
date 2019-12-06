@@ -67,8 +67,6 @@ void Spai_SD<T>::SPAI_Column(Matrix<T>* A,
     // new J values from pattern
     // and will be updated each augmenting
     // step.
-    // J = new Index_Set(A->n);
-
     J = M->J_set;
 
     // Extract pattern from pattern matrix
@@ -85,31 +83,36 @@ void Spai_SD<T>::SPAI_Column(Matrix<T>* A,
         // is available in row. Create Index Set I
         I = o_sub.Get_I_Set(J, A, M, B, P, UP, U_UP, ht, pre_k_param,
                             pre_max_param, bitvec, reset_vec);
+
         // Create the submatrix A_Hat = A(I;J) and update the
         // The index of the unit vector
-        A_Hat = o_sub.Create_Submatrix_AHat_Block(
-            A, M, B, P, UP, U_UP, J, I, col, m, n, ht, nnz, pre_k_param, pre_max_param);
+        A_Hat = o_sub.Create_Submatrix_AHat(A, M, B, P, UP, U_UP, J, I, m, n,
+                                            ht, nnz, pre_k_param, pre_max_param);
+
         // Create the unit vector
         // Notice that the name is the solution name already.
+        // if (B)
+        //    mk_Hat = o_sub.Create_bk_Hat(A, M, B, P, UP,
+        //                                 I, I->len, col);
+        // else
 
-        mk_Hat = o_sub.Create_ek_Hat_Block(I, M, I->slen * A->block_sizes[col], col, unit_idx);
+        mk_Hat = o_sub.Create_ek_Hat(I, M, I->len, col, unit_idx);
 
         // Copy the unit vector. This is used for
         // computing the residual vector later
-        // bk_Hat = o_sub.Copy_Vector(mk_Hat, I->slen * A->block_sizes[col]);
         bk_Hat = M->bk_Hat;
-        memcpy(bk_Hat, mk_Hat, I->slen * A->block_sizes[col]);
+        memcpy(bk_Hat, mk_Hat, I->len * sizeof(T));
 
         // Computing solution m_k which is stored within
         // mk_Hat.
-
-        Approximative_Solution(A_Hat, m, n, mk_Hat, I, col, nnz);
+        Approximative_Solution(A_Hat, M->A_Hat_buffer, M, m, n, mk_Hat, I, col, nnz);
 
         // Extract solution values
+        // mk_Hat = o_sub.Get_Solution_Vals(mk_Hat, J);
 
-        memcpy(M->mk_Hat_buffer, mk_Hat, I->slen * A->block_sizes[col] * sizeof(T));
-
-        o_sub.Get_Solution_Vals_Block(M->mk_Hat_buffer, mk_Hat, M, A, col, J, I->slen);
+        // Computing the residual vector
+        // and the frobenius norm of it
+        residual_norm = o_sub.Residual_Norm(A_Hat, m, n, mk_Hat, bk_Hat, residual_vals);
 
         // Finishing conditions
         if ((residual_norm <= epsilon_param)  // residual good enough
@@ -126,18 +129,26 @@ void Spai_SD<T>::SPAI_Column(Matrix<T>* A,
     }
 
     // Inserting solution row into preconditioner
-    o_comm.Insert_Row_Solution_Block(A, M, B, P, UP, col, mk_Hat, J);
+    o_comm.Insert_Row_Solution(A, M, B, P, UP, col, mk_Hat, J);
 }
 
 template <class T>
-void Spai_SD<T>::Approximative_Solution(
-    T* A_Hat_orig, int& m, int& n, T*& mk_Hat, const Index_Set* I, const int col, const int nnz)
+void Spai_SD<T>::Approximative_Solution(T* A_Hat_orig,
+                                        T* A_Hat_of_M,
+                                        Matrix<T>* M,
+                                        int& m,
+                                        int& n,
+                                        T*& mk_Hat,
+                                        const Index_Set* I,
+                                        const int col,
+                                        const int nnz)
 {
     int order;
 
     Spai_Sub<T> o_sub;
 
-    T* A_Hat = o_sub.Copy_Vector(A_Hat_orig, m * n);
+    T* A_Hat = A_Hat_of_M;
+    memcpy(A_Hat, A_Hat_orig, m * n * sizeof(T));
 
     cs* A_Hat_cs = o_sub.Convert_Matrix_toCS(A_Hat, m, n, nnz);
 
@@ -148,5 +159,4 @@ void Spai_SD<T>::Approximative_Solution(
     cs_qrsol(order, A_Hat_cs, mk_Hat);
 
     *cs_spfree(A_Hat_cs);
-    delete[] A_Hat;
 }

@@ -45,6 +45,7 @@ template <>
 void Switch_Algorithm<double>::Set_QR_Spec(Spai<double>*& QR_Templ_Spec,
                                            const int my_id,
                                            const int qr_level,
+                                           const int& bs,
                                            const double fillgrade_param)
 {
     switch (qr_level) {
@@ -118,7 +119,11 @@ void Switch_Algorithm<double>::Set_QR_Spec(Spai<double>*& QR_Templ_Spec,
             std::cout << "\t    QR-DECOMP.:\t";
             std::cout << COLOR_GREEN << "sparse\n" << COLOR_NORMAL << std::endl;
         }
-        QR_Templ_Spec = new Spai_SD<double>();
+        if (bs == 1)
+            QR_Templ_Spec = new Spai_SD<double>();
+        else
+            QR_Templ_Spec = new Spai_SD_Block<double>();
+
         break;
 
         // default case will not occur

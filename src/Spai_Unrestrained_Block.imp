@@ -57,7 +57,7 @@ void Spai_Unrestrained_Block<T>::SPAI_Column(Matrix<T>* A,
     double adjust_epsilon;
 
     T *A_Hat = NULL, *mk_Hat = NULL, *bk_Hat = NULL, *residual_vals = NULL;
-    T* residual_vals_b = new T[3000];
+    T* residual_vals_b = M->mk_Hat_buffer;
 
     Spai_Sub<T> o_sub;
 
@@ -109,8 +109,8 @@ void Spai_Unrestrained_Block<T>::SPAI_Column(Matrix<T>* A,
         // Computing solution m_k which is stored within
         // mk_Hat.
 
-        Approximative_Solution_Block(A_Hat, M->A_Hat_buffer, M, m, n, mk_Hat, I,
-                                     A->block_sizes[col]);
+        Approximative_Solution(A_Hat, M->A_Hat_buffer, M, m, n, mk_Hat, I,
+                               A->block_sizes[col]);
 
         // Extract solution values
         // mk_Hat = o_sub.Get_Solution_Vals(mk_Hat, J);
@@ -175,14 +175,14 @@ void Spai_Unrestrained_Block<T>::SPAI_Column(Matrix<T>* A,
 }
 
 template <class T>
-void Spai_Unrestrained_Block<T>::Approximative_Solution_Block(T* A_Hat_orig,
-                                                              T* A_Hat_of_M,
-                                                              Matrix<T>* M,
-                                                              int& m,
-                                                              int& n,
-                                                              T*& mk_Hat,
-                                                              const Index_Set* I,
-                                                              const int block_size_col)
+void Spai_Unrestrained_Block<T>::Approximative_Solution(T* A_Hat_orig,
+                                                        T* A_Hat_of_M,
+                                                        Matrix<T>* M,
+                                                        int& m,
+                                                        int& n,
+                                                        T*& mk_Hat,
+                                                        const Index_Set* I,
+                                                        const int block_size_col)
 {
     int lda = 0, k = 0, info = 0, lwork = 0, one = block_size_col;
 
