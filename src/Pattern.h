@@ -124,7 +124,7 @@ public:
     //////////////////////////////////////////////////////
     ///     \brief  Printing all pattern data
     //////////////////////////////////////////////////////
-    void Print_Pattern_Data();
+    void Print_Pattern_Data() const;
 
     //////////////////////////////////////////////////////
     ///     \brief  Building pattern out of pattern file
@@ -238,7 +238,7 @@ private:
     ///                nnzs of each column within the
     ///                pattern
     //////////////////////////////////////////////////////
-    void Count_NNZ_Cols(RC const* in, size_t size, int* out);
+    void Count_NNZ_Cols(RC const* in, size_t size, int* out) const;
 
     //////////////////////////////////////////////////////
     ///     \brief  Counting nnz in each row
@@ -250,7 +250,7 @@ private:
     ///                nnzs of each row within the
     ///                pattern
     //////////////////////////////////////////////////////
-    void Count_NNZ_Rows(RC const* in, size_t size, int* out);
+    void Count_NNZ_Rows(RC const* in, size_t size, int* out) const;
 };
 
 #endif

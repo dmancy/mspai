@@ -76,7 +76,7 @@ public:
     ///                set indices - usually the
     ///                name of the index set
     ///////////////////////////////////////////////
-    void Print_Index_Set(char* str);
+    void Print_Index_Set(char* str) const;
 
     ///////////////////////////////////////////////
     ///     \brief Returns a mathematical set

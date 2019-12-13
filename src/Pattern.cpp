@@ -311,7 +311,7 @@ Pattern* Pattern::Data_To_Pattern(int file_N, RC* cols, int nnz_cols, int my_nbr
     return P;
 }
 
-void Pattern::Count_NNZ_Cols(RC const* in, size_t size, int* out)
+void Pattern::Count_NNZ_Cols(RC const* in, size_t size, int* out) const
 {
     // Columns with no nnz will be
     // present with no entry in out
@@ -326,7 +326,7 @@ void Pattern::Count_NNZ_Cols(RC const* in, size_t size, int* out)
     }
 }
 
-void Pattern::Count_NNZ_Rows(RC const* in, size_t size, int* out)
+void Pattern::Count_NNZ_Rows(RC const* in, size_t size, int* out) const
 {
     // Columns with no nnz will be
     // present with no entry in out
@@ -341,7 +341,7 @@ void Pattern::Count_NNZ_Rows(RC const* in, size_t size, int* out)
     }
 }
 
-void Pattern::Print_Pattern_Data()
+void Pattern::Print_Pattern_Data() const
 {
     std::cout << "\n\tPattern Data:\t\n"
               << "\n\tmy_id:\t\t" << my_id << "\n\tnum_procs:\t" << num_procs
