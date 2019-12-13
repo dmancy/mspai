@@ -47,14 +47,14 @@ int main(int argc, char** args)
 
     PetscViewer fd;
     PetscPrintf(PETSC_COMM_WORLD, "Loading matrix...\n");
-    //    ierr =
+    //     ierr =
     // PetscViewerBinaryOpen(PETSC_COMM_WORLD,"orsirr_2_T.dat",FILE_MODE_READ,&fd);CHKERRQ(ierr);
     ierr = PetscViewerBinaryOpen(
         PETSC_COMM_WORLD, "shyy161.mtx_76480x76480_329762nnz.gz", FILE_MODE_READ, &fd);
     // CHKERRQ(ierr);
 
     // ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD, "visc-naca_lhs.pmat",
-    //                             FILE_MODE_READ, &fd);
+    //                           FILE_MODE_READ, &fd);
     CHKERRQ(ierr);
     ierr = MatCreate(PETSC_COMM_WORLD, &A);
     CHKERRQ(ierr);
@@ -93,7 +93,8 @@ int main(int argc, char** args)
         ierr = PetscViewerDestroy(&fd);
         CHKERRQ(ierr);
         VecGetSize(solution, &n);
-    */
+        */
+
     ierr = MatGetSize(A, &n, NULL);
     // ierr = MatTranspose(A,MAT_INPLACE_MATRIX,&A);
     ierr = VecCreate(PETSC_COMM_WORLD, &u);
@@ -108,6 +109,7 @@ int main(int argc, char** args)
     CHKERRQ(ierr);
     ierr = VecSet(b, one);
     CHKERRQ(ierr);
+
     /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                   Create the linear solver and set various options
        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -244,22 +246,14 @@ int main(int argc, char** args)
        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
     T = MPI_Wtime();
 
-    for (int iteration = 0; iteration < 1; iteration++) {
+    for (int iteration = 0; iteration < 2; iteration++) {
         ierr = KSPSolve(ksp, b, solution);
         CHKERRQ(ierr);
         // MatTranspose(A,MAT_INPLACE_MATRIX,&A);
         MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
         MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
-
-        ierr = KSPGetPC(ksp, &pc);
-        CHKERRQ(ierr);
-        ierr = PCShellGetContext(pc, (void**)&mspai);
-        delete mspai;
-
-        mspai = new PC_MSPAI;
-        mspai->PCSetFromOptions_SPAI(&opt);
-        ierr = PCShellSetContext(pc, mspai);
-        CHKERRQ(ierr);
+        // ierr = KSPSetTolerances(ksp, PETSC_DEFAULT, PETSC_DEFAULT,
+        // PETSC_DEFAULT, 10);
     }
 
     /*

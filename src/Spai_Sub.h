@@ -355,6 +355,7 @@ public:
     ///     \return The unit vector
     //////////////////////////////////////////////////////////////
     T* Create_ek(const int len, const int col);
+    void Initialize_ek(T* ek_Hat, const int len, const int col);
 
     //////////////////////////////////////////////////////////////
     ///     \brief Extract the solution values of the LS-Problem
@@ -423,6 +424,7 @@ public:
                      const int len,
                      const int col);
 
+    T* Create_bk_Hat(const Index_Set* I, const Matrix<T>* M, const int len, const int col, int& unit_idx);
     //////////////////////////////////////////////////////////////
     ///     \brief Copy an array
     ///

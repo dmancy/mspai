@@ -32,7 +32,8 @@
 
 template <typename T>
 Pattern* Pattern_Switch<T>::Generate_Pattern(Matrix<T>* mtx,
-                                             char* pattern_file,
+                                             Mat* Amat,
+                                             Pattern* pattern,
                                              int pattern_param,
                                              const int use_schur,
                                              const int prob_Ce_N,
@@ -52,7 +53,8 @@ Pattern* Pattern_Switch<T>::Generate_Pattern(Matrix<T>* mtx,
 
     switch (pattern_param) {
     case 0: // Own pattern file
-        P = P->Arbitrary_Pattern(pattern_file, mtx->n, use_schur, prob_Ce_N, mtx->world);
+        // P = P->Arbitrary_Pattern(pattern_file, mtx->n, use_schur, prob_Ce_N,
+        // mtx->world);
         break;
 
     case 1: // Diagonal pattern

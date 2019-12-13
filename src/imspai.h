@@ -24,10 +24,11 @@
 class PC_MSPAI {
 public:
     PC_MSPAI();
+    ~PC_MSPAI();
 
     PetscErrorCode PCSetUp_MSPAI(Mat A);
-    PetscErrorCode PCView_MSPAI();
-    PetscErrorCode Apply_MSPAI(Vec xx, Vec yy);
+    PetscErrorCode PCView_MSPAI() const;
+    PetscErrorCode Apply_MSPAI(Vec xx, Vec yy) const;
     PetscErrorCode PCSetFromOptions_SPAI(PetscOptionItems* PetscOptionsObject);
 
     PetscErrorCode PCSetA_REAL(Matrix<double>* A);
@@ -54,11 +55,11 @@ public:
     PetscErrorCode PCSetVerbose(const int& vb);
     PetscErrorCode PCSetWriteParam(const int& wp);
     PetscErrorCode PCSetBSParam(const int& bs);
+    PetscErrorCode PCSetReusePattern(const int& rp);
 
     int bspai(void);
 
     PetscErrorCode PCSetCeVecs(Vec** vec, const int nb);
-    ~PC_MSPAI();
 
     //	private:
 
@@ -67,7 +68,10 @@ public:
     Matrix<double>* M_REAL;
     Matrix<double>* C_REAL;
 
+    Mat* A;  /* the PETSc matrix system */
     Mat* PM; /* the approximate inverse PETSc format */
+
+    Pattern* P_Memory; /* Potential reused of the last pattern */
 
     Vec** prob_Ce;
 
@@ -78,7 +82,7 @@ public:
 
     int maxnew_param, max_impr_steps, write_param, pattern_param, u_pattern_param,
         hash_param, cache_param, opt_level, qr, pre_k_param, pre_max_param,
-        prob_Ce_N, target_param, use_schur, nb_pwrs, block_size, verbose;
+        prob_Ce_N, target_param, use_schur, nb_pwrs, block_size, verbose, count;
 
     bool use_mean, use_prob, left_prec;
 };

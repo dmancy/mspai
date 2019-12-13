@@ -204,6 +204,8 @@ void Matrix<T>::Init_Preconditioner(Matrix<T>*& M, const int m_dim, const int n_
     M->A_Hat = new T[max_arg * max_block_size * max_block_size];
     M->A_Hat_buffer = new T[max_arg * max_block_size * max_block_size];
 
+    // M->mk_Hat = new T[max_arg * max_block_size * max_block_size];
+    // M->mk_Hat_buffer = new T[max_arg * max_block_size * max_block_size];
     M->mk_Hat = new T[max_arg * max_block_size * max_block_size];
     M->mk_Hat_buffer = new T[max_arg * max_block_size * max_block_size];
     M->bk_Hat = new T[max_arg * max_block_size * max_block_size];

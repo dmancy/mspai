@@ -47,7 +47,7 @@
 //============================================================================
 
 template <>
-void Matrix<double>::Print_Matrix_Data(Matrix<double>* matrix)
+void Matrix<double>::Print_Matrix_Data(Matrix<double>* matrix) const
 {
     std::cout << "\n\tMatrix Data:\t\n"
               << "\n\tmy_id:\t\t" << my_id << "\n\tnum_procs:\t" << num_procs
@@ -119,7 +119,7 @@ void Matrix<double>::Print_Matrix_Data(Matrix<double>* matrix)
 template <>
 void Matrix<double>::Print_Matrix_Human_Readable(const Matrix<double>* matrix,
                                                  const int n,
-                                                 const int m)
+                                                 const int m) const
 {
     double *print_matrix = new double[n * m], val;
 
@@ -597,3 +597,103 @@ void write_block(FILE* fptr, double* a, int m, int n)
         fprintf(fptr, "\n");
     }
 }
+
+template <>
+Pattern* Matrix<double>::To_Pattern_Power(Mat* Amat,
+                                          Matrix<double>* A_REAL,
+                                          const int nb_pw,
+                                          const bool use_prob)
+{
+    Mat Atemp;
+    Matrix<double> *B = NULL, *V = NULL;
+    PetscInt* List_lfill = NULL;
+    Pattern* P = NULL;
+    PetscErrorCode ierr;
+
+    ierr = MatMatMult(*Amat, *Amat, MAT_INITIAL_MATRIX, PETSC_DEFAULT, &Atemp);
+    B->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &B, &Atemp);
+
+    List_lfill = new int[B->my_nbr_cols];
+
+    for (int col = 0; col < B->my_nbr_cols; col++) {
+        List_lfill[col] = B->len_all_cols[B->my_start_idx + col];
+    }
+
+    B->Sparsify(&B, List_lfill);
+
+    V = B->Convert_To_Block_Matrix(
+        A_REAL->my_nbr_cols, &(A_REAL->block_sizes[A_REAL->my_start_idx]));
+    V->block_size = A_REAL->block_size;
+
+    P = V->To_Pattern(V, use_prob);
+
+    delete[] List_lfill;
+    delete V;
+    delete B;
+
+    return P;
+}
+
+/*
+Pattern* Convert_Mat_to_Pattern(MPI_Comm comm, Mat* A)
+{
+    int rank, size;
+    int m, n, mnl, nnl;
+    int nz;
+    int *cols;
+    Index_Set *i_set = NULL;
+
+    ierr = MPI_Comm_size(comm, &size);
+    ierr = MPI_Comm_rank(comm, &rank);
+
+    ierr = MatGetSize(*A, &m, &n);
+    CHKERRQ(ierr);
+    ierr = MatGetLocalSize(*A, &mnl, &nnl);
+    CHKERRQ(ierr);
+
+    P = new Pattern(n, mnl, comm);
+
+    P->all_nbr_cols = new int[P->num_procs];
+    P->start_indices = new int[P->num_procs];
+    P->pe = new int[n];
+
+    MPI_Barrier(comm);
+    MPI_Allgather(static_cast<void*>(&mnl), 1, MPI_INT,
+                  static_cast<void*>(P->all_nbr_cols), 1, MPI_INT, comm);
+
+    // Filling start indices
+    P->start_indices[0] = 0;
+    for (int pe = 1; pe < P->num_procs; pe++)
+        P->start_indices[pe] = P->start_indices[pe - 1] + P->all_nbr_cols[pe -
+1];
+
+    // filling pe array
+    memset(P->pe, 0, mtx->n * sizeof(int));
+    for (int pe = 0; pe < P->num_procs; pe++) {
+        start_idx = P->start_indices[pe];
+        for (int i = 0; i < P->all_nbr_cols[pe]; i++)
+            P->pe[start_idx + i] = pe;
+    }
+
+    P->my_nbr_cols = P->all_nbr_cols[P->my_id];
+    P->my_start_idx = P->start_indices[P->my_id];
+
+
+    for (int col = 0; col < P->my_nbr_cols; col++) {
+        ierr = MatGetRow(*A, col + P->my_start_idx, &nz, &cols, NULL);
+        len = nz;
+        i_set = new Index_Set(len);
+        memcpy(i_set->idcs, cols, len * sizeof(int));
+        P->j_sets[col] = i_set;
+        ierr = MatRestoreRow(*A, col + P->my_start_idx, &nz, &cols, NULL);
+    }
+
+    // Get the maximum number of nnz per
+    // column/row of all pes
+    MPI_Barrier(world);
+    MPI_Allreduce(&mtx->max_nnz, &P->max_nnz, 1, MPI_INT, MPI_MAX, world);
+
+    return P;
+
+
+}*/

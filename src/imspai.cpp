@@ -8,7 +8,9 @@ PC_MSPAI::PC_MSPAI()
     B_REAL = NULL;
     M_REAL = NULL;
     C_REAL = NULL;
+    A = NULL;
     PM = NULL;
+    P_Memory = NULL;
 
     Command_Line o_cm;
 
@@ -19,37 +21,29 @@ PC_MSPAI::PC_MSPAI()
                     pre_max_param, probing_Ce_file, probing_Be_file, use_prob,
                     target_file, target_param, rho_param, use_schur, nb_pwrs,
                     left_prec, verbose, block_size, output_file);
+    count = 0;
 }
 
-PetscErrorCode PC_MSPAI::PCSetUp_MSPAI(Mat A)
+PetscErrorCode PC_MSPAI::PCSetUp_MSPAI(Mat Amat)
 {
     PetscErrorCode ierr;
 
     PetscFunctionBegin;
-    if (!left_prec) {
-        ierr = MatTranspose(A, MAT_INITIAL_MATRIX, &A);
-        CHKERRQ(ierr);
-    }
-
-    if (use_prob) {
-        A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, &A, prob_Ce, prob_Ce_N);
-    }
-    else {
-        A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, &A);
-    }
     //   A_REAL->Write_Matrix_To_File("A.mtx");
+
+    A = &Amat;
 
     bspai();
 
     return 0;
 }
 
-PetscErrorCode PC_MSPAI::PCView_MSPAI()
+PetscErrorCode PC_MSPAI::PCView_MSPAI() const
 {
     return 0;
 }
 
-PetscErrorCode PC_MSPAI::Apply_MSPAI(Vec xx, Vec yy)
+PetscErrorCode PC_MSPAI::Apply_MSPAI(Vec xx, Vec yy) const
 {
     PetscErrorCode ierr;
     ierr = MatMult(*PM, xx, yy);
@@ -640,6 +634,13 @@ PetscErrorCode PC_MSPAI::PCSetBSParam(const int& bs)
 
 int PC_MSPAI::bspai(void)
 {
+    count++;
+
+    if (count >= 2) {
+        pattern_param = 0;
+        maxnew_param = 0;
+        max_impr_steps = 0;
+    }
     // SPAI controling parameters
 
     int my_id, num_procs;
@@ -653,6 +654,19 @@ int PC_MSPAI::bspai(void)
 
     MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_id);
+
+    // Conversion PETSc matrix to Mspai matrix
+    if (!left_prec) {
+        ierr = MatTranspose(*A, MAT_INITIAL_MATRIX, A);
+        CHKERRQ(ierr);
+    }
+
+    if (use_prob) {
+        A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, A, prob_Ce, prob_Ce_N);
+    }
+    else {
+        A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, A);
+    }
 
     bool symmetric_system = A_REAL->symmetric;
 
@@ -696,7 +710,7 @@ int PC_MSPAI::bspai(void)
 
         delete A_REAL;
         A_REAL = B;
-        // A_REAL->Write_Matrix_To_File("B.mtx");
+        A_REAL->Write_Matrix_To_File("B.mtx");
     }
 
     Read_mm_Matrix o_rm;
@@ -723,7 +737,7 @@ int PC_MSPAI::bspai(void)
     }
 
     Pattern_Switch<double> o_ps;
-    P = o_ps.Generate_Pattern(A_REAL, pattern_file, pattern_param, use_schur,
+    P = o_ps.Generate_Pattern(A_REAL, A, P_Memory, pattern_param, use_schur,
                               prob_Ce_N, use_prob, nb_pwrs, verbose);
 
     // Does user wants any upper pattern?
@@ -737,7 +751,7 @@ int PC_MSPAI::bspai(void)
             }
         }
 
-        UP = o_ps.Generate_Pattern(A_REAL, u_pattern_file, u_pattern_param, use_schur,
+        UP = o_ps.Generate_Pattern(A_REAL, A, P_Memory, u_pattern_param, use_schur,
                                    prob_Ce_N, use_prob, nb_pwrs, verbose);
     }
 
@@ -778,6 +792,13 @@ int PC_MSPAI::bspai(void)
         A_REAL->Write_Matrix_To_File("A.mtx");
     }
 
+    // Update of P_Memory
+    if (!(count >= 2)) {
+        if (!P_Memory)
+            delete P_Memory;
+        P_Memory = M_REAL->To_Pattern(M_REAL, use_prob);
+    }
+
     Matrix<double>* Scalar = NULL;
 
     if (A_REAL->block_size != 1) {
@@ -812,7 +833,6 @@ int PC_MSPAI::bspai(void)
     }
 
     delete alg_ptr;
-    delete P;
 
     delete UP;
 
@@ -873,7 +893,11 @@ PC_MSPAI::~PC_MSPAI()
     }
 
     if (PM) {
-        delete PM;
+        MatDestroy(PM);
         PM = NULL;
+    }
+
+    if (P_Memory) {
+        delete P_Memory;
     }
 }

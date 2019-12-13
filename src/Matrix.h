@@ -244,7 +244,7 @@ public:
     ///
     ///     \param  matrix The matrix to be printed
     /////////////////////////////////////////////////////////
-    void Print_Matrix_Data(Matrix<double>* matrix);
+    void Print_Matrix_Data(Matrix<double>* matrix) const;
 
     /////////////////////////////////////////////////////////
     ///     \brief  Printing the matrix values in
@@ -257,7 +257,7 @@ public:
     ///     \param n n-dimension of the matrix (columns)
     ///     \param m m-dimension of the matrix (rows)
     /////////////////////////////////////////////////////////
-    void Print_Matrix_Human_Readable(const Matrix<double>* matrix, const int n, const int m);
+    void Print_Matrix_Human_Readable(const Matrix<double>* matrix, const int n, const int m) const;
 
     /////////////////////////////////////////////////////////
     ///     \brief  Printing the real matrix values
@@ -356,6 +356,7 @@ public:
     /////////////////////////////////////////////////////////
     Pattern* To_Pattern_Powers(Matrix<double>* mtx, const int nb_pw, const bool use_prob);
 
+    Pattern* To_Pattern_Power(Mat* Amat, Matrix<double>* A_REAL, const int nb_pw, const bool use_prob);
     /////////////////////////////////////////////////////////
     ///     \brief  Sparsify a matrix
     ///

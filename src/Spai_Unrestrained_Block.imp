@@ -74,6 +74,7 @@ void Spai_Unrestrained_Block<T>::SPAI_Column(Matrix<T>* A,
     // J = new Index_Set(A->n);
 
     J = M->J_set;
+    // J = new Index_Set(A->n);
 
     // Extract pattern from pattern matrix
     // Create the Index Set J
@@ -105,18 +106,39 @@ void Spai_Unrestrained_Block<T>::SPAI_Column(Matrix<T>* A,
         // bk_Hat = o_sub.Copy_Vector(mk_Hat, I->slen * A->block_sizes[col]);
         bk_Hat = M->bk_Hat;
         memcpy(bk_Hat, mk_Hat, I->slen * A->block_sizes[col] * sizeof(double));
-
+        /*
+            if (col > 293)
+            {
+            std::cout << "step g2" << std::endl;
+              std::cout << P->pe << std::endl;
+            for (int k = 0; k < 100; k++)
+              std::cout << P->pe[k] << std::endl;
+            }*/
         // Computing solution m_k which is stored within
         // mk_Hat.
 
         Approximative_Solution(A_Hat, M->A_Hat_buffer, M, m, n, mk_Hat, I,
                                A->block_sizes[col]);
-
+        /*
+            if (col > 293)
+            {
+            std::cout << "step g3" << std::endl;
+              std::cout << P->pe << std::endl;
+            for (int k = 0; k < 100; k++)
+              std::cout << P->pe[k] << std::endl;
+            }*/
         // Extract solution values
         // mk_Hat = o_sub.Get_Solution_Vals(mk_Hat, J);
 
         memcpy(M->mk_Hat_buffer, mk_Hat, I->slen * A->block_sizes[col] * sizeof(T));
-
+        /*
+            if (col > 293)
+            {
+            std::cout << "step g4" << std::endl;
+              std::cout << P->pe << std::endl;
+            for (int k = 0; k < 100; k++)
+              std::cout << P->pe[k] << std::endl;
+          }*/
         o_sub.Get_Solution_Vals_Block(M->mk_Hat_buffer, mk_Hat, M, A, col, J, I->slen);
         // Copy  M->mk_Hat_buffer back into mk_Hat
         // Use dormqr to compute A_hat * mk_hat
@@ -128,8 +150,24 @@ void Spai_Unrestrained_Block<T>::SPAI_Column(Matrix<T>* A,
 
         // Computing the residual vector
         // and the frobenius norm of it
+        /*
+    if (col > 293)
+    {
+    std::cout << "step g5" << std::endl;
+      std::cout << P->pe << std::endl;
+    for (int k = 0; k < 100; k++)
+      std::cout << P->pe[k] << std::endl;
+    }*/
         residual_norm = o_sub.Residual_Norm_Block(
             M, A_Hat, m, A->block_sizes[col], n, mk_Hat, bk_Hat, residual_vals);
+        /*
+    if (col > 293)
+    {
+    std::cout << "step g6" << std::endl;
+      std::cout << P->pe << std::endl;
+    for (int k = 0; k < 100; k++)
+      std::cout << P->pe[k] << std::endl;
+    }*/
 
         o_sub.Convert_To_Block(M, I, col, residual_vals, residual_vals_b);
         /*
@@ -169,9 +207,24 @@ void Spai_Unrestrained_Block<T>::SPAI_Column(Matrix<T>* A,
                 ht, use_mean, pre_k_param, pre_max_param, bitvec, reset_vec))
             break;
     }
-
+    /*
+        if (col > 293)
+        {
+        std::cout << "step b" << std::endl;
+          std::cout << P->pe << std::endl;
+        for (int k = 0; k < 100; k++)
+          std::cout << P->pe[k] << std::endl;
+        }*/
     // Inserting solution row into preconditioner
     o_comm.Insert_Row_Solution_Block(A, M, B, P, UP, col, mk_Hat, J);
+    /*
+    if (col > 293)
+    {
+    std::cout << "step c" << std::endl;
+      std::cout << P->pe << std::endl;
+    for (int k = 0; k < 100; k++)
+      std::cout << P->pe[k] << std::endl;
+    }*/
 }
 
 template <class T>

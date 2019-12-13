@@ -646,6 +646,36 @@ T* Spai_Sub<T>::Create_ek_Hat(
 }
 
 template <class T>
+T* Spai_Sub<T>::Create_bk_Hat(
+    const Index_Set* I, const Matrix<T>* M, const int len, const int col, int& unit_idx)
+{
+    T* bk_Hat = NULL;
+
+    int i_val;
+
+    bool found = false;
+
+    bk_Hat = M->bk_Hat;
+    memset(bk_Hat, 0, len * sizeof(T));
+
+    /*Sweep block rows */
+    for (int i = 0; i < I->len; i++) {
+        i_val = I->idcs[i];
+        if (i_val > col)
+            break;
+        if (i_val == col) {
+            found = true;
+            unit_idx = i;
+            break;
+        }
+    }
+
+    if (found)
+        Set_Unit_Idx(bk_Hat, unit_idx);
+
+    return bk_Hat;
+}
+template <class T>
 T* Spai_Sub<T>::Create_ek_Hat_Block(
     const Index_Set* I, const Matrix<T>* M, const int len, const int col, int& unit_idx)
 {
@@ -742,6 +772,13 @@ T* Spai_Sub<T>::Create_ek(const int len, const int col)
     Set_Unit_Idx(ek_Hat, col);
 
     return ek_Hat;
+}
+
+template <class T>
+void Spai_Sub<T>::Initialize_ek(T* ek_Hat, const int len, const int col)
+{
+    memset(ek_Hat, 0, len * sizeof(T));
+    Set_Unit_Idx(ek_Hat, col);
 }
 
 template <class T>

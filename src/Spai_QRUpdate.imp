@@ -73,7 +73,8 @@ void Spai_QRUpdate<T>::SPAI_Column(Matrix<T>* A,
     // new J values from pattern
     // and will be updated each augmenting
     // step.
-    J = new Index_Set(A->n);
+    // J = new Index_Set(A->n);
+    J = M->J_set;
 
     // Extract pattern from pattern matrix
     // Create the Index Set J
@@ -90,11 +91,12 @@ void Spai_QRUpdate<T>::SPAI_Column(Matrix<T>* A,
     // Create the unit vector
     // Notice that the name is the solution name
     // already:
-    mk = o_sub.Create_ek(A->n, col);
+    mk = M->mk_Hat;
+    o_sub.Initialize_ek(mk, A->n, col);
 
     // Copy the unit vector. This is used for
     // computing the residual vector later
-    ek_Hat = o_sub.Create_ek_Hat(I, M, I->len, col, unit_idx);
+    ek_Hat = o_sub.Create_bk_Hat(I, M, I->len, col, unit_idx);
 
     // Create the submatrix A_Hat = A(I;J) and update the
     // The index of the unit vector
@@ -102,7 +104,9 @@ void Spai_QRUpdate<T>::SPAI_Column(Matrix<T>* A,
                                         nnz, pre_k_param, pre_max_param);
 
     // Copy A_Hat because QRZerlegungLapack() changes it
-    A_Hat_QR = o_sub.Copy_Vector(A_Hat, m * n);
+    // A_Hat_QR = o_sub.Copy_Vector(A_Hat, m * n);
+    A_Hat_QR = M->A_Hat_buffer;
+    memcpy(A_Hat_QR, A_Hat, m * n * sizeof(T));
 
     // Computing solution m_k which is stored within
     // mk_Hat.
@@ -110,7 +114,8 @@ void Spai_QRUpdate<T>::SPAI_Column(Matrix<T>* A,
                      J->idcs, max_impr_steps, maxnew_param);
 
     // Extract the solution values from the solution vector mk
-    mk_Hat = o_sub.Get_Solution_Vals(mk, J);
+    // mk_Hat = o_sub.Get_Solution_Vals(mk, J);
+    mk_Hat = mk;
 
     // Computing the residual vector
     // and the frobenius norm of it
@@ -118,9 +123,10 @@ void Spai_QRUpdate<T>::SPAI_Column(Matrix<T>* A,
 
     // step is -1 because the first improvement step is
     // only the static SPAI
+
     for (int step = 0; (step < max_impr_steps) && (residual_norm > epsilon_param); step++) {
         J_old = J_old->Copy_Index_Set(J);
-        I_old = I;
+        I_old = I_old->Copy_Index_Set(I);
 
         // Solution is not good enough - augmenting
         // Finish augmenting if no new candidates found
@@ -131,9 +137,9 @@ void Spai_QRUpdate<T>::SPAI_Column(Matrix<T>* A,
             break;
         }
 
-        delete[] mk_Hat;
-        delete[] A_Hat;
-        delete[] ek_Hat;
+        // delete[] mk_Hat;
+        // delete[] A_Hat;
+        // delete[] ek_Hat;
         delete I_aug;
         delete J_aug;
 
@@ -154,20 +160,22 @@ void Spai_QRUpdate<T>::SPAI_Column(Matrix<T>* A,
         // Notice that the name is the solution name
         // already:
         mk = o_sub.Create_ek(A->n, col);
+        o_sub.Initialize_ek(mk, A->n, col);
 
         // Copy the unit vector. This is used for
         // computing the residual vector later
-        ek_Hat = o_sub.Create_ek_Hat(I, M, I->len, col, unit_idx);
+        // ek_Hat = o_sub.Create_ek_Hat(I, M, I->len, col, unit_idx);
+        ek_Hat = o_sub.Create_bk_Hat(I, M, I->len, col, unit_idx);
 
         // Get the index set I_aug which contains only the
         // new augmenting i indices.
         I_aug = I_aug->Set_Difference(I, I_old);
-        delete I_old;
+        // delete I_old;
 
         // Get the index set J_aug which contains only the
         // new augmenting j indices
         J_aug = J_aug->Set_Difference(J, J_old);
-        delete J_old;
+        // delete J_old;
 
         // QR-Update
         QR_Update(A, M, B, P, UP, U_UP, ht, QRS, QRSS, aug_cols, mk, J_aug,
@@ -175,7 +183,8 @@ void Spai_QRUpdate<T>::SPAI_Column(Matrix<T>* A,
                   maxnew_param, pre_k_param, pre_max_param);
 
         // Extract the solution values
-        mk_Hat = o_sub.Get_Solution_Vals(mk, J);
+        // mk_Hat = o_sub.Get_Solution_Vals(mk, J);
+        mk_Hat = mk;
 
         // Computing the residual vector
         // and the frobenius norm of it
@@ -191,12 +200,12 @@ void Spai_QRUpdate<T>::SPAI_Column(Matrix<T>* A,
     o_comm.Insert_Row_Solution(A, M, B, P, UP, col, mk_Hat, J);
 
     // Free heap storage last time
-    delete[] mk_Hat;
-    delete[] ek_Hat;
-    delete[] A_Hat;
-    delete[] A_Hat_QR;
-    delete J;
-    delete I;
+    // delete[] mk_Hat;
+    // delete[] ek_Hat;
+    // delete[] A_Hat;
+    // delete[] A_Hat_QR;
+    // delete J;
+    // delete I;
     delete J_aug;
     delete I_aug;
     if (QRS)

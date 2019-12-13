@@ -65,7 +65,8 @@ public:
     ///     \return Returns the generated Pattern
     //////////////////////////////////////////////////////
     Pattern* Generate_Pattern(Matrix<T>* mtx,
-                              char* pattern_file,
+                              Mat* Amat,
+                              Pattern* P_Arbitrary,
                               int pattern_param,
                               const int use_schur,
                               const int prob_Ce_N,

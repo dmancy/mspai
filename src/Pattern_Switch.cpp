@@ -34,7 +34,8 @@
 
 template <>
 Pattern* Pattern_Switch<double>::Generate_Pattern(Matrix<double>* mtx,
-                                                  char* pattern_file,
+                                                  Mat* Amat,
+                                                  Pattern* P_Arbitrary,
                                                   int pattern_param,
                                                   const int use_schur,
                                                   const int prob_Ce_N,
@@ -52,9 +53,17 @@ Pattern* Pattern_Switch<double>::Generate_Pattern(Matrix<double>* mtx,
         o_timer.Start_Timer();
     }
 
+    /* If we compute a new pattern, then the last one must be deleted */
+    if ((pattern_param > 0) && (P_Arbitrary))
+        delete P_Arbitrary;
+
     switch (pattern_param) {
     case 0: // Own pattern file
-        P = P->Arbitrary_Pattern(pattern_file, mtx->n, use_schur, prob_Ce_N, mtx->world);
+        if (!P_Arbitrary)
+            throw std::runtime_error(
+                "\n\tIllegal Arbitrary Pattern:\n\tCheck the given Pattern "
+                "argument.\n");
+        P = P_Arbitrary;
         break;
 
     case 1: // Diagonal pattern
@@ -63,12 +72,16 @@ Pattern* Pattern_Switch<double>::Generate_Pattern(Matrix<double>* mtx,
 
     case 2: // Pattern filled where A has nnz
         P = mtx->To_Pattern(mtx, use_prob);
+        std::cout << "To patern" << std::endl;
         break;
 
     case 3: // Pattern based on powers of A.
         P = mtx->To_Pattern_Powers(mtx, nb_pwrs, use_prob);
         break;
 
+    case 4:
+        P = mtx->To_Pattern_Power(Amat, mtx, nb_pwrs, use_prob);
+        break;
         // default case will not occur
     }
 

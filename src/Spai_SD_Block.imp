@@ -56,6 +56,7 @@ void Spai_SD_Block<T>::SPAI_Column(Matrix<T>* A,
     double residual_norm = 1.0e+50; // appr. infinity
 
     T *A_Hat = NULL, *mk_Hat = NULL, *bk_Hat = NULL, *residual_vals = NULL;
+    T* residual_vals_b = M->mk_Hat_buffer;
 
     Spai_Sub<T> o_sub;
 
@@ -111,6 +112,11 @@ void Spai_SD_Block<T>::SPAI_Column(Matrix<T>* A,
 
         o_sub.Get_Solution_Vals_Block(M->mk_Hat_buffer, mk_Hat, M, A, col, J, I->slen);
 
+        residual_norm = o_sub.Residual_Norm_Block(
+            M, A_Hat, m, A->block_sizes[col], n, mk_Hat, bk_Hat, residual_vals);
+
+        o_sub.Convert_To_Block(M, I, col, residual_vals, residual_vals_b);
+
         // Finishing conditions
         if ((residual_norm <= epsilon_param)  // residual good enough
             || (step == (max_impr_steps - 1)) // Don't delete solution,
@@ -120,7 +126,7 @@ void Spai_SD_Block<T>::SPAI_Column(Matrix<T>* A,
         // Solution is not good enough - augmenting
         // Finish augmenting if no new candidates found
         if (!o_sub.Augment_Sparsity(A, M, B, P, I, J, UP, U_UP, col, residual_norm,
-                                    residual_vals, maxnew_param, ht, use_mean,
+                                    residual_vals_b, maxnew_param, ht, use_mean,
                                     pre_k_param, pre_max_param, bitvec, reset_vec))
             break;
     }
