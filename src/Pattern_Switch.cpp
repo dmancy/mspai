@@ -72,7 +72,6 @@ Pattern* Pattern_Switch<double>::Generate_Pattern(Matrix<double>* mtx,
 
     case 2: // Pattern filled where A has nnz
         P = mtx->To_Pattern(mtx, use_prob);
-        std::cout << "To patern" << std::endl;
         break;
 
     case 3: // Pattern based on powers of A.

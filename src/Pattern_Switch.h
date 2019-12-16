@@ -64,7 +64,7 @@ public:
     ///		       start pattern
     ///     \return Returns the generated Pattern
     //////////////////////////////////////////////////////
-    Pattern* Generate_Pattern(Matrix<T>* mtx,
+    Pattern* Generate_Pattern(Matrix<double>* mtx,
                               Mat* Amat,
                               Pattern* P_Arbitrary,
                               int pattern_param,

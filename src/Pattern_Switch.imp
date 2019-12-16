@@ -29,7 +29,7 @@
     ======================================================================
     ======================================================================
 */
-
+/*
 template <typename T>
 Pattern* Pattern_Switch<T>::Generate_Pattern(Matrix<T>* mtx,
                                              Mat* Amat,
@@ -58,7 +58,8 @@ Pattern* Pattern_Switch<T>::Generate_Pattern(Matrix<T>* mtx,
         break;
 
     case 1: // Diagonal pattern
-        P = P->Diagonal_Pattern(mtx->n, mtx->my_nbr_cols, mtx->my_start_idx, mtx->world);
+        P = P->Diagonal_Pattern(mtx->n, mtx->my_nbr_cols, mtx->my_start_idx,
+mtx->world);
         break;
 
     case 2: // Pattern filled where A has nnz
@@ -77,3 +78,4 @@ Pattern* Pattern_Switch<T>::Generate_Pattern(Matrix<T>* mtx,
 
     return P;
 }
+*/

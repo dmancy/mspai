@@ -314,8 +314,6 @@ double* Spai_Sub<double>::Compute_Numerator_Block(double* residual,
     sum_block = M->mk_Hat_buffer;
     memset(sum_block, 0, bj * bk * sizeof(double));
 
-    double temp = 0.0;
-
     //    for (int i = 0; i < col_len; i++)
     //      std::cout << "Index pour Aj : "<< col_idcs_buf[i] << std::endl;
 
@@ -335,15 +333,10 @@ double* Spai_Sub<double>::Compute_Numerator_Block(double* residual,
         }
 
         if ((idx_A == idx_r) && (ia < col_len) && (ir < I->len)) {
-            //   std::cout << "Meme indice : " << idx_A << std::endl;
-            // std::cout << "idx_r = "<< idx_r << " idx_A = " << idx_A <<
-            // std::endl;
-
             // Add the block participation sum_block in (Aj^T)*r
             dgemm(TRANSA, TRANSB, &bj, &bk, &(M->block_sizes[idx_A]), &alpha,
                   &(aj[start_aj]), &(M->block_sizes[idx_A]), &(residual[start_r]),
                   &(M->block_sizes[idx_A]), &beta, sum_block, &bj);
-            temp += aj[ia] * residual[ir];
             ir++;
             start_r += bk * M->block_sizes[idx_r];
         }
@@ -357,7 +350,6 @@ double* Spai_Sub<double>::Compute_Numerator_Block(double* residual,
                 // std::endl;
             }
             if ((idx_A == idx_r) && (ia < col_len) && (ir < I->len)) {
-                //     std::cout << "Meme indice : " << idx_A << std::endl;
                 // std::cout << "idx_r = "<< idx_r << " idx_A = " << idx_A <<
                 // std::endl;
 
@@ -365,7 +357,6 @@ double* Spai_Sub<double>::Compute_Numerator_Block(double* residual,
                 dgemm(TRANSA, TRANSB, &bj, &bk, &(M->block_sizes[idx_A]), &alpha,
                       &(aj[start_aj]), &(M->block_sizes[idx_A]), &(residual[start_r]),
                       &(M->block_sizes[idx_A]), &beta, sum_block, &bj);
-                temp += aj[ia] * residual[ir];
                 ir++;
                 start_r += bk * M->block_sizes[idx_r];
             }

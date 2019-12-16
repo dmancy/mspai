@@ -805,6 +805,26 @@ T* Spai_Sub<T>::Get_Solution_Vals(T* mk_Hat_in, Index_Set* J)
 }
 
 template <class T>
+void Spai_Sub<T>::Get_Solution_Vals_Scalar(T* mk_Hat_in,
+                                           T* mk_Hat_out,
+                                           const Matrix<T>* M,
+                                           const Matrix<T>* A,
+                                           const int col,
+                                           Index_Set* J,
+                                           int Islen)
+{
+    int len = J->slen * A->block_sizes[col], index = 0;
+
+    memset(mk_Hat_out, 0, len * sizeof(T));
+
+    for (int jcol = 0; jcol < A->block_sizes[col]; jcol++) {
+        for (int j = 0; j < J->slen; j++) {
+            mk_Hat_out[index++] = mk_Hat_in[jcol * Islen + j];
+        }
+    }
+}
+
+template <class T>
 void Spai_Sub<T>::Get_Solution_Vals_Block(T* mk_Hat_in,
                                           T* mk_Hat_out,
                                           const Matrix<T>* M,

@@ -224,6 +224,7 @@ public:
 
     RHO_IDX* rhos;
     double* num_block;
+    T* residual_vals_b_buffer;
 
     int send;
 

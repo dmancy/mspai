@@ -740,6 +740,8 @@ int PC_MSPAI::bspai(void)
     P = o_ps.Generate_Pattern(A_REAL, A, P_Memory, pattern_param, use_schur,
                               prob_Ce_N, use_prob, nb_pwrs, verbose);
 
+    // P->Print_Pattern_Data();
+
     // Does user wants any upper pattern?
     if (u_pattern_param < 3) {
         // Reading upper pattern file and generating

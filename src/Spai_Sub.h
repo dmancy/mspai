@@ -260,6 +260,13 @@ public:
                                  Index_Set* J,
                                  int Islen);
 
+    void Get_Solution_Vals_Scalar(T* mk_Hat_in,
+                                  T* mk_Hat_out,
+                                  const Matrix<T>* M,
+                                  const Matrix<T>* A,
+                                  const int col,
+                                  Index_Set* J,
+                                  int Islen);
     //////////////////////////////////////////////////////////////
     ///     \brief Converting a matrix from double vector format
     ///            to coince sparse format using the coinse sparse

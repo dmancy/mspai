@@ -47,14 +47,17 @@ int main(int argc, char** args)
 
     PetscViewer fd;
     PetscPrintf(PETSC_COMM_WORLD, "Loading matrix...\n");
-    //     ierr =
-    // PetscViewerBinaryOpen(PETSC_COMM_WORLD,"orsirr_2_T.dat",FILE_MODE_READ,&fd);CHKERRQ(ierr);
-    ierr = PetscViewerBinaryOpen(
-        PETSC_COMM_WORLD, "shyy161.mtx_76480x76480_329762nnz.gz", FILE_MODE_READ, &fd);
+    //      ierr =
+    //  PetscViewerBinaryOpen(PETSC_COMM_WORLD,"orsirr_2_T.dat",FILE_MODE_READ,&fd);CHKERRQ(ierr);
+    // ierr = PetscViewerBinaryOpen(
+    //    PETSC_COMM_WORLD, "shyy161.mtx_76480x76480_329762nnz.gz",
+    //    FILE_MODE_READ, &fd);
     // CHKERRQ(ierr);
 
-    // ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD, "visc-naca_lhs.pmat",
-    //                           FILE_MODE_READ, &fd);
+    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD, "visc-naca_lhs.pmat",
+                                 FILE_MODE_READ, &fd);
+    // ierr = PetscViewerBinaryOpen(
+    //    PETSC_COMM_WORLD, "matrix.dat", FILE_MODE_READ, &fd);
     CHKERRQ(ierr);
     ierr = MatCreate(PETSC_COMM_WORLD, &A);
     CHKERRQ(ierr);
@@ -70,46 +73,44 @@ int main(int argc, char** args)
     MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);
   */
     /* Read new vector in binary format */
-    /*
-        ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD, "visc-naca_b.pmat",
-       FILE_MODE_READ, &fd);
-        CHKERRQ(ierr);
-        ierr = VecCreate(PETSC_COMM_WORLD, &b);
-        CHKERRQ(ierr);
-        ierr = VecLoad(b, fd);
-        CHKERRQ(ierr);
-        ierr = PetscViewerDestroy(&fd);
-        CHKERRQ(ierr);
-        ierr = VecDuplicate(b, &solution);
-        CHKERRQ(ierr);
 
-        ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD, "visc-naca_x.pmat",
-       FILE_MODE_READ, &fd);
-        CHKERRQ(ierr);
-        ierr = VecCreate(PETSC_COMM_WORLD, &u);
-        CHKERRQ(ierr);
-        ierr = VecLoad(u, fd);
-        CHKERRQ(ierr);
-        ierr = PetscViewerDestroy(&fd);
-        CHKERRQ(ierr);
-        VecGetSize(solution, &n);
-        */
+    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD, "visc-naca_b.pmat", FILE_MODE_READ, &fd);
+    CHKERRQ(ierr);
+    ierr = VecCreate(PETSC_COMM_WORLD, &b);
+    CHKERRQ(ierr);
+    ierr = VecLoad(b, fd);
+    CHKERRQ(ierr);
+    ierr = PetscViewerDestroy(&fd);
+    CHKERRQ(ierr);
+    ierr = VecDuplicate(b, &solution);
+    CHKERRQ(ierr);
 
-    ierr = MatGetSize(A, &n, NULL);
-    // ierr = MatTranspose(A,MAT_INPLACE_MATRIX,&A);
+    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD, "visc-naca_x.pmat", FILE_MODE_READ, &fd);
+    CHKERRQ(ierr);
     ierr = VecCreate(PETSC_COMM_WORLD, &u);
     CHKERRQ(ierr);
-    ierr = VecSetSizes(u, PETSC_DECIDE, n);
+    ierr = VecLoad(u, fd);
     CHKERRQ(ierr);
-    ierr = VecSetFromOptions(u);
+    ierr = PetscViewerDestroy(&fd);
     CHKERRQ(ierr);
-    ierr = VecDuplicate(u, &b);
-    CHKERRQ(ierr);
-    ierr = VecDuplicate(u, &solution);
-    CHKERRQ(ierr);
-    ierr = VecSet(b, one);
-    CHKERRQ(ierr);
+    VecGetSize(solution, &n);
+    /*
 
+ierr = MatGetSize(A, &n, NULL);
+// ierr = MatTranspose(A,MAT_INPLACE_MATRIX,&A);
+ierr = VecCreate(PETSC_COMM_WORLD, &u);
+CHKERRQ(ierr);
+ierr = VecSetSizes(u, PETSC_DECIDE, n);
+CHKERRQ(ierr);
+ierr = VecSetFromOptions(u);
+CHKERRQ(ierr);
+ierr = VecDuplicate(u, &b);
+CHKERRQ(ierr);
+ierr = VecDuplicate(u, &solution);
+CHKERRQ(ierr);
+ierr = VecSet(b, one);
+CHKERRQ(ierr);
+*/
     /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                   Create the linear solver and set various options
        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -246,7 +247,7 @@ int main(int argc, char** args)
        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
     T = MPI_Wtime();
 
-    for (int iteration = 0; iteration < 2; iteration++) {
+    for (int iteration = 0; iteration < 1; iteration++) {
         ierr = KSPSolve(ksp, b, solution);
         CHKERRQ(ierr);
         // MatTranspose(A,MAT_INPLACE_MATRIX,&A);

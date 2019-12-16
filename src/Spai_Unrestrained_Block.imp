@@ -57,7 +57,7 @@ void Spai_Unrestrained_Block<T>::SPAI_Column(Matrix<T>* A,
     double adjust_epsilon;
 
     T *A_Hat = NULL, *mk_Hat = NULL, *bk_Hat = NULL, *residual_vals = NULL;
-    T* residual_vals_b = M->mk_Hat_buffer;
+    T* residual_vals_b = M->residual_vals_b_buffer;
 
     Spai_Sub<T> o_sub;
 
@@ -113,7 +113,7 @@ void Spai_Unrestrained_Block<T>::SPAI_Column(Matrix<T>* A,
 
         memcpy(M->mk_Hat_buffer, mk_Hat, I->slen * A->block_sizes[col] * sizeof(T));
 
-        o_sub.Get_Solution_Vals_Block(M->mk_Hat_buffer, mk_Hat, M, A, col, J, I->slen);
+        o_sub.Get_Solution_Vals_Scalar(M->mk_Hat_buffer, mk_Hat, M, A, col, J, I->slen);
 
         residual_norm = o_sub.Residual_Norm_Block(
             M, A_Hat, m, A->block_sizes[col], n, mk_Hat, bk_Hat, residual_vals);
@@ -135,6 +135,7 @@ void Spai_Unrestrained_Block<T>::SPAI_Column(Matrix<T>* A,
             break;
     }
     // Inserting solution row into preconditioner
+    o_sub.Get_Solution_Vals_Block(M->mk_Hat_buffer, mk_Hat, M, A, col, J, I->slen);
     o_comm.Insert_Row_Solution_Block(A, M, B, P, UP, col, mk_Hat, J);
 }
 

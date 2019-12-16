@@ -55,7 +55,7 @@ Index_Set::~Index_Set()
         delete[] idcs;
 }
 
-void Index_Set::Print_Index_Set(char* str)
+void Index_Set::Print_Index_Set(char* str) const
 {
     std::cout << "\t" << str << " ";
     for (int i = 0; i < len; i++)

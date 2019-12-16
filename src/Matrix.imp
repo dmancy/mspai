@@ -76,6 +76,7 @@ Matrix<T>::Matrix(MPI_Comm world_m)
     J_tilde_set = NULL;
     Aj_sq_inv_buffer = NULL;
     start_indices_Aj_sq_inv = NULL;
+    residual_vals_b_buffer = NULL;
 }
 
 template <class T>
@@ -133,14 +134,14 @@ Matrix<T>::~Matrix()
         delete[] rhos;
     if (U_Nls)
         delete U_Nls;
-
     if (Aj_sq_inv_buffer)
         delete[] Aj_sq_inv_buffer;
     if (start_indices_Aj_sq_inv)
         delete[] start_indices_Aj_sq_inv;
-
     if (J_tilde_set)
         delete J_tilde_set;
+    if (residual_vals_b_buffer)
+        delete[] residual_vals_b_buffer;
 }
 
 template <class T>
@@ -209,6 +210,7 @@ void Matrix<T>::Init_Preconditioner(Matrix<T>*& M, const int m_dim, const int n_
     M->mk_Hat = new T[max_arg * max_block_size * max_block_size];
     M->mk_Hat_buffer = new T[max_arg * max_block_size * max_block_size];
     M->bk_Hat = new T[max_arg * max_block_size * max_block_size];
+    M->residual_vals_b_buffer = new T[max_arg * max_block_size * max_block_size];
 
     M->Tau_ptr = new double[TAU_SIZE * max_arg];
     M->Work_qr_ptr = new double[QR_SIZE * max_arg];
