@@ -51,9 +51,9 @@ void Com_Server<double>::Initialize_nbr_done_prefetching(void)
 }
 
 template <>
-void Com_Server<double>::Handle_Get_Col(const Matrix<double>* A, const int requestor)
+void Com_Server<double>::Handle_Get_Col(Matrix<double>* A, const int requestor)
 {
-    // A->send++;
+    A->send++;
 
     int idx, len_col = 0, slen_col = 0, len_row = 0, next = 0, index = 0,
              *col_idcs_buf = NULL, *row_idcs_buf = NULL;
@@ -238,6 +238,8 @@ void Com_Server<double>::Get_Remote_Col(Matrix<double>* A,
     Timer o_timer;
 
     world = A->world;
+
+    A->receive++;
 
     // Element is not in cache - get it from a remote pe
     if (MPI_Irecv(static_cast<void*>(A->remote_col_idcs_buf), A->max_nnz,

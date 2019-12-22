@@ -753,7 +753,7 @@ private:
     ///     \param A Local matrix chunk
     ///     \param requestor Pe which invoked this handle
     /////////////////////////////////////////////////////
-    void Handle_Get_Col(const Matrix<double>* A, const int requestor);
+    void Handle_Get_Col(Matrix<double>* A, const int requestor);
 
     /////////////////////////////////////////////////////
     ///     \brief Remote pe gets request to send column

@@ -227,6 +227,7 @@ public:
     T* residual_vals_b_buffer;
 
     int send;
+    int receive;
 
     // Aj_sq_inverses buffers
     double* Aj_sq_inv_buffer;

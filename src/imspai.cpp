@@ -801,6 +801,11 @@ int PC_MSPAI::bspai(void)
         P_Memory = M_REAL->To_Pattern(M_REAL, use_prob);
     }
 
+
+    // A supp plus tard
+
+    std::cout << "Processor : " << A_REAL->my_id << " , Send : " << A_REAL->send << " , Receive : " << A_REAL->receive << std::endl;
+
     Matrix<double>* Scalar = NULL;
 
     if (A_REAL->block_size != 1) {
