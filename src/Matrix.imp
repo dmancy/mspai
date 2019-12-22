@@ -867,6 +867,122 @@ PetscErrorCode Matrix<T>::Convert_Mat_to_Matrix(MPI_Comm comm, Matrix<double>** 
 }
 
 template <class T>
+PetscErrorCode Matrix<T>::Convert_Mat_to_Matrix_Update(MPI_Comm comm, Matrix<double>** B, Mat* A)
+{
+    Matrix<double>* M = *B;
+    Mat AT;
+    int i, j;
+    int pe, start_indx;
+    int A_buf_size = 0;
+    int row_buf_size = 0;
+    PetscErrorCode ierr;
+    const int* cols = NULL;
+    const double* vals = NULL;
+    int n, m, mnl, nnl, nz, gap = 0, max = 0;
+    PetscMPIInt size, rank;
+    PetscBool isSymmetric;
+    Compressed_Lines<double>* lines = NULL;
+    MatInfo matinfo;
+
+    PetscFunctionBegin;
+    ierr = MPI_Comm_size(comm, &size);
+    CHKERRQ(ierr);
+    ierr = MPI_Comm_rank(comm, &rank);
+    CHKERRQ(ierr);
+    ierr = MatGetSize(*A, &m, &n);
+    CHKERRQ(ierr);
+    ierr = MatGetLocalSize(*A, &mnl, &nnl);
+    CHKERRQ(ierr);
+
+
+
+
+    // Use the transpose to get the row non zero structure
+    ierr = MatTranspose(*A, MAT_INITIAL_MATRIX, &AT);
+    CHKERRQ(ierr);
+
+
+    /*number of nonzeros in each row */
+    ierr = MatGetInfo(*A, MAT_GLOBAL_SUM, &matinfo);
+    CHKERRQ(ierr);
+
+    /*Number of nonzeros in each local rows*/
+    ierr = MatGetInfo(*A, MAT_LOCAL, &matinfo);
+    CHKERRQ(ierr);
+    A_buf_size = matinfo.nz_used;
+    M->my_nnz = matinfo.nz_used;
+
+    /*Set colums and fill compressed lines*/
+    lines = M->c_lines;
+
+    for (int col = 0; col < M->my_nbr_cols; col++) {
+        ierr = MatGetRow(*A, col + M->my_start_idx, &nz, &cols, &vals);
+        lines->len_cols[col] = nz;
+        lines->len_scalar[col] = nz;
+        lines->A[col] = &(lines->col_buf[gap]);
+        lines->col_idcs[col] = &(lines->col_idcs_buf[gap]);
+        gap += nz;
+
+        for (j = 0; j < nz; j++) {
+            lines->col_idcs[col][j] = cols[j];
+            lines->A[col][j] = abs_complex(vals[j]);
+        }
+
+        ierr = MatRestoreRow(*A, col + M->my_start_idx, &nz, &cols, &vals);
+    }
+
+    /* Set up the row structure */
+
+    if (!isSymmetric) {
+        ierr = MatGetInfo(AT, MAT_LOCAL, &matinfo);
+        CHKERRQ(ierr);
+
+        for (int row = 0, gap = 0; row < M->my_nbr_cols; row++) {
+            ierr = MatGetRow(AT, row + M->my_start_idx, &nz, &cols, NULL);
+            lines->len_rows[row] = nz;
+            lines->row_idcs[row] = &(lines->row_idcs_buf[gap]);
+            gap += nz;
+
+            for (int r = 0; r < nz; r++)
+                lines->row_idcs[row][r] = cols[r];
+
+            ierr = MatRestoreRow(AT, row + M->my_start_idx, &nz, &cols, NULL);
+        }
+    }
+
+    /* Get length of all cols*/
+    M->len_all_cols = new int[M->n];
+    MPI_Barrier(comm);
+    MPI_Allgatherv(static_cast<void*>(lines->len_cols), M->my_nbr_cols, MPI_INT,
+                   static_cast<void*>(M->len_all_cols), M->all_nbr_cols,
+                   M->start_indices, MPI_INT, comm);
+
+    /* Get length of all rows */
+    M->len_all_rows = new int[M->n];
+    MPI_Barrier(comm);
+    MPI_Allgatherv(static_cast<void*>(lines->len_rows), M->my_nbr_cols, MPI_INT,
+                   static_cast<void*>(M->len_all_rows), M->all_nbr_cols,
+                   M->start_indices, MPI_INT, comm);
+
+    /* Get the maximum number of nnz per column/row of all pes */
+    for (i = 0; i < M->my_nbr_cols; i++)
+        if (lines->len_rows[i] > max)
+            max = lines->len_rows[i];
+
+    for (i = 0; i < M->my_nbr_cols; i++)
+        if (lines->len_cols[i] > max)
+            max = lines->len_cols[i];
+
+    MPI_Barrier(comm);
+    MPI_Allreduce(&max, &M->max_nnz, 1, MPI_INT, MPI_MAX, comm);
+
+    lines = NULL;
+
+
+    ierr = MatDestroy(&AT);
+    return ierr;
+}
+template <class T>
 PetscErrorCode Matrix<T>::Convert_Mat_to_Matrix(
     MPI_Comm comm, Matrix<double>** B, Mat* A, Vec** prob_Ce, int prob_Ce_N)
 {
@@ -1138,6 +1254,28 @@ Matrix<T>* Matrix<T>::Convert_Block_Matrix(Matrix<T>* A, int bs, int upper_bs_li
     }
 
     return (B);
+}
+
+template <class T>
+void Matrix<T>::Convert_Block_Matrix_Update(Matrix<T>* A, Matrix<T>* B, int verbose)
+{
+    Timer o_timer;
+
+    // Start time measurement
+    if (verbose) {
+        o_timer = Timer();
+        o_timer.Start_Timer();
+    }
+
+    
+    A->Convert_To_Block_Matrix_Update(B);
+
+    if (verbose) {
+        // Stop time measurement
+        o_timer.Stop_Timer();
+        o_timer.Report_Time(B->world);
+    }
+
 }
 
 template <class T>
@@ -1674,6 +1812,168 @@ Matrix<T>* Matrix<T>::Convert_To_Block_Matrix(int nblocks_local, int* block_size
 
     return B;
 }
+
+template <class T>
+void Matrix<T>::Convert_To_Block_Matrix_Update(Matrix<T>* B)
+{
+    int max_n = 0, count = 0, total_height = 0;
+    int *block_bitvec = NULL, *block_start = NULL;
+    double* fullcol;
+    double infinity = 1.0E300;
+    int* block_index_map = NULL;
+    int max_block_columns;
+    int idx, jcol, k, m1, n1, next;
+    int jb, ib, start, start_idx;
+
+    int col_buf_size, row_buf_size, A_buf_size;
+    int max_col_buf_size, max_row_buf_size, max_A_buf_size;
+
+    int *ptr_adr = NULL, *rptr_adr = NULL;
+    double* A_adr = NULL;
+    int next_ptr, next_rptr, next_Aptr;
+    int num;
+    int B_my_nnz = 0;
+
+
+
+    fullcol = new double[n * max_n];
+    block_bitvec = new int[B->n];
+
+    for (int k = 0; k < (n)*max_n; k++)
+        fullcol[k] = infinity;
+
+    for (ib = 0; ib < B->n; ib++)
+        block_bitvec[ib] = 0;
+
+    /* Mapping of scalar indices to block indices */
+    /// block_index_map[ col in A] = col in B
+
+    int idx_map = 0;
+
+    block_index_map = new int[n];
+    for (ib = 0; ib < B->n; ib++) {
+        for (int k = 0; k < B->block_sizes[ib]; k++)
+            block_index_map[idx_map + k] = ib;
+
+        idx_map += B->block_sizes[ib];
+    }
+
+    /* block_start[ib] gives the index of the first scalar column in block i */
+    block_start = new int[B->n];
+    block_start[0] = 0;
+    for (ib = 1; ib < B->n; ib++)
+        block_start[ib] = block_start[ib - 1] + B->block_sizes[ib - 1];
+
+    /* Fill the columns */
+    // Sweep sub block columns in a processor
+    //
+    jb = 0;
+    for (int startj = 0; jb < max_block_columns; jb++) {
+        if (jb < B->my_nbr_cols) {
+            n1 = B->block_sizes[B->my_start_idx + jb];
+            count = 0;        /* number of blocks in this block column jb */
+            total_height = 0; /*number of entries in column block jb (only
+                                 height not width)*/
+
+            /*fill fullcol*/
+            // Sweep scalar columns in block column jb
+            for (int j = startj; j < startj + n1; j++) {
+                // Seep elements of A in scalar column j
+                for (int k = 0; k < c_lines->len_cols[j]; k++) {
+                    idx = c_lines->col_idcs[j][k]; // row index of element
+                                                   // [j][k]
+                    jcol = j - startj;
+                    fullcol[jcol * n + idx] = c_lines->A[j][k];
+
+                    ib = block_index_map[idx];
+                    if (!block_bitvec[ib]) {
+                        block_bitvec[ib] = 1;
+                        count++;
+                        total_height += B->block_sizes[ib];
+                    }
+                }
+            }
+
+            B_my_nnz += total_height;
+
+            /*Sweep Block rows of B in block column jb*/
+            k = 0;
+            next = 0;
+            for (ib = 0; ib < B->n; ib++) {
+                /*if this block row is present */
+                if (block_bitvec[ib]) {
+                    B->c_lines->col_idcs[jb][k] = ib;
+                    start = block_start[ib];
+                    m1 = B->block_sizes[ib];
+                    for (int col = 0; col < n1; col++) {
+                        for (int row = 0; row < m1; row++) {
+                            if (fullcol[start + col * n + row] == infinity) {
+                                fullcol[start + col * n + row] = 0.0;
+                            }
+                            B->c_lines->A[jb][next + col * m1 + row] =
+                                fullcol[start + col * n + row];
+                            fullcol[start + col * n + row] = infinity;
+                        }
+                    }
+
+                    block_bitvec[ib] = 0;
+
+                    k++;
+                    next += m1 * n1;
+                }
+            }
+        }
+        startj += B->block_sizes[B->my_start_idx + jb];
+    }
+
+    /*i and j : column and row indices in the scalar matrix
+     * ib and jb : column and row indices in the block matrix*/
+
+    if (c_lines->row_idcs_buf) {
+        jb = 0;
+        for (int startj = 0; jb < max_block_columns; startj += B->block_sizes[B->my_start_idx + jb], jb++) {
+            if (jb < B->my_nbr_cols) {
+                n1 = B->block_sizes[B->my_start_idx + jb];
+                count = 0; /*number of blocks in this block row jb*/
+
+                /*fill fullcol (actually fullrow)*/
+                for (int j = startj; j < startj + n1; j++) {
+                    for (k = 0; k < c_lines->len_rows[j]; k++) {
+                        idx = c_lines->row_idcs[j][k];
+                        jcol = j - startj;
+                        fullcol[jcol * n + idx] = 1.0;
+
+                        ib = block_index_map[idx];
+                        if (!block_bitvec[ib]) {
+                            block_bitvec[ib] = 1;
+                            count++;
+                            block_start[ib] = idx;
+                        }
+                    }
+                }
+
+                /*Install block row structure*/
+                k = 0;
+                next = 0;
+                for (ib = 0; ib < B->n; ib++) {
+                    if (block_bitvec[ib]) {
+                        B->c_lines->row_idcs[jb][k] = ib;
+                        k++;
+                        next += m1 * n1;
+                        block_bitvec[ib] = 0;
+                    }
+                }
+            }
+        }
+    }
+
+    delete[] fullcol;
+    delete[] block_bitvec;
+    delete[] block_start;
+    delete[] block_index_map;
+
+}
+
 
 template <class T>
 Matrix<T>* Matrix<T>::Convert_To_Block_Matrix_2(int nblocks_local, int* block_sizes_local)
@@ -2445,7 +2745,7 @@ Matrix<T>* Matrix<T>::Scalar_Matrix(const int& verbose)
         new Compressed_Lines<double>(S->my_nbr_cols, 0); // No row structure
 
     // Reuse of array pe of the old Matrix
-    block_start = pe;
+    block_start = new int[n];
     block_start[0] = 0;
     for (int ib = 1; ib < n; ib++)
         block_start[ib] = block_start[ib - 1] + block_sizes[ib - 1];
@@ -2508,8 +2808,82 @@ Matrix<T>* Matrix<T>::Scalar_Matrix(const int& verbose)
         o_timer.Report_Time(world);
     }
 
+    delete [] block_start;
     return S;
 }
+
+template <typename T>
+void Matrix<T>::Scalar_Matrix_Update(Matrix<T>* S, const int& verbose)
+{
+    int mnl = 0, m1, n1;
+    int start_index, len, height;
+    int* block_start = NULL;
+    int jstart, istart, jb_global, ib_global, i_global, next, j_val;
+    double val;
+    double* Aval = NULL;
+    Timer o_timer;
+
+    if (verbose) {
+        // Start time measurement
+        o_timer = Timer();
+        o_timer.Start_Timer();
+    }
+
+    block_start = new int[n];
+    block_start[0] = 0;
+    for (int ib = 1; ib < n; ib++)
+        block_start[ib] = block_start[ib - 1] + block_sizes[ib - 1];
+
+    /* i and j are local row and column indices into the scalar matrix.
+     *      ib and jb are local row and column indices into the block matrix */
+    jb_global = my_start_idx;
+    jstart = 0;
+
+    for (int jb = 0; jb < my_nbr_cols; jb++) {
+        n1 = block_sizes[jb_global];
+        /* Determine the scalar length of block column jb */
+        height = 0;
+
+
+        /* Install values associaed with block column jb */
+
+        next = 0;
+        for (int kb = 0; kb < c_lines->len_cols[jb]; kb++) {
+            Aval = &(c_lines->A[jb][next]);
+            ib_global = c_lines->col_idcs[jb][kb];
+            istart = block_start[ib_global];
+            m1 = block_sizes[ib_global];
+
+            for (int col = 0; col < n1; col++) {
+                for (int row = 0; row < m1; row++) {
+                    val = Aval[col * m1 + row];
+                    if (val != 0.0) {
+                        j_val = jstart + col;
+                        i_global = istart + row;
+                        len = S->c_lines->len_cols[j_val]++;
+                        S->c_lines->col_idcs[j_val][len] = i_global;
+                        S->c_lines->A[j_val][len] = val;
+                    }
+                }
+            }
+            next += m1 * n1;
+        }
+        jstart += block_sizes[jb_global];
+        jb_global++;
+    }
+
+    /* Max nnz calculation */
+    S->max_nnz = Count_NNZ();
+
+    if (verbose) {
+        // Stop time measurement
+        o_timer.Stop_Timer();
+        o_timer.Report_Time(world);
+    }
+
+    delete [] block_start;
+}
+
 
 template <typename T>
 void Matrix<T>::Precomputation_Column_Square_Inverses(Matrix<T>* A)

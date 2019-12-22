@@ -64,8 +64,10 @@ public:
     //	private:
 
     Matrix<double>* A_REAL;
+    Matrix<double>* A_REAL_BLOCK;
     Matrix<double>* B_REAL;
     Matrix<double>* M_REAL;
+    Matrix<double>* M_REAL_SCALAR;
     Matrix<double>* C_REAL;
 
     Mat* A;  /* the PETSc matrix system */

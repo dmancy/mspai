@@ -5,8 +5,10 @@ std::stringstream out_str;
 PC_MSPAI::PC_MSPAI()
 {
     A_REAL = NULL;
+    A_REAL_BLOCK = NULL;
     B_REAL = NULL;
     M_REAL = NULL;
+    M_REAL_SCALAR = NULL;
     C_REAL = NULL;
     A = NULL;
     PM = NULL;
@@ -634,6 +636,7 @@ PetscErrorCode PC_MSPAI::PCSetBSParam(const int& bs)
 
 int PC_MSPAI::bspai(void)
 {
+    Matrix<double> *A_sys = NULL;
     count++;
 
     if (count >= 2) {
@@ -662,10 +665,14 @@ int PC_MSPAI::bspai(void)
     }
 
     if (use_prob) {
-        A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, A, prob_Ce, prob_Ce_N);
+          A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, A, prob_Ce, prob_Ce_N);
     }
     else {
-        A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, A);
+        if (count < 2)
+            A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, A);
+        else
+            A_REAL->Convert_Mat_to_Matrix_Update(PETSC_COMM_WORLD, &A_REAL, A);
+        A_sys = A_REAL;
     }
 
     bool symmetric_system = A_REAL->symmetric;
@@ -706,11 +713,13 @@ int PC_MSPAI::bspai(void)
     if (block_size != 1) {
         Matrix<double>* B;
 
-        B = Matrix<double>::Convert_Block_Matrix(A_REAL, block_size, 1000000, verbose);
-
-        delete A_REAL;
-        A_REAL = B;
-        A_REAL->Write_Matrix_To_File("B.mtx");
+        if (count < 2)
+            A_REAL_BLOCK = Matrix<double>::Convert_Block_Matrix(A_REAL, block_size, 1000000, verbose);
+        else
+            Matrix<double>::Convert_Block_Matrix_Update(A_REAL, A_REAL_BLOCK, verbose);
+            
+        //A_REAL_BLOCK->Write_Matrix_To_File("B.mtx");
+        A_sys = A_REAL_BLOCK;
     }
 
     Read_mm_Matrix o_rm;
@@ -718,15 +727,16 @@ int PC_MSPAI::bspai(void)
         // Reading data input and generating the
         // target matrix B
 
-        if (my_id == 0) {
+        if ((my_id == 0) && (count < 2)) {
             std::cout << "\n\t* Reading target matrix data...\t\t ";
             std::cout.flush();
         }
     }
 
-    o_rm.Read_Target_File(A_REAL, target_file, probing_Be_file, use_prob,
-                          use_schur, B_REAL, prob_Ce_N, target_param, rho_param,
-                          verbose, MPI_COMM_WORLD);
+    if (count < 2)
+        o_rm.Read_Target_File(A_sys, target_file, probing_Be_file, use_prob,
+                              use_schur, B_REAL, prob_Ce_N, target_param, rho_param,
+                              verbose, MPI_COMM_WORLD);
 
     // Reading pattern file and generating pattern
     if (verbose) {
@@ -737,7 +747,7 @@ int PC_MSPAI::bspai(void)
     }
 
     Pattern_Switch<double> o_ps;
-    P = o_ps.Generate_Pattern(A_REAL, A, P_Memory, pattern_param, use_schur,
+    P = o_ps.Generate_Pattern(A_sys, A, P_Memory, pattern_param, use_schur,
                               prob_Ce_N, use_prob, nb_pwrs, verbose);
 
     // P->Print_Pattern_Data();
@@ -753,7 +763,7 @@ int PC_MSPAI::bspai(void)
             }
         }
 
-        UP = o_ps.Generate_Pattern(A_REAL, A, P_Memory, u_pattern_param, use_schur,
+        UP = o_ps.Generate_Pattern(A_sys, A, P_Memory, u_pattern_param, use_schur,
                                    prob_Ce_N, use_prob, nb_pwrs, verbose);
     }
 
@@ -776,9 +786,9 @@ int PC_MSPAI::bspai(void)
         }
     }
 
-    alg_ptr->SPAI_Algorithm(A_REAL, M_REAL, B_REAL, P, UP, epsilon_param,
+    alg_ptr->SPAI_Algorithm(A_sys, M_REAL, B_REAL, P, UP, epsilon_param,
                             maxnew_param, max_impr_steps, hash_param, use_mean,
-                            pre_k_param, pre_max_param, verbose);
+                            pre_k_param, pre_max_param, count, verbose);
 
     if (write_param) {
         if (verbose) {
@@ -791,7 +801,7 @@ int PC_MSPAI::bspai(void)
         }
 
         M_REAL->Write_Matrix_To_File("precond.mtx");
-        A_REAL->Write_Matrix_To_File("A.mtx");
+        A_sys->Write_Matrix_To_File("A.mtx");
     }
 
     // Update of P_Memory
@@ -803,7 +813,7 @@ int PC_MSPAI::bspai(void)
 
     Matrix<double>* Scalar = NULL;
 
-    if (A_REAL->block_size != 1) {
+    if (A_REAL_BLOCK->block_size != 1) {
         if (verbose) {
             // Write preconditioner to file
             if (my_id == 0) {
@@ -811,14 +821,18 @@ int PC_MSPAI::bspai(void)
                 std::cout.flush();
             }
 
-            Scalar = M_REAL->Scalar_Matrix(verbose);
-            delete M_REAL;
+            if (count < 2)
+                M_REAL_SCALAR = M_REAL->Scalar_Matrix(verbose);
+            else
+                M_REAL->Scalar_Matrix_Update(M_REAL_SCALAR, verbose);
 
-            M_REAL = Scalar;
+            Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL_SCALAR, &(PM));
+
         }
     }
+    else
+        Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL, &(PM));
 
-    Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL, &(PM));
     // printf("id : %d, columns got : %d\n", A_REAL->my_id, A_REAL->send);
 
     if (!(left_prec))
@@ -850,20 +864,24 @@ int PC_MSPAI::bspai(void)
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-
+/*
     if (A_REAL) {
         delete A_REAL;
         A_REAL = NULL;
     }
+    */
+    /*
     if (B_REAL) {
         delete B_REAL;
         B_REAL = NULL;
     }
-
+*/
+    /*
     if (M_REAL) {
         delete M_REAL;
         M_REAL = NULL;
     }
+*/
 
     if (C_REAL) {
         delete C_REAL;
@@ -879,6 +897,10 @@ PC_MSPAI::~PC_MSPAI()
         delete A_REAL;
         A_REAL = NULL;
     }
+    if (A_REAL_BLOCK) {
+        delete A_REAL_BLOCK;
+        A_REAL_BLOCK = NULL;
+    }
     if (B_REAL) {
         delete B_REAL;
         B_REAL = NULL;
@@ -887,6 +909,11 @@ PC_MSPAI::~PC_MSPAI()
     if (M_REAL) {
         delete M_REAL;
         M_REAL = NULL;
+    }
+
+    if (M_REAL_SCALAR) {
+        delete M_REAL_SCALAR;
+        M_REAL_SCALAR = NULL;
     }
 
     if (C_REAL) {
