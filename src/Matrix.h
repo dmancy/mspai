@@ -401,6 +401,8 @@ public:
     static PetscErrorCode Convert_Mat_to_Matrix(
         MPI_Comm comm, Matrix<double>** B, Mat* A, Vec** prob_Ce, int prob_Ce_N);
 
+    static PetscErrorCode Convert_Mat_to_Matrix_Update(MPI_Comm comm, Matrix<double>** B, Mat* A);
+
     /////////////////////////////////////////////////////////
     ///     \brief Convert a Scalar Marix into a Block Matrix
     ///
@@ -412,6 +414,7 @@ public:
     /////////////////////////////////////////////////////////
 
     static Matrix<T>* Convert_Block_Matrix(Matrix<T>* A, int bs, int upper_bs_limit, int verbose);
+    static void Convert_Block_Matrix_Update(Matrix<T>* A, Matrix<T>* B, int verbose);
 
     static Matrix<T>* Constant_Block_Matrix(Matrix<T>* A, int bs);
 
@@ -424,8 +427,10 @@ public:
     static int Check_Next_Run(Matrix<T>* A, int i, int i_next, int bs);
 
     Matrix<T>* Convert_To_Block_Matrix(int nblocks_local, int* block_sizes_local);
+    void Convert_To_Block_Matrix_Update(Matrix<T>* B);
     Matrix<T>* Convert_To_Block_Matrix_2(int nblocks_local, int* block_sizes_local);
     Matrix<T>* Scalar_Matrix(const int& verbose);
+    void Scalar_Matrix_Update(Matrix<T>* S, const int& verbose);
 
     void Precomputation_Column_Square_Inverses(Matrix<T>* A);
 
@@ -454,3 +459,4 @@ public:
 #include "Matrix.imp"
 
 #endif
+
