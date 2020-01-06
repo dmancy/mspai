@@ -401,7 +401,9 @@ public:
     static PetscErrorCode Convert_Mat_to_Matrix(
         MPI_Comm comm, Matrix<double>** B, Mat* A, Vec** prob_Ce, int prob_Ce_N);
 
-    static PetscErrorCode Convert_Mat_to_Matrix_Update(MPI_Comm comm, Matrix<double>** B, Mat* A);
+    static PetscErrorCode Convert_Mat_to_Matrix_Update(MPI_Comm comm,
+                                                       Matrix<double>** B,
+                                                       Mat* A);
 
     /////////////////////////////////////////////////////////
     ///     \brief Convert a Scalar Marix into a Block Matrix
@@ -459,4 +461,3 @@ public:
 #include "Matrix.imp"
 
 #endif
-

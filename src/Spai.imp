@@ -74,8 +74,8 @@ void Spai<T>::SPAI_Algorithm(Matrix<T>* A,
         o_timer.Start_Timer();
     }
 
-    if (count < 2)
-        A->Init_Preconditioner(M, A->n, P->len);
+    // if (count < 2)
+    A->Init_Preconditioner(M, A->n, P->len);
 
     if (verbose) {
         // Stop time measurement

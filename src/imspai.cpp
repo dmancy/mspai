@@ -636,10 +636,12 @@ PetscErrorCode PC_MSPAI::PCSetBSParam(const int& bs)
 
 int PC_MSPAI::bspai(void)
 {
-    Matrix<double> *A_sys = NULL;
+    Matrix<double>* A_sys = NULL;
     count++;
 
     if (count >= 2) {
+        MatDestroy(PM);
+        P_Memory->next_col = 0;
         pattern_param = 0;
         maxnew_param = 0;
         max_impr_steps = 0;
@@ -665,13 +667,15 @@ int PC_MSPAI::bspai(void)
     }
 
     if (use_prob) {
-          A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, A, prob_Ce, prob_Ce_N);
+        A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, A, prob_Ce, prob_Ce_N);
     }
     else {
-        if (count < 2)
+        if (count < 2) {
             A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, A);
-        else
+        }
+        else {
             A_REAL->Convert_Mat_to_Matrix_Update(PETSC_COMM_WORLD, &A_REAL, A);
+        }
         A_sys = A_REAL;
     }
 
@@ -714,11 +718,11 @@ int PC_MSPAI::bspai(void)
         Matrix<double>* B;
 
         if (count < 2)
-            A_REAL_BLOCK = Matrix<double>::Convert_Block_Matrix(A_REAL, block_size, 1000000, verbose);
+            A_REAL_BLOCK = Matrix<double>::Convert_Block_Matrix(
+                A_REAL, block_size, 1000000, verbose);
         else
             Matrix<double>::Convert_Block_Matrix_Update(A_REAL, A_REAL_BLOCK, verbose);
-            
-        //A_REAL_BLOCK->Write_Matrix_To_File("B.mtx");
+
         A_sys = A_REAL_BLOCK;
     }
 
@@ -735,8 +739,8 @@ int PC_MSPAI::bspai(void)
 
     if (count < 2)
         o_rm.Read_Target_File(A_sys, target_file, probing_Be_file, use_prob,
-                              use_schur, B_REAL, prob_Ce_N, target_param, rho_param,
-                              verbose, MPI_COMM_WORLD);
+                              use_schur, B_REAL, prob_Ce_N, target_param,
+                              rho_param, verbose, MPI_COMM_WORLD);
 
     // Reading pattern file and generating pattern
     if (verbose) {
@@ -749,8 +753,6 @@ int PC_MSPAI::bspai(void)
     Pattern_Switch<double> o_ps;
     P = o_ps.Generate_Pattern(A_sys, A, P_Memory, pattern_param, use_schur,
                               prob_Ce_N, use_prob, nb_pwrs, verbose);
-
-    // P->Print_Pattern_Data();
 
     // Does user wants any upper pattern?
     if (u_pattern_param < 3) {
@@ -811,14 +813,14 @@ int PC_MSPAI::bspai(void)
         P_Memory = M_REAL->To_Pattern(M_REAL, use_prob);
     }
 
-
     // A supp plus tard
 
-    std::cout << "Processor : " << A_REAL->my_id << " , Send : " << A_REAL->send << " , Receive : " << A_REAL->receive << std::endl;
+    std::cout << "Processor : " << A_REAL->my_id << " , Send : " << A_REAL->send
+              << " , Receive : " << A_REAL->receive << std::endl;
 
     Matrix<double>* Scalar = NULL;
 
-    if (A_REAL_BLOCK->block_size != 1) {
+    if (A_sys->block_size != 1) {
         if (verbose) {
             // Write preconditioner to file
             if (my_id == 0) {
@@ -829,16 +831,13 @@ int PC_MSPAI::bspai(void)
             if (count < 2)
                 M_REAL_SCALAR = M_REAL->Scalar_Matrix(verbose);
             else
-                M_REAL->Scalar_Matrix_Update(M_REAL_SCALAR, verbose);
+                M_REAL_SCALAR = M_REAL->Scalar_Matrix(verbose);
 
             Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL_SCALAR, &(PM));
-
         }
     }
     else
         Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL, &(PM));
-
-    // printf("id : %d, columns got : %d\n", A_REAL->my_id, A_REAL->send);
 
     if (!(left_prec))
         ierr = MatTranspose(*(PM), MAT_INITIAL_MATRIX, PM);
@@ -869,30 +868,32 @@ int PC_MSPAI::bspai(void)
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-/*
-    if (A_REAL) {
-        delete A_REAL;
-        A_REAL = NULL;
-    }
+    /*
+        if (A_REAL) {
+            delete A_REAL;
+            A_REAL = NULL;
+        }
+
+        if (B_REAL) {
+            delete B_REAL;
+            B_REAL = NULL;
+        }
+
     */
-    /*
-    if (B_REAL) {
-        delete B_REAL;
-        B_REAL = NULL;
-    }
-*/
-    /*
     if (M_REAL) {
         delete M_REAL;
         M_REAL = NULL;
     }
-*/
 
     if (C_REAL) {
         delete C_REAL;
         C_REAL = NULL;
     }
 
+    if (M_REAL_SCALAR) {
+        delete M_REAL_SCALAR;
+        M_REAL_SCALAR = NULL;
+    }
     return ierr;
 }
 

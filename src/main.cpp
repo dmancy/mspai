@@ -240,14 +240,14 @@ CHKERRQ(ierr);
 
     ierr = KSPMonitorSet(ksp, MyKSPMonitor, NULL, 0);
 
-    ierr = KSPSetTolerances(ksp, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT, 5);
+    ierr = KSPSetTolerances(ksp, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT, 10);
 
     /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                         Solve the linear system
        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
     T = MPI_Wtime();
 
-    for (int iteration = 0; iteration < 1; iteration++) {
+    for (int iteration = 0; iteration < 3; iteration++) {
         ierr = KSPSolve(ksp, b, solution);
         CHKERRQ(ierr);
         // MatTranspose(A,MAT_INPLACE_MATRIX,&A);

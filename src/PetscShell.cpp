@@ -72,6 +72,6 @@ PetscErrorCode SampleShellPCDestroy(PC pc)
 
     ierr = PCShellGetContext(pc, (void**)&mspai);
     CHKERRQ(ierr);
-    // delete mspai;
+    delete mspai;
     return 0;
 }
