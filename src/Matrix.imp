@@ -76,9 +76,6 @@ Matrix<T>::Matrix(MPI_Comm world_m)
     Aj_sq_inv_buffer = NULL;
     start_indices_Aj_sq_inv = NULL;
     residual_vals_b_buffer = NULL;
-
-    send = 0;
-    receive = 0;
 }
 
 template <class T>

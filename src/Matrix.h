@@ -226,9 +226,6 @@ public:
     double* num_block;
     T* residual_vals_b_buffer;
 
-    int send;
-    int receive;
-
     // Aj_sq_inverses buffers
     double* Aj_sq_inv_buffer;
     int* start_indices_Aj_sq_inv;

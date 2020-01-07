@@ -839,15 +839,6 @@ int PC_MSPAI::bspai(void)
         P_Memory = M_REAL->To_Pattern(M_REAL, use_prob);
     }
 
-    // A supp plus tard
-
-    // std::cout << "Processor : " << A_sys->my_id << " , Send : " <<
-    // A_sys->send
-    //          << " , Receive : " << A_sys->receive << std::endl;
-    MPI_Barrier(MPI_COMM_WORLD);
-    std::cout << A_sys->send << "," << std::endl;
-    MPI_Barrier(MPI_COMM_WORLD);
-
     Matrix<double>* Scalar = NULL;
 
     if (A_sys->block_size != 1) {
@@ -895,18 +886,7 @@ int PC_MSPAI::bspai(void)
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-    /*
-        if (A_REAL) {
-            delete A_REAL;
-            A_REAL = NULL;
-        }
 
-        if (B_REAL) {
-            delete B_REAL;
-            B_REAL = NULL;
-        }
-
-    */
     if (M_REAL) {
         delete M_REAL;
         M_REAL = NULL;

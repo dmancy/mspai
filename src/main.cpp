@@ -248,7 +248,6 @@ CHKERRQ(ierr);
     T = MPI_Wtime();
 
     for (int iteration = 0; iteration < 1; iteration++) {
-        std::cout << "####### Iteration : " << iteration << " #######" << std::endl;
         ierr = KSPSolve(ksp, b, solution);
         CHKERRQ(ierr);
         // MatTranspose(A,MAT_INPLACE_MATRIX,&A);
