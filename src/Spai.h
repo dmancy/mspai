@@ -98,7 +98,6 @@ public:
                         const int use_mean,
                         int pre_k_param,
                         const int pre_max_param,
-                        const int& count,
                         const int& verbose);
 
 protected:

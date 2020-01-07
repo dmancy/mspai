@@ -22,7 +22,7 @@ PC_MSPAI::PC_MSPAI()
                     cache_param, qr, fillgrade_param, use_mean, pre_k_param,
                     pre_max_param, probing_Ce_file, probing_Be_file, use_prob,
                     target_file, target_param, rho_param, use_schur, nb_pwrs,
-                    left_prec, verbose, block_size, output_file);
+                    left_prec, verbose, block_size, restart, output_file);
     count = 0;
 }
 
@@ -31,7 +31,6 @@ PetscErrorCode PC_MSPAI::PCSetUp_MSPAI(Mat Amat)
     PetscErrorCode ierr;
 
     PetscFunctionBegin;
-    //   A_REAL->Write_Matrix_To_File("A.mtx");
 
     A = &Amat;
 
@@ -59,7 +58,7 @@ PetscErrorCode PC_MSPAI::PCSetFromOptions_SPAI(PetscOptionItems* PetscOptionsObj
 {
     PetscErrorCode ierr;
     int mn, ns, wp, hs, cs, qr_2, pk, pm, pp, up, us, um, tp, pr,
-        nb_p = -1, ch = 0, lp, bs, vb;
+        nb_p = -1, ch = 0, lp, bs, vb, rs;
     double ep, fg, rho;
 
     int hash_sizes[7];
@@ -209,6 +208,12 @@ PetscErrorCode PC_MSPAI::PCSetFromOptions_SPAI(PetscOptionItems* PetscOptionsObj
     ierr = PetscOptionsGetInt(NULL, NULL, "-bs", &bs, &flg);
     if (flg) {
         ierr = PCSetBSParam(bs);
+        CHKERRQ(ierr);
+    }
+
+    ierr = PetscOptionsGetInt(NULL, NULL, "-rs", &rs, &flg);
+    if (flg) {
+        ierr = PCSetRSParam(rs);
         CHKERRQ(ierr);
     }
 
@@ -634,18 +639,39 @@ PetscErrorCode PC_MSPAI::PCSetBSParam(const int& bs)
     return 0;
 }
 
+PetscErrorCode PC_MSPAI::PCSetRSParam(const int& rs)
+{
+    restart = rs;
+    return 0;
+}
+
 int PC_MSPAI::bspai(void)
 {
     Matrix<double>* A_sys = NULL;
-    count++;
 
-    if (count >= 2) {
+    // Parameters of the local SPAI computation
+    int pattern_param_local, maxnew_param_local, max_impr_steps_local;
+
+    // Delete the former SPAI matrix
+    if (count > 0)
         MatDestroy(PM);
+
+    if (!(count % restart == 0)) {
+        // Renitialize the pattern next column
         P_Memory->next_col = 0;
-        pattern_param = 0;
-        maxnew_param = 0;
-        max_impr_steps = 0;
+
+        // Local parameters
+        pattern_param_local = 0;
+        maxnew_param_local = 0;
+        max_impr_steps_local = 0;
     }
+    else {
+        // Recomputation of the SPAI pattern
+        pattern_param_local = pattern_param;
+        maxnew_param_local = maxnew_param;
+        max_impr_steps_local = max_impr_steps;
+    }
+
     // SPAI controling parameters
 
     int my_id, num_procs;
@@ -670,7 +696,7 @@ int PC_MSPAI::bspai(void)
         A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, A, prob_Ce, prob_Ce_N);
     }
     else {
-        if (count < 2) {
+        if (count < 1) {
             A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, A);
         }
         else {
@@ -717,7 +743,7 @@ int PC_MSPAI::bspai(void)
     if (block_size != 1) {
         Matrix<double>* B;
 
-        if (count < 2)
+        if (count < 1)
             A_REAL_BLOCK = Matrix<double>::Convert_Block_Matrix(
                 A_REAL, block_size, 1000000, verbose);
         else
@@ -731,13 +757,13 @@ int PC_MSPAI::bspai(void)
         // Reading data input and generating the
         // target matrix B
 
-        if ((my_id == 0) && (count < 2)) {
+        if ((my_id == 0) && (count < 1)) {
             std::cout << "\n\t* Reading target matrix data...\t\t ";
             std::cout.flush();
         }
     }
 
-    if (count < 2)
+    if (count < 1)
         o_rm.Read_Target_File(A_sys, target_file, probing_Be_file, use_prob,
                               use_schur, B_REAL, prob_Ce_N, target_param,
                               rho_param, verbose, MPI_COMM_WORLD);
@@ -751,8 +777,8 @@ int PC_MSPAI::bspai(void)
     }
 
     Pattern_Switch<double> o_ps;
-    P = o_ps.Generate_Pattern(A_sys, A, P_Memory, pattern_param, use_schur,
-                              prob_Ce_N, use_prob, nb_pwrs, verbose);
+    P = o_ps.Generate_Pattern(A_sys, A, P_Memory, pattern_param_local,
+                              use_schur, prob_Ce_N, use_prob, nb_pwrs, verbose);
 
     // Does user wants any upper pattern?
     if (u_pattern_param < 3) {
@@ -789,8 +815,8 @@ int PC_MSPAI::bspai(void)
     }
 
     alg_ptr->SPAI_Algorithm(A_sys, M_REAL, B_REAL, P, UP, epsilon_param,
-                            maxnew_param, max_impr_steps, hash_param, use_mean,
-                            pre_k_param, pre_max_param, count, verbose);
+                            maxnew_param_local, max_impr_steps_local, hash_param,
+                            use_mean, pre_k_param, pre_max_param, verbose);
 
     if (write_param) {
         if (verbose) {
@@ -807,7 +833,7 @@ int PC_MSPAI::bspai(void)
     }
 
     // Update of P_Memory
-    if (!(count >= 2)) {
+    if (count % restart == 0) {
         if (!P_Memory)
             delete P_Memory;
         P_Memory = M_REAL->To_Pattern(M_REAL, use_prob);
@@ -815,8 +841,12 @@ int PC_MSPAI::bspai(void)
 
     // A supp plus tard
 
-    std::cout << "Processor : " << A_REAL->my_id << " , Send : " << A_REAL->send
-              << " , Receive : " << A_REAL->receive << std::endl;
+    // std::cout << "Processor : " << A_sys->my_id << " , Send : " <<
+    // A_sys->send
+    //          << " , Receive : " << A_sys->receive << std::endl;
+    MPI_Barrier(MPI_COMM_WORLD);
+    std::cout << A_sys->send << "," << std::endl;
+    MPI_Barrier(MPI_COMM_WORLD);
 
     Matrix<double>* Scalar = NULL;
 
@@ -828,10 +858,7 @@ int PC_MSPAI::bspai(void)
                 std::cout.flush();
             }
 
-            if (count < 2)
-                M_REAL_SCALAR = M_REAL->Scalar_Matrix(verbose);
-            else
-                M_REAL_SCALAR = M_REAL->Scalar_Matrix(verbose);
+            M_REAL_SCALAR = M_REAL->Scalar_Matrix(verbose);
 
             Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL_SCALAR, &(PM));
         }
@@ -894,6 +921,8 @@ int PC_MSPAI::bspai(void)
         delete M_REAL_SCALAR;
         M_REAL_SCALAR = NULL;
     }
+
+    count++;
     return ierr;
 }
 

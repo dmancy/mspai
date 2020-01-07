@@ -184,6 +184,7 @@ void Command_Line::Parameters(int argc,
                               bool& lp,
                               int& vb,
                               int& bs,
+                              int& rs,
                               char*& output_file)
 {
     std::stringstream out_str;
@@ -208,6 +209,7 @@ void Command_Line::Parameters(int argc,
     lp = 1;
     bs = 1;
     vb = 0;
+    rs = 1;
     output_file = (char*)"precond.mtx";
 
     pp = 1;

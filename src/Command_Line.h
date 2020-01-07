@@ -167,6 +167,7 @@ public:
                     bool& lp,
                     int& vb,
                     int& bs,
+                    int& rs,
                     char*& output_file);
 
     //////////////////////////////////////////////////////

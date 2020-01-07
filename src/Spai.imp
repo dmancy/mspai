@@ -43,7 +43,6 @@ void Spai<T>::SPAI_Algorithm(Matrix<T>* A,
                              const int use_mean,
                              int pre_k_param,
                              const int pre_max_param,
-                             const int& count,
                              const int& verbose)
 {
     int col, bitvec_size;
@@ -74,7 +73,6 @@ void Spai<T>::SPAI_Algorithm(Matrix<T>* A,
         o_timer.Start_Timer();
     }
 
-    // if (count < 2)
     A->Init_Preconditioner(M, A->n, P->len);
 
     if (verbose) {
