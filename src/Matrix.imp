@@ -1821,6 +1821,8 @@ void Matrix<T>::Convert_To_Block_Matrix_Update(Matrix<T>* B)
     int num;
     int B_my_nnz = 0;
 
+    max_n = B->max_block_size;
+
     fullcol = new double[n * max_n];
     block_bitvec = new int[B->n];
 
@@ -1829,6 +1831,12 @@ void Matrix<T>::Convert_To_Block_Matrix_Update(Matrix<T>* B)
 
     for (ib = 0; ib < B->n; ib++)
         block_bitvec[ib] = 0;
+
+    max_block_columns = 0;
+    for (int i_pe = 0; i_pe < B->num_procs; i_pe++) {
+        if (max_block_columns < B->all_nbr_cols[i_pe])
+            max_block_columns = B->all_nbr_cols[i_pe];
+    }
 
     /* Mapping of scalar indices to block indices */
     /// block_index_map[ col in A] = col in B

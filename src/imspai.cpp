@@ -733,8 +733,6 @@ int PC_MSPAI::bspai(void)
                 std::cout << "\t\t     preserve symmetry.";
                 std::cout << std::endl;
             }
-            if (block_size != 1)
-                std::cout << "\n\t* Conversion scalar to block...\t\t ";
             std::cout.flush();
         }
     }
@@ -743,11 +741,21 @@ int PC_MSPAI::bspai(void)
     if (block_size != 1) {
         Matrix<double>* B;
 
-        if (count < 1)
+        if (count < 1) {
+            if (my_id == 0) {
+                std::cout << "\n\t* Conversion scalar to block...\t\t ";
+                std::cout.flush();
+            }
             A_REAL_BLOCK = Matrix<double>::Convert_Block_Matrix(
                 A_REAL, block_size, 1000000, verbose);
-        else
+        }
+        else {
+            if (my_id == 0) {
+                std::cout << "\n\t* Update scalar to block...\t\t ";
+                std::cout.flush();
+            }
             Matrix<double>::Convert_Block_Matrix_Update(A_REAL, A_REAL_BLOCK, verbose);
+        }
 
         A_sys = A_REAL_BLOCK;
     }
