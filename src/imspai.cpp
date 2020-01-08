@@ -856,11 +856,11 @@ int PC_MSPAI::bspai(void)
                 std::cout << "\n\t* Conversion block to scalar...\t ";
                 std::cout.flush();
             }
-
-            M_REAL_SCALAR = M_REAL->Scalar_Matrix(verbose);
-
-            Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL_SCALAR, &(PM));
         }
+
+        M_REAL_SCALAR = M_REAL->Scalar_Matrix(verbose);
+
+        Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL_SCALAR, &(PM));
     }
     else
         Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL, &(PM));
