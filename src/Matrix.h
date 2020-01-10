@@ -332,7 +332,12 @@ public:
     ///     \param m_dim Number of rows of preconditioner
     ///     \param n_dim Number of columns of preconditioner
     /////////////////////////////////////////////////////////
-    void Init_Preconditioner(Matrix<T>*& M, const int m_dim, const int n_dim);
+    void Init_Preconditioner(Matrix<T>*& M,
+                             const int m_dim,
+                             const int n_dim,
+                             const Pattern* P,
+                             const int& maxnew,
+                             const int& nbsteps);
 
     /////////////////////////////////////////////////////////
     ///     \brief  Generating Pattern out of Matrix

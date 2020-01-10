@@ -158,12 +158,20 @@ int Matrix<T>::Count_NNZ()
 }
 
 template <class T>
-void Matrix<T>::Init_Preconditioner(Matrix<T>*& M, const int m_dim, const int n_dim)
+void Matrix<T>::Init_Preconditioner(Matrix<T>*& M,
+                                    const int m_dim,
+                                    const int n_dim,
+                                    const Pattern* P,
+                                    const int& maxnew,
+                                    const int& nbsteps)
 {
     int max_arg = 10000; // Length of buffers
-    int TAU_SIZE = 10000;
-    int QR_SIZE = 10000;
-    int QT_SIZE = 10000;
+    int TAU_SIZE = 1000;
+    int QR_SIZE = 1000;
+    int QT_SIZE = 1000;
+
+    double* col_buf = NULL;
+    int* col_idcs_buf = NULL;
 
     M = new Matrix<T>(world);
 
@@ -186,6 +194,16 @@ void Matrix<T>::Init_Preconditioner(Matrix<T>*& M, const int m_dim, const int n_
     M->my_start_idx = M->start_indices[M->my_id];
     M->c_lines = new Compressed_Lines<T>(M->my_nbr_cols, symmetric);
 
+    // Allocate compressed lines
+
+    for (int idx = 0; idx < M->my_nbr_cols; idx++) {
+        col_buf = new T[max_block_size * max_block_size * (P->max_nnz + maxnew * nbsteps)];
+        col_idcs_buf =
+            new int[max_block_size * max_block_size * (P->max_nnz + maxnew * nbsteps)];
+        M->c_lines->A[idx] = col_buf;
+        M->c_lines->col_idcs[idx] = col_idcs_buf;
+    }
+
     // Filling pe array
     M->pe = new int[n];
     for (int i = 0; i < n; i++)
@@ -195,6 +213,7 @@ void Matrix<T>::Init_Preconditioner(Matrix<T>*& M, const int m_dim, const int n_
     M->block_size = block_size;
     M->max_block_size = max_block_size;
     M->block_sizes = new int[n];
+    M->max_nnz = max_nnz;
 
     memcpy(M->block_sizes, block_sizes, n * sizeof(int));
 
@@ -431,7 +450,7 @@ void Matrix<T>::Sparsify(Matrix<T>** Mat_pattern, const int* List_lfill)
 
     if (initialization) {
         /*Initialization of the sparsified matrix */
-        Init_Preconditioner(C, this->n, this->n);
+        Init_Preconditioner(C, this->n, this->n, NULL, 0, 0);
 
         C->c_lines->col_idcs_buf = new int[my_nnz];
         C->c_lines->col_buf = new T[my_nnz];
@@ -1775,7 +1794,7 @@ Matrix<T>* Matrix<T>::Convert_To_Block_Matrix(int nblocks_local, int* block_size
     B->my_nnz = B_my_nnz;
 
     MPI_Barrier(B->world);
-    MPI_Allreduce(&max, &B->max_nnz, 1, MPI_INT, MPI_MAX, B->world);
+    MPI_Allreduce(&max, &(B->max_nnz), 1, MPI_INT, MPI_MAX, B->world);
 
     B->max_nnz *= B->max_block_size * B->max_block_size;
 
@@ -2759,8 +2778,10 @@ Matrix<T>* Matrix<T>::Scalar_Matrix(const int& verbose)
 
         /* Allocate Scalar columns in S associated with block column jb */
         for (int j = jstart; j < jstart + block_sizes[jb_global]; j++) {
-            S->c_lines->col_idcs[j] = new int[height];
-            S->c_lines->A[j] = new double[height];
+            S->c_lines->col_idcs[j] = new int[max_nnz * max_block_size * max_block_size];
+            S->c_lines->A[j] = new double[max_nnz * max_block_size * max_block_size];
+            // S->c_lines->col_idcs[j] = new int[height];
+            // S->c_lines->A[j] = new double[height];
             S->c_lines->len_cols[j] = 0;
         }
 
@@ -2825,6 +2846,10 @@ void Matrix<T>::Scalar_Matrix_Update(Matrix<T>* S, const int& verbose)
     block_start[0] = 0;
     for (int ib = 1; ib < n; ib++)
         block_start[ib] = block_start[ib - 1] + block_sizes[ib - 1];
+
+    /* Reinitialize the length of all the scalar columns */
+    for (int i = 0; i < S->my_nbr_cols; i++)
+        S->c_lines->len_cols[i] = 0;
 
     /* i and j are local row and column indices into the scalar matrix.
      *      ib and jb are local row and column indices into the block matrix */

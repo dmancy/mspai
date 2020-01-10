@@ -43,6 +43,7 @@ void Spai<T>::SPAI_Algorithm(Matrix<T>* A,
                              const int use_mean,
                              int pre_k_param,
                              const int pre_max_param,
+                             const int& count,
                              const int& verbose)
 {
     int col, bitvec_size;
@@ -73,7 +74,8 @@ void Spai<T>::SPAI_Algorithm(Matrix<T>* A,
         o_timer.Start_Timer();
     }
 
-    A->Init_Preconditioner(M, A->n, P->len);
+    if (count == 0)
+        A->Init_Preconditioner(M, A->n, P->len, P, maxnew_param, max_impr_steps);
 
     if (verbose) {
         // Stop time measurement

@@ -439,11 +439,14 @@ void Com_Server<double>::Insert_Row_Solution(Matrix<double>* A,
         nnz = J->len;
         M->c_lines->len_cols[idx] = nnz;
 
-        col_buf = new double[nnz];
-        col_idcs_buf = new int[nnz];
+        // col_buf = new double[nnz];
+        // col_idcs_buf = new int[nnz];
 
-        M->c_lines->A[idx] = col_buf;
-        M->c_lines->col_idcs[idx] = col_idcs_buf;
+        // M->c_lines->A[idx] = col_buf;
+        // M->c_lines->col_idcs[idx] = col_idcs_buf;
+
+        col_buf = M->c_lines->A[idx];
+        col_idcs_buf = M->c_lines->col_idcs[idx];
 
         for (int i = 0; i < nnz; i++) {
             col_idcs_buf[i] = J->idcs[i];
@@ -529,11 +532,14 @@ void Com_Server<double>::Insert_Row_Solution_Block(Matrix<double>* A,
 
         scalar_nnz = J->slen * A->block_sizes[col];
 
-        col_buf = new double[scalar_nnz];
-        col_idcs_buf = new int[nnz];
+        // col_buf = new double[scalar_nnz];
+        // col_idcs_buf = new int[nnz];
 
-        M->c_lines->A[idx] = col_buf;
-        M->c_lines->col_idcs[idx] = col_idcs_buf;
+        // M->c_lines->A[idx] = col_buf;
+        // M->c_lines->col_idcs[idx] = col_idcs_buf;
+
+        col_buf = M->c_lines->A[idx];
+        col_idcs_buf = M->c_lines->col_idcs[idx];
 
         idx = 0;
 

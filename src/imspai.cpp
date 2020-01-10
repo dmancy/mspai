@@ -698,6 +698,7 @@ int PC_MSPAI::bspai(void)
     else {
         if (count < 1) {
             A_REAL->Convert_Mat_to_Matrix(PETSC_COMM_WORLD, &A_REAL, A);
+            A_REAL->Write_Matrix_To_File("A_REAL.mtx");
         }
         else {
             A_REAL->Convert_Mat_to_Matrix_Update(PETSC_COMM_WORLD, &A_REAL, A);
@@ -748,6 +749,7 @@ int PC_MSPAI::bspai(void)
             }
             A_REAL_BLOCK = Matrix<double>::Convert_Block_Matrix(
                 A_REAL, block_size, 1000000, verbose);
+            A_REAL_BLOCK->Write_Matrix_To_File("A_REAL_BLOCK.mtx");
         }
         else {
             if (my_id == 0) {
@@ -824,7 +826,7 @@ int PC_MSPAI::bspai(void)
 
     alg_ptr->SPAI_Algorithm(A_sys, M_REAL, B_REAL, P, UP, epsilon_param,
                             maxnew_param_local, max_impr_steps_local, hash_param,
-                            use_mean, pre_k_param, pre_max_param, verbose);
+                            use_mean, pre_k_param, pre_max_param, count, verbose);
 
     if (write_param) {
         if (verbose) {
@@ -858,7 +860,10 @@ int PC_MSPAI::bspai(void)
             }
         }
 
-        M_REAL_SCALAR = M_REAL->Scalar_Matrix(verbose);
+        if (count == 0)
+            M_REAL_SCALAR = M_REAL->Scalar_Matrix(verbose);
+        else
+            M_REAL->Scalar_Matrix_Update(M_REAL_SCALAR, verbose);
 
         Matrix<double>::Convert_Matrix_to_Mat(A_REAL->world, M_REAL_SCALAR, &(PM));
     }
@@ -894,22 +899,22 @@ int PC_MSPAI::bspai(void)
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-
-    if (M_REAL) {
-        delete M_REAL;
-        M_REAL = NULL;
-    }
-
+    /*
+        if (M_REAL) {
+            delete M_REAL;
+            M_REAL = NULL;
+        }
+    */
     if (C_REAL) {
         delete C_REAL;
         C_REAL = NULL;
     }
-
-    if (M_REAL_SCALAR) {
-        delete M_REAL_SCALAR;
-        M_REAL_SCALAR = NULL;
-    }
-
+    /*
+        if (M_REAL_SCALAR) {
+            delete M_REAL_SCALAR;
+            M_REAL_SCALAR = NULL;
+        }
+    */
     count++;
     return ierr;
 }
