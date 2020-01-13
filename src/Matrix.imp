@@ -76,6 +76,9 @@ Matrix<T>::Matrix(MPI_Comm world_m)
     Aj_sq_inv_buffer = NULL;
     start_indices_Aj_sq_inv = NULL;
     residual_vals_b_buffer = NULL;
+    reset_vec = NULL;
+    bitvec = NULL;
+    ht_M = NULL;
 }
 
 template <class T>
@@ -141,6 +144,12 @@ Matrix<T>::~Matrix()
         delete J_tilde_set;
     if (residual_vals_b_buffer)
         delete[] residual_vals_b_buffer;
+    if (reset_vec)
+        delete[] reset_vec;
+    if (bitvec)
+        delete[] bitvec;
+    if (ht_M)
+        delete ht_M;
 }
 
 template <class T>
@@ -169,6 +178,7 @@ void Matrix<T>::Init_Preconditioner(Matrix<T>*& M,
     int TAU_SIZE = 1000;
     int QR_SIZE = 1000;
     int QT_SIZE = 1000;
+    int bitvec_size = 0;
 
     double* col_buf = NULL;
     int* col_idcs_buf = NULL;
@@ -241,6 +251,17 @@ void Matrix<T>::Init_Preconditioner(Matrix<T>*& M,
     M->rhos = new RHO_IDX[max_arg];
     M->U_Nls = new Index_Set(max_arg);
     M->J_tilde_set = new Index_Set(max_arg);
+
+    bitvec_size = m <= n ? n : m;
+
+    // reset vector must have A->m or A->n positions
+    // because more positions can be stored at once.
+    M->reset_vec = new unsigned int[bitvec_size];
+
+    // Only these positions are needed within
+    // the bitvec. 5: log n bits of int
+    bitvec_size = (bitvec_size >> 5) + 1;
+    M->bitvec = new unsigned int[bitvec_size];
 }
 
 template <class T>

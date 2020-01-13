@@ -300,7 +300,7 @@ void Com_Server<double>::Get_Remote_Col(Matrix<double>* A,
     } while (!vals_flag);
 
     col_len = A->len_all_cols[col_idx];
-    ;
+
     col_idcs_buf = A->remote_col_idcs_buf;
     col_buf = A->remote_col_buf;
 
@@ -325,12 +325,14 @@ void Com_Server<double>::Get_Remote_Col(Matrix<double>* A,
     {
         // row structure ?
         if (A->c_lines->row_idcs) {
-            ht->Insert_Block(col_idx, A->remote_col_idcs_buf, A->remote_row_idcs_buf,
-                             A->remote_col_buf, col_len, scalar_len, row_len);
+            ht->Insert_Block(col_idx, A->remote_col_idcs_buf,
+                             A->remote_row_idcs_buf, A->remote_col_buf, A->max_nnz,
+                             A->max_nnz, col_len, scalar_len, row_len);
         }
         else {
-            ht->Insert_Block(col_idx, A->remote_col_idcs_buf, A->remote_col_idcs_buf,
-                             A->remote_col_buf, col_len, scalar_len, col_len);
+            ht->Insert_Block(col_idx, A->remote_col_idcs_buf,
+                             A->remote_col_idcs_buf, A->remote_col_buf, A->max_nnz,
+                             A->max_nnz, col_len, scalar_len, col_len);
         }
     }
 }
@@ -896,11 +898,11 @@ void Com_Server<COMPLEX>::Get_Remote_Col(Matrix<COMPLEX>* A,
         // row structure ?
         if (A->c_lines->row_idcs) {
             ht->Insert(col_idx, A->remote_col_idcs_buf, A->remote_row_idcs_buf,
-                       A->remote_col_buf, col_len, row_len);
+                       A->remote_col_buf, A->max_nnz, col_len, row_len);
         }
         else {
             ht->Insert(col_idx, A->remote_col_idcs_buf, A->remote_col_idcs_buf,
-                       A->remote_col_buf, col_len, col_len);
+                       A->remote_col_buf, A->max_nnz, col_len, col_len);
         }
     }
 }

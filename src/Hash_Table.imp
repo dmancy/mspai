@@ -45,11 +45,15 @@ Hash_Table<T>::Hash_Table(int size_m)
     col_idcs_table = new int*[size];
     row_idcs_table = new int*[size];
     vals_table = new T*[size];
+    allocation = new bool[size];
+    set_current = new bool[size];
 
     for (int i = 0; i < size; i++) {
         col_idcs_table[i] = NULL;
         row_idcs_table[i] = NULL;
         vals_table[i] = NULL;
+        allocation[i] = false;
+        set_current[i] = false;
     }
 }
 
@@ -67,12 +71,16 @@ Hash_Table<T>::~Hash_Table()
     delete[] col_idcs_table;
     delete[] row_idcs_table;
     delete[] vals_table;
+    delete[] allocation;
+    delete[] set_current;
 }
 
 template <class T>
-bool Hash_Table<T>::Insert(int idx, int* col_idcs_buf, int* row_idcs_buf, T* col_buf, int col_len, int row_len)
+bool Hash_Table<T>::Insert(
+    int idx, int* col_idcs_buf, int* row_idcs_buf, T* col_buf, int max_buf, int col_len, int row_len)
 {
     int loc, *htcol_idcs_buf, *htrow_idcs_buf;
+    bool alloc = false;
 
     T* htvals_buf;
 
@@ -83,36 +91,61 @@ bool Hash_Table<T>::Insert(int idx, int* col_idcs_buf, int* row_idcs_buf, T* col
         return false;
 
     loc = Find_Location(idx);
+    alloc = allocation[loc];
 
     // The column/row indices arrays have 2 elements more
     // because into first position the index of the
     // column/row is inserted, and on second position
     // there is the length of the column/row
 
-    htcol_idcs_buf = new int[col_len + 2];
+    if (!(alloc))
+        htcol_idcs_buf = new int[max_buf + 2];
+    else
+        htcol_idcs_buf = col_idcs_table[loc];
+
     htcol_idcs_buf[0] = idx;
     htcol_idcs_buf[1] = col_len;
     memcpy(&htcol_idcs_buf[2], col_idcs_buf, col_len * sizeof(int));
     col_idcs_table[loc] = htcol_idcs_buf;
 
-    htrow_idcs_buf = new int[row_len + 2];
+    if (!(alloc))
+        htrow_idcs_buf = new int[max_buf + 2];
+    else
+        htrow_idcs_buf = row_idcs_table[loc];
+
     htrow_idcs_buf[0] = idx;
     htrow_idcs_buf[1] = row_len;
     memcpy(&htrow_idcs_buf[2], row_idcs_buf, row_len * sizeof(int));
     row_idcs_table[loc] = htrow_idcs_buf;
 
-    htvals_buf = new T[col_len];
+    if (!(alloc))
+        htvals_buf = new T[max_buf];
+    else
+        htvals_buf = vals_table[loc];
+
     memcpy(htvals_buf, col_buf, col_len * sizeof(T));
     vals_table[loc] = htvals_buf;
+
+    allocation[loc] = true;
+    set_current[loc] = true;
 
     return true;
 }
 
 template <class T>
-bool Hash_Table<T>::Insert_Block(
-    int idx, int* col_idcs_buf, int* row_idcs_buf, T* col_buf, int col_len, int scalar_len, int row_len)
+bool Hash_Table<T>::Insert_Block(int idx,
+                                 int* col_idcs_buf,
+                                 int* row_idcs_buf,
+                                 T* col_buf,
+                                 int max_buf_idcs,
+                                 int max_buf_vals,
+                                 int col_len,
+                                 int scalar_len,
+                                 int row_len)
 {
     int loc, *htcol_idcs_buf, *htrow_idcs_buf;
+
+    bool alloc = false;
 
     T* htvals_buf;
 
@@ -124,26 +157,43 @@ bool Hash_Table<T>::Insert_Block(
 
     loc = Find_Location(idx);
 
+    alloc = allocation[loc];
+
     // The column/row indices arrays have 2 elements more
     // because into first position the index of the
     // column/row is inserted, and on second position
     // there is the length of the column/row
 
-    htcol_idcs_buf = new int[col_len + 2];
+    if (!(alloc))
+        htcol_idcs_buf = new int[max_buf_idcs + 2];
+    else
+        htcol_idcs_buf = col_idcs_table[loc];
+
     htcol_idcs_buf[0] = idx;
     htcol_idcs_buf[1] = col_len;
     memcpy(&htcol_idcs_buf[2], col_idcs_buf, col_len * sizeof(int));
     col_idcs_table[loc] = htcol_idcs_buf;
 
-    htrow_idcs_buf = new int[row_len + 2];
+    if (!(alloc))
+        htrow_idcs_buf = new int[max_buf_idcs + 2];
+    else
+        htrow_idcs_buf = row_idcs_table[loc];
+
     htrow_idcs_buf[0] = idx;
     htrow_idcs_buf[1] = row_len;
     memcpy(&htrow_idcs_buf[2], row_idcs_buf, row_len * sizeof(int));
     row_idcs_table[loc] = htrow_idcs_buf;
 
-    htvals_buf = new T[scalar_len];
+    if (!(alloc))
+        htvals_buf = new T[max_buf_vals];
+    else
+        htvals_buf = vals_table[loc];
+
     memcpy(htvals_buf, col_buf, scalar_len * sizeof(T));
     vals_table[loc] = htvals_buf;
+
+    allocation[loc] = true;
+    set_current[loc] = true;
 
     return true;
 }
@@ -197,7 +247,7 @@ int Hash_Table<T>::Find_Location(int idx)
     // max. 5 times.
 
     do {
-        if (buf == NULL)
+        if ((buf == NULL) || (set_current[loc]))
             return loc;
         else // linear rehash
         {
@@ -211,9 +261,10 @@ int Hash_Table<T>::Find_Location(int idx)
     // The 5 jumps are done.
     // Delete what's there and return loc.
     if (buf != NULL) {
-        delete[] buf;
-        delete[] row_idcs_table[loc];
-        delete[] vals_table[loc];
+        // allocation[loc] = false;
+        // delete[] buf;
+        // delete[] row_idcs_table[loc];
+        // delete[] vals_table[loc];
     }
 
     return loc;
@@ -242,7 +293,7 @@ int Hash_Table<T>::Get_Location(int idx)
         buf = col_idcs_table[loc];
         if (buf == NULL)
             return -1;
-        if (buf[0] == idx)
+        if ((buf[0] == idx) && (set_current[loc]))
             return loc;
         else // linear rehash
         {
@@ -253,4 +304,10 @@ int Hash_Table<T>::Get_Location(int idx)
     } while (nbr_tries < size);
 
     return -1;
+}
+template <class T>
+void Hash_Table<T>::Reinitialize(void)
+{
+    for (int i = 0; i < size; i++)
+        set_current[i] = false;
 }

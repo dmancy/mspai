@@ -35,6 +35,7 @@
 
 // file includings
 #include "Compressed_Lines.h"
+#include "Hash_Table.h"
 #include "Matrix_Base.h"
 #include "Pattern.h"
 #include "Timer.h"
@@ -229,6 +230,13 @@ public:
     // Aj_sq_inverses buffers
     double* Aj_sq_inv_buffer;
     int* start_indices_Aj_sq_inv;
+
+    // bitvec buffers
+    unsigned int* bitvec;
+    unsigned int* reset_vec;
+
+    // Hash table
+    Hash_Table<T>* ht_M;
 
     // Methods
     //================================================================

@@ -70,6 +70,13 @@ public:
     /// 2D array containing the column values
     T** vals_table;
 
+    /// 1D array indication if a hash table location has already been allocated
+    bool* allocation;
+
+    /// 1D array indicates if the current buffer stores a column of the current
+    /// matrix system
+    bool* set_current;
+
     // Methods
     //============================================================
     //========== Template methods - see Hash_Table.imp ===========
@@ -94,12 +101,14 @@ public:
     ///             if user set -hs 0, if hs > 0
     ///             then it is
     ///////////////////////////////////////////////
-    bool Insert(int idx, int* col_idcs_buf, int* row_idcs_buf, T* col_buf, int col_len, int row_len);
+    bool Insert(int idx, int* col_idcs_buf, int* row_idcs_buf, T* col_buf, int max_buf, int col_len, int row_len);
 
     bool Insert_Block(int idx,
                       int* col_idcs_buf,
                       int* row_idcs_buf,
                       T* col_buf,
+                      int max_buf_idcs,
+                      int max_buf_vals,
                       int col_len,
                       int scalar_len,
                       int row_len);
@@ -149,6 +158,8 @@ public:
     ///             is stored within hash table
     //////////////////////////////////////////////
     int Get_Location(int idx);
+
+    void Reinitialize(void);
 
 private:
     ///////////////////////////////////////////////

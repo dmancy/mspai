@@ -46,9 +46,11 @@ void Spai<T>::SPAI_Algorithm(Matrix<T>* A,
                              const int& count,
                              const int& verbose)
 {
-    int col, bitvec_size;
+    int col;
 
     unsigned int *bitvec = NULL, *reset_vec = NULL;
+
+    int bitvec_size;
 
     Load_Balance<T> o_load;
 
@@ -63,19 +65,22 @@ void Spai<T>::SPAI_Algorithm(Matrix<T>* A,
     // union of all upper pattern index sets
     Index_Set* U_UP = NULL;
 
-    // Does the user want to use a hash table?
-    if (hash_param > 0)
-        ht = new Hash_Table<T>(hash_param);
+    if (count == 0)
+        A->Init_Preconditioner(M, A->n, P->len, P, maxnew_param, max_impr_steps);
 
+    // Does the user want to use a hash table?
+    if ((hash_param > 0) && count == 0)
+        M->ht_M = new Hash_Table<T>(hash_param);
+    if ((hash_param > 0) && count > 0)
+        M->ht_M->Reinitialize();
+
+    ht = M->ht_M;
     // Initializing local preconditioner chunk
     if (verbose) {
         // Start time measurement
         o_timer = Timer();
         o_timer.Start_Timer();
     }
-
-    if (count == 0)
-        A->Init_Preconditioner(M, A->n, P->len, P, maxnew_param, max_impr_steps);
 
     if (verbose) {
         // Stop time measurement
@@ -88,7 +93,11 @@ void Spai<T>::SPAI_Algorithm(Matrix<T>* A,
     if (max_impr_steps > 0)
         M->Precomputation_Column_Square_Inverses(A);
 
+    bitvec = M->bitvec;
+    reset_vec = M->reset_vec;
+
     bitvec_size = A->m <= A->n ? A->n : A->m;
+    /*
 
     // reset vector must have A->m or A->n positions
     // because more positions can be stored at once.
@@ -98,7 +107,8 @@ void Spai<T>::SPAI_Algorithm(Matrix<T>* A,
     // the bitvec. 5: log n bits of int
     bitvec_size = (bitvec_size >> 5) + 1;
     bitvec = new unsigned int[bitvec_size];
-
+*/
+    bitvec_size = (bitvec_size >> 5) + 1;
     memset(bitvec, 0, bitvec_size * sizeof(unsigned int));
 
     // Creating union of all pattern sets this
@@ -171,8 +181,6 @@ void Spai<T>::SPAI_Algorithm(Matrix<T>* A,
         o_timer.Report_Time(A->world);
     }
 
-    delete ht;
+    //    delete ht;
     delete U_UP;
-    delete[] bitvec;
-    delete[] reset_vec;
 }
