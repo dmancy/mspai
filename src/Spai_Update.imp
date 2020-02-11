@@ -33,13 +33,13 @@
 template <class T>
 Spai_Update<T>::Spai_Update()
 {
-    hash = new Hash<T>();
+    //hash = new Hash<T>();
 }
 
 template <class T>
 Spai_Update<T>::~Spai_Update()
 {
-    delete hash;
+    //delete hash;
 }
 
 template <class T>
@@ -76,6 +76,9 @@ void Spai_Update<T>::SPAI_Column(Matrix<T>* A,
     Index_Set *J = NULL, *I = NULL;
 
     Key hash_key, bk_Hat_key;
+
+    //Initialize hash pointer of Spai_Update
+    hash = M->hash_qr_M;
 
     // J will be filled with the
     // new J values from pattern
@@ -217,25 +220,29 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
 
         // Testing if even the whole spai iteration was done
         // and mk_Hat already computed
+        /*
         if (hd.key_bk_Hat == bk_Hat_key) // Best case
         {
             // A_Hat is identically as well as bk_Hat
             // -> extract mk_Hat and finish iteration
             memcpy(mk_Hat, hd.mk_Hat, J->len * sizeof(T));
+            //PetscPrintf(PETSC_COMM_WORLD, "Best Case, Col : %d\n", col);
 
             return;
         }
-        else {
+        else {*/
             // bk_hat is not the same - extract only A_hat and tau
             // and proceed further in computation with lapack routines
 
+            //PetscPrintf(PETSC_COMM_WORLD, "Extract A, Col : %d\n", col);
             work_qt = M->Work_qt_ptr;
             work_qr = M->Work_qr_ptr;
 
-            o_sub.Init_Lapack_Vals(m, n, k, lda, lwork, &work_qr, &tau);
+            o_sub.Init_Lapack_Vals(m, n, k, lda, lwork, &work_qr);
 
             // Getting previously computed qr factorization of A_hat
-            memcpy(A_Hat, hd.A_Hat_qr, m * n * sizeof(T));
+           // memcpy(A_Hat, hd.A_Hat_qr, m * n * sizeof(T));
+            A_Hat = hd.A_Hat_qr;
 
             // Getting previously computed tau data
             // memcpy(tau, hd.tau, k * sizeof(T));
@@ -263,10 +270,11 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
             o_sub.Solve_Tr_System(UPLO, NCHAR, n, one, A_Hat, mk_Hat, info);
 
             // mk_Hat = o_sub.Get_Solution_Vals(mk_Hat, J);
-        }
+        //}
     }
     else // in_hash == -1 no A_Hat found     //Worst case
     {
+        //    PetscPrintf(PETSC_COMM_WORLD, "No stored, Col : %d\n", col);
         // Copy A_Hat because lapack routines change input
         // and the original A_Hat is used later as well
         A_Hat = A_Hat_of_M;

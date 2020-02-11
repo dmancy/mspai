@@ -44,6 +44,17 @@ void Spai_Sub<T>::Init_Lapack_Vals(
 }
 
 template <class T>
+void Spai_Sub<T>::Init_Lapack_Vals(
+    const int m, const int n, int& k, int& lda, int& lwork, T** work)
+{
+    k = std::min(m, n);
+    lda = std::max(m, 1);
+    lwork = std::max(1, lwork);
+
+    memset(*work, 0, lwork * sizeof(T));
+}
+
+template <class T>
 Index_Set* Spai_Sub<T>::Union_UP(Pattern* UP, const int max_arg)
 {
     Index_Set* U_UP = new Index_Set(max_arg);

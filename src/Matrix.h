@@ -36,6 +36,7 @@
 // file includings
 #include "Compressed_Lines.h"
 #include "Hash_Table.h"
+#include "Hash.h"
 #include "Matrix_Base.h"
 #include "Pattern.h"
 #include "Timer.h"
@@ -235,8 +236,11 @@ public:
     unsigned int* bitvec;
     unsigned int* reset_vec;
 
-    // Hash table
+    // Hash table for columns of M
     Hash_Table<T>* ht_M;
+
+    // Hash to store QR factorisations
+    Hash<T>*      hash_qr_M;
 
     // Methods
     //================================================================

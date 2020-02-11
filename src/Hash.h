@@ -34,12 +34,14 @@
 #define GUARD_HASH_H
 
 // file includings
-#include "Matrix.h"
-#include "Spai_Sub.h"
+//#include "Matrix.h"
+//#include "Spai_Sub.h"
 
 // C++/QT includings
 #include <iostream>
-#include <vector>
+#include <mkl.h>
+#include <mpi.h>
+#include <stdlib.h>
 
 // hash_map is no C++ standard -
 // so include the extensions due to gcc version

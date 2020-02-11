@@ -74,6 +74,7 @@ void Hash<T>::Insert_Hash_Data(
 template <class T>
 void Hash<T>::Print_Specific_Hash_Data(Key kp)
 {
+  /*
     struct HASH_DATA<T> hd = m_hash_map[kp];
 
     Spai_Sub<T> o_sub;
@@ -88,6 +89,7 @@ void Hash<T>::Print_Specific_Hash_Data(Key kp)
     o_sub.Print_A_Hat(hd.mk_Hat, hd.n, 1);
     o_sub.Print_A_Hat(hd.A_Hat_qr, hd.n, hd.m);
     std::cout << "" << std::endl;
+    */
 }
 
 template <class T>

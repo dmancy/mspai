@@ -179,6 +179,7 @@ public:
     ///                reflectors
     //////////////////////////////////////////////////////////////
     void Init_Lapack_Vals(const int m, const int n, int& k, int& lda, int& lwork, T** work, T** tau);
+    void Init_Lapack_Vals(const int m, const int n, int& k, int& lda, int& lwork, T** work);
 
     //////////////////////////////////////////////////////////////
     ///     \brief Creating the submatrix A_Hat from the index

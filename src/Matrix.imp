@@ -79,6 +79,8 @@ Matrix<T>::Matrix(MPI_Comm world_m)
     reset_vec = NULL;
     bitvec = NULL;
     ht_M = NULL;
+
+    hash_qr_M = NULL;
 }
 
 template <class T>
@@ -150,6 +152,8 @@ Matrix<T>::~Matrix()
         delete[] bitvec;
     if (ht_M)
         delete ht_M;
+    if (hash_qr_M)
+        delete hash_qr_M;
 }
 
 template <class T>
@@ -262,6 +266,10 @@ void Matrix<T>::Init_Preconditioner(Matrix<T>*& M,
     // the bitvec. 5: log n bits of int
     bitvec_size = (bitvec_size >> 5) + 1;
     M->bitvec = new unsigned int[bitvec_size];
+
+    //Create new hash
+    M->hash_qr_M = new Hash<T>();
+
 }
 
 template <class T>
