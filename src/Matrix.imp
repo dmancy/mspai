@@ -2809,8 +2809,8 @@ Matrix<T>* Matrix<T>::Scalar_Matrix(const int& verbose)
 
         /* Allocate Scalar columns in S associated with block column jb */
         for (int j = jstart; j < jstart + block_sizes[jb_global]; j++) {
-            S->c_lines->col_idcs[j] = new int[max_nnz * max_block_size * max_block_size];
-            S->c_lines->A[j] = new double[max_nnz * max_block_size * max_block_size];
+            S->c_lines->col_idcs[j] = new int[max_nnz * max_block_size];
+            S->c_lines->A[j] = new double[max_nnz * max_block_size];
             // S->c_lines->col_idcs[j] = new int[height];
             // S->c_lines->A[j] = new double[height];
             S->c_lines->len_cols[j] = 0;
