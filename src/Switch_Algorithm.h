@@ -42,6 +42,7 @@
 #include "Spai_SD_Block.h"
 #include "Spai_Unrestrained.h"
 #include "Spai_Unrestrained_Block.h"
+#include "Spai_Update.h"
 
 // C++ includings
 #include <iostream>

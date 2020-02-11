@@ -1523,6 +1523,8 @@ Matrix<T>* Matrix<T>::Convert_To_Block_Matrix(int nblocks_local, int* block_size
     B->all_nbr_cols = new int[B->num_procs];
     B->start_indices = new int[B->num_procs];
 
+    B->symmetric = symmetric;
+
     // Filling all_nbr_cols
     MPI_Barrier(B->world);
     MPI_Allgather(static_cast<void*>(&nblocks_local), 1, MPI_INT,

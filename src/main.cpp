@@ -47,14 +47,15 @@ int main(int argc, char** args)
 
     PetscViewer fd;
     PetscPrintf(PETSC_COMM_WORLD, "Loading matrix...\n");
-    //      ierr =
-    //  PetscViewerBinaryOpen(PETSC_COMM_WORLD,"orsirr_2_T.dat",FILE_MODE_READ,&fd);CHKERRQ(ierr);
-    ierr = PetscViewerBinaryOpen(
-        PETSC_COMM_WORLD, "shyy161.mtx_76480x76480_329762nnz.gz", FILE_MODE_READ, &fd);
+    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD, "orsirr_2_T.dat", FILE_MODE_READ, &fd);
+    CHKERRQ(ierr);
+    // ierr = PetscViewerBinaryOpen(
+    //    PETSC_COMM_WORLD, "shyy161.mtx_76480x76480_329762nnz.gz",
+    //    FILE_MODE_READ, &fd);
     // CHKERRQ(ierr);
 
-    // ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD, "visc-naca_lhs.pmat",
-    //                             FILE_MODE_READ, &fd);
+    //     ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD, "visc-naca_lhs.pmat",
+    //                               FILE_MODE_READ, &fd);
     // ierr = PetscViewerBinaryOpen(
     //    PETSC_COMM_WORLD, "matrix.dat", FILE_MODE_READ, &fd);
     CHKERRQ(ierr);
@@ -73,7 +74,7 @@ int main(int argc, char** args)
   */
     /* Read new vector in binary format */
     /*
-        ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD, "visc-naca_b.pmat",
+       ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD, "visc-naca_b.pmat",
        FILE_MODE_READ, &fd);
         CHKERRQ(ierr);
         ierr = VecCreate(PETSC_COMM_WORLD, &b);
@@ -241,14 +242,14 @@ int main(int argc, char** args)
 
     ierr = KSPMonitorSet(ksp, MyKSPMonitor, NULL, 0);
 
-    ierr = KSPSetTolerances(ksp, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT, 10);
+    ierr = KSPSetTolerances(ksp, PETSC_DEFAULT, PETSC_DEFAULT, PETSC_DEFAULT, 5);
 
     /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                         Solve the linear system
        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
     T = MPI_Wtime();
 
-    for (int iteration = 0; iteration < 5; iteration++) {
+    for (int iteration = 0; iteration < 1; iteration++) {
         PetscPrintf(PETSC_COMM_WORLD, "######## Interation %d ########", iteration);
         ierr = KSPSolve(ksp, b, solution);
         CHKERRQ(ierr);
