@@ -31,34 +31,34 @@
 */
 
 template <class T>
-Spai_Update<T>::Spai_Update()
+Spai_Update_Block<T>::Spai_Update_Block()
 {
     //hash = new Hash<T>();
 }
 
 template <class T>
-Spai_Update<T>::~Spai_Update()
+Spai_Update_Block<T>::~Spai_Update_Block()
 {
     //delete hash;
 }
 
 template <class T>
-void Spai_Update<T>::SPAI_Column(Matrix<T>* A,
-                                 Matrix<T>*& M,
-                                 Matrix<T>* B,
-                                 Pattern* P,
-                                 Pattern* UP,
-                                 Index_Set* U_UP,
-                                 const int col,
-                                 const double epsilon_param,
-                                 const int maxnew_param,
-                                 const int max_impr_steps,
-                                 Hash_Table<T>* ht,
-                                 const int use_mean,
-                                 int pre_k_param,
-                                 const int pre_max_param,
-                                 unsigned int*& bitvec,
-                                 unsigned int*& reset_vec)
+void Spai_Update_Block<T>::SPAI_Column(Matrix<T>* A,
+                                       Matrix<T>*& M,
+                                       Matrix<T>* B,
+                                       Pattern* P,
+                                       Pattern* UP,
+                                       Index_Set* U_UP,
+                                       const int col,
+                                       const double epsilon_param,
+                                       const int maxnew_param,
+                                       const int max_impr_steps,
+                                       Hash_Table<T>* ht,
+                                       const int use_mean,
+                                       int pre_k_param,
+                                       const int pre_max_param,
+                                       unsigned int*& bitvec,
+                                       unsigned int*& reset_vec)
 {
     int m = 0, // y dimension of A_hat
         n = 0, // x dimension of A_hat
@@ -66,8 +66,10 @@ void Spai_Update<T>::SPAI_Column(Matrix<T>* A,
         nnz = 0; // number of nnz within A_Hat
 
     double residual_norm = 1.0e+50; // appr. infinity
+    double adjust_epsilon;
 
     T *A_Hat = NULL, *mk_Hat = NULL, *bk_Hat = NULL, *residual_vals = NULL;
+    T* residual_vals_b = M->residual_vals_b_buffer;
 
     Spai_Sub<T> o_sub;
 
@@ -77,7 +79,9 @@ void Spai_Update<T>::SPAI_Column(Matrix<T>* A,
 
     Key hash_key, bk_Hat_key;
 
-    //Initialize hash pointer of Spai_Update
+    adjust_epsilon = epsilon_param * sqrt((double)A->block_sizes[col]);
+
+    //Initialize hash pointer of Spai_Update_Block
     hash = M->hash_qr_M;
 
     // J will be filled with the
@@ -105,50 +109,49 @@ void Spai_Update<T>::SPAI_Column(Matrix<T>* A,
 
         // Create the submatrix A_Hat = A(I;J) and
         // update the index of the unit vector
-        A_Hat = o_sub.Create_Submatrix_AHat(A, M, B, P, UP, U_UP, J, I, m, n,
-                                            ht, nnz, pre_k_param, pre_max_param);
+        A_Hat = o_sub.Create_Submatrix_AHat_Block(
+            A, M, B, P, UP, U_UP, J, I, col, m, n, ht, nnz, pre_k_param, pre_max_param);
 
         // Compute key from A_Hat
         hash_key = hash->Compute_Key(A_Hat, m * n);
 
         // Create the unit vector
         // Notice that the name is the solution name already.
-        /*
-        if (B)
-            mk_Hat = o_sub.Create_bk_Hat(A, M, B, P, UP, I, I->len, col);
-        else
-            mk_Hat = o_sub.Create_ek_Hat(I, M, I->len, col, unit_idx);
-*/
 
-        mk_Hat = o_sub.Create_ek_Hat(I, M, I->len, col, unit_idx);
+        mk_Hat = o_sub.Create_ek_Hat_Block(I, M, I->slen * A->block_sizes[col], col, unit_idx);
 
         // Copy the right hand side vector.
         // This is used for computing the residual
         // vector later
         bk_Hat = M->bk_Hat;
-        memcpy(bk_Hat, mk_Hat, I->len * sizeof(T));
+        memcpy(bk_Hat, mk_Hat, I->slen * A->block_sizes[col] * sizeof(double));
 
         // Compute right hand side key
-        bk_Hat_key = hash->Compute_Key(mk_Hat, I->len);
+        bk_Hat_key = hash->Compute_Key(mk_Hat, I->slen * A->block_sizes[col]);
 
         // Computing solution m_k which is stored within
         // mk_Hat.
         Approximative_Solution(A_Hat, M->A_Hat_buffer, M, m, n, mk_Hat, I, J,
                                col, hash_key, bk_Hat_key);
 
-        // Computing the residual vector
-        // and the frobenius norm of it
-        residual_norm = o_sub.Residual_Norm(A_Hat, m, n, mk_Hat, bk_Hat, residual_vals);
+        memcpy(M->mk_Hat_buffer, mk_Hat, I->slen * A->block_sizes[col] * sizeof(T));
+
+        o_sub.Get_Solution_Vals_Scalar(M->mk_Hat_buffer, mk_Hat, M, A, col, J, I->slen);
+
+        residual_norm = o_sub.Residual_Norm_Block(
+            M, A_Hat, m, A->block_sizes[col], n, mk_Hat, bk_Hat, residual_vals);
+
+        o_sub.Convert_To_Block(M, I, col, residual_vals, residual_vals_b);
 
         // Finishing conditions
-        if ((residual_norm <= epsilon_param)  // residual good enough
+        if ((residual_norm <= adjust_epsilon)  // residual good enough
             || (step == (max_impr_steps - 1)) // Don't delete solution,
             )                                 // Don't augment sparsity
             break;
 
         // Solution is not good enough - augmenting
         // Finish augmenting if no new candidates found
-        if (!o_sub.Augment_Sparsity(A, M, B, P, I, J, UP, U_UP, col, residual_norm,
+        if (!o_sub.Augment_Sparsity_Block(A, M, B, P, I, J, UP, U_UP, col, residual_norm,
                                     residual_vals, maxnew_param, ht, use_mean,
                                     pre_k_param, pre_max_param, bitvec, reset_vec))
             break;
@@ -156,20 +159,21 @@ void Spai_Update<T>::SPAI_Column(Matrix<T>* A,
 
     // Inserting solution row into preconditioner
     o_comm.Insert_Row_Solution(A, M, B, P, UP, col, mk_Hat, J);
+    o_comm.Insert_Row_Solution_Block(A, M, B, P, UP, col, mk_Hat, J);
 }
 
 template <class T>
-void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
-                                            T* A_Hat_of_M,
-                                            Matrix<T>* M,
-                                            int& m,
-                                            int& n,
-                                            T*& mk_Hat,
-                                            const Index_Set* I,
-                                            Index_Set* J,
-                                            const int col,
-                                            Key hash_key,
-                                            Key bk_Hat_key)
+void Spai_Update_Block<T>::Approximative_Solution(T* A_Hat_orig,
+                                                  T* A_Hat_of_M,
+                                                  Matrix<T>* M,
+                                                  int& m,
+                                                  int& n,
+                                                  T*& mk_Hat,
+                                                  const Index_Set* I,
+                                                  Index_Set* J,
+                                                  const int col,
+                                                  Key hash_key,
+                                                  Key bk_Hat_key)
 {
     int lda = 0, k = 0, info = 0, lwork = 0, one = 1;
 
@@ -210,10 +214,7 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
         // Check if A_Hats are really equal - if not reset
         // cache element.
         if (!o_sub.Compare_A_Hat(A_Hat_orig, hd.A_Hat, m * n))
-        {
             in_hash = false;
-            //PetscPrintf(PETSC_COMM_WORLD, "FALSE\n");
-        }
     }
 
     if (in_hash) {
@@ -223,7 +224,7 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
 
         // Testing if even the whole spai iteration was done
         // and mk_Hat already computed
-      /* 
+        /*
         if (hd.key_bk_Hat == bk_Hat_key) // Best case
         {
             // A_Hat is identically as well as bk_Hat
@@ -237,7 +238,7 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
             // bk_hat is not the same - extract only A_hat and tau
             // and proceed further in computation with lapack routines
 
-           // PetscPrintf(PETSC_COMM_WORLD, "Extract A, Col : %d\n", col);
+            //PetscPrintf(PETSC_COMM_WORLD, "Extract A, Col : %d\n", col);
             work_qt = M->Work_qt_ptr;
             work_qr = M->Work_qr_ptr;
 
@@ -245,7 +246,6 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
 
             // Getting previously computed qr factorization of A_hat
             memcpy(A_Hat, hd.A_Hat_qr, m * n * sizeof(T));
-            //A_Hat = hd.A_Hat_qr;
 
             // Getting previously computed tau data
             // memcpy(tau, hd.tau, k * sizeof(T));
@@ -270,7 +270,7 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
 
             // Solving the triangular system:
             // Computing :   R^-1 * (Q^T * e_k_hat)
-            o_sub.Solve_Tr_System(UPLO, NCHAR, n, one, A_Hat, mk_Hat, info);
+            o_sub.Solve_Tr_System_Block(UPLO, NCHAR, n, one, I->slen, A_Hat, mk_Hat, info);
 
             // mk_Hat = o_sub.Get_Solution_Vals(mk_Hat, J);
         //}
@@ -331,7 +331,7 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
 
         // Solving the triangular system:
         // Computing :   R^-1 * (Q^T * e_k_hat)
-        o_sub.Solve_Tr_System(UPLO, NCHAR, n, one, A_Hat, mk_Hat, info);
+        o_sub.Solve_Tr_System_Block(UPLO, NCHAR, n, one, I->slen, A_Hat, mk_Hat, info);
 
         // mk_Hat = o_sub.Get_Solution_Vals(mk_Hat, J);
 

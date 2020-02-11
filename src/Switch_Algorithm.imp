@@ -101,7 +101,10 @@ Spai<T>* Switch_Algorithm<T>::Get_Algorithm(const int my_id,
                           << COLOR_NORMAL << std::endl;
             }
         }
-        return new Spai_Update<T>();
+        if (bs == 1)
+            return new Spai_Update<T>();
+        else
+            return new Spai_Update_Block<T>();
 
     case qr_updates:
         // use qr_updates for runtime optimization within SPAI
