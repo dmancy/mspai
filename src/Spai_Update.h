@@ -34,7 +34,7 @@
 #define GUARD_SPAI_UPDATE_H
 
 // file includings
-#include "Hash.h"
+#include "Hash_Update.h"
 #include "Spai.h"
 
 // A++ includings
@@ -92,7 +92,7 @@ public:
 
 private:
     /// Member hash to use
-    Hash<T>* hash;
+    Hash_Update<T>* hash;
 
     ///////////////////////////////////////////////////////////
     ///     \brief  Solving one Least-Squares-Problem

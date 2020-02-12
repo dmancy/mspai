@@ -37,6 +37,7 @@
 #include "Compressed_Lines.h"
 #include "Hash.h"
 #include "Hash_Table.h"
+#include "Hash_Update.h"
 #include "Matrix_Base.h"
 #include "Pattern.h"
 #include "Timer.h"
@@ -241,7 +242,7 @@ public:
     Hash_Table<T>* ht_M;
 
     // Hash to store QR factorisations
-    Hash<T>* hash_qr_M;
+    Hash_Update<T>* hash_qr_M;
     Key* indices_qr;
 
     // Methods

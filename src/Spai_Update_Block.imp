@@ -199,11 +199,11 @@ void Spai_Update_Block<T>::Approximative_Solution(T* A_Hat_orig,
     A_Hat = A_Hat_of_M;
     //    memcpy(A_Hat, A_Hat_orig, m * n * sizeof(T));
 
-    HASH_DATA<T> hd;
+    HASH_UPDATE_DATA<T> hd;
 
-    std::pair<Key, HASH_DATA<T>> hp;
+    std::pair<Key, HASH_UPDATE_DATA<T>> hp;
 
-    typename hash_map<Key, HASH_DATA<T>, HASH_FUNCTION>::const_iterator h_it;
+    typename hash_map<Key, HASH_UPDATE_DATA<T>, HASH_UPDATE_FUNCTION>::const_iterator h_it;
 
     // Testing hash for possible previously computed values:
     // Was this A_hat previously computed?
@@ -389,11 +389,11 @@ void Spai_Update_Block<T>::Approximative_Solution_Update(T* A_Hat_orig,
     // and the original A_Hat is used later as well
     A_Hat = A_Hat_of_M;
 
-    HASH_DATA<T> hd;
+    HASH_UPDATE_DATA<T> hd;
 
-    std::pair<Key, HASH_DATA<T>> hp;
+    std::pair<Key, HASH_UPDATE_DATA<T>> hp;
 
-    typename hash_map<Key, HASH_DATA<T>, HASH_FUNCTION>::const_iterator h_it;
+    typename hash_map<Key, HASH_UPDATE_DATA<T>, HASH_UPDATE_FUNCTION>::const_iterator h_it;
 
     // Retrieve information from the hash table
     hash_key = M->indices_qr[col - M->my_start_idx];
