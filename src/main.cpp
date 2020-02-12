@@ -95,23 +95,23 @@ int main(int argc, char** args)
     ierr = PetscViewerDestroy(&fd);
     CHKERRQ(ierr);
     VecGetSize(solution, &n);
-
     /*
-        ierr = MatGetSize(A, &n, NULL);
-        // ierr = MatTranspose(A,MAT_INPLACE_MATRIX,&A);
-        ierr = VecCreate(PETSC_COMM_WORLD, &u);
-        CHKERRQ(ierr);
-        ierr = VecSetSizes(u, PETSC_DECIDE, n);
-        CHKERRQ(ierr);
-        ierr = VecSetFromOptions(u);
-        CHKERRQ(ierr);
-        ierr = VecDuplicate(u, &b);
-        CHKERRQ(ierr);
-        ierr = VecDuplicate(u, &solution);
-        CHKERRQ(ierr);
-        ierr = VecSet(b, one);
-        CHKERRQ(ierr);
-    */
+
+            ierr = MatGetSize(A, &n, NULL);
+            // ierr = MatTranspose(A,MAT_INPLACE_MATRIX,&A);
+            ierr = VecCreate(PETSC_COMM_WORLD, &u);
+            CHKERRQ(ierr);
+            ierr = VecSetSizes(u, PETSC_DECIDE, n);
+            CHKERRQ(ierr);
+            ierr = VecSetFromOptions(u);
+            CHKERRQ(ierr);
+            ierr = VecDuplicate(u, &b);
+            CHKERRQ(ierr);
+            ierr = VecDuplicate(u, &solution);
+            CHKERRQ(ierr);
+            ierr = VecSet(b, one);
+            CHKERRQ(ierr);
+            */
     /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                   Create the linear solver and set various options
        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -248,7 +248,7 @@ int main(int argc, char** args)
        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
     T = MPI_Wtime();
 
-    for (int iteration = 0; iteration < 2; iteration++) {
+    for (int iteration = 0; iteration < 20; iteration++) {
         PetscPrintf(PETSC_COMM_WORLD, "######## Interation %d ########", iteration);
         ierr = KSPSolve(ksp, b, solution);
         CHKERRQ(ierr);

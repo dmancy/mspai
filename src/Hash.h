@@ -222,6 +222,8 @@ public:
     ////////////////////////////////////////////////////////
     static inline Key Hash_Double(double x);
 
+    void Initialize();
+
 private:
     /// the hash map containing the desired data
     hash_map<Key, HASH_DATA<T>, HASH_FUNCTION> m_hash_map;

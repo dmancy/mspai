@@ -121,6 +121,18 @@ private:
                                 Key hash_key,
                                 Key ek_Hat_key);
 
+    void Approximative_Solution_Update(T* A_Hat_orig,
+                                       T* A_Hat_of_M,
+                                       Matrix<T>* M,
+                                       int& m,
+                                       int& n,
+                                       T*& mk_Hat,
+                                       const Index_Set* I,
+                                       Index_Set* J,
+                                       const int col,
+                                       Key hash_key,
+                                       Key ek_Hat_key);
+
 protected:
     ///////////////////////////////////////////////////////////
     ///     \brief  Implementing the SPAI Hashing algorithm

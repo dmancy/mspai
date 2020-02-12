@@ -39,6 +39,12 @@
 template <class T>
 Hash<T>::~Hash()
 {
+    Initialize();
+}
+
+template <class T>
+void Hash<T>::Initialize()
+{
     typename hash_map<Key, HASH_DATA<T>, HASH_FUNCTION>::iterator it;
 
     std::pair<Key, HASH_DATA<T>> hp;
@@ -52,6 +58,8 @@ Hash<T>::~Hash()
         delete[] hd.tau;
         delete[] hd.A_Hat;
     }
+
+    m_hash_map.clear();
 }
 
 template <class T>

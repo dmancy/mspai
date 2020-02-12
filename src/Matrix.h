@@ -464,6 +464,9 @@ public:
                         const int& n,
                         const int& k,
                         double* c);
+
+    void Reset_Hash_QR();
+
     //    private:
 
     /////////////////////////////////////////////////////////

@@ -3023,6 +3023,15 @@ void Matrix<T>::Compute_Square_Inverse(const double* const col_buf,
     dgetri_(&block_size, Aj_sq_inv, &block_size, ipiv, work, &lwork, &info);
 }
 
+template <typename T>
+void Matrix<T>::Reset_Hash_QR()
+{
+    if (hash_qr_M)
+        hash_qr_M->Initialize();
+    if (indices_qr)
+        std::fill(indices_qr, indices_qr + my_nbr_cols, std::numeric_limits<Key>::max());
+}
+
 inline int comp(const void* elem1, const void* elem2)
 {
     const Row_sparsify* f = (Row_sparsify*)elem1;

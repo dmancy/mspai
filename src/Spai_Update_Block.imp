@@ -39,7 +39,6 @@ Spai_Update_Block<T>::Spai_Update_Block()
 template <class T>
 Spai_Update_Block<T>::~Spai_Update_Block()
 {
-    // delete hash;
 }
 
 template <class T>
@@ -88,7 +87,6 @@ void Spai_Update_Block<T>::SPAI_Column(Matrix<T>* A,
     // new J values from pattern
     // and will be updated each augmenting
     // step.
-    // J = new Index_Set(A->n);
 
     J = M->J_set;
 
@@ -111,9 +109,9 @@ void Spai_Update_Block<T>::SPAI_Column(Matrix<T>* A,
 
         // QR factorization already stored
         if (M->indices_qr[col - M->my_start_idx] != std::numeric_limits<Key>::max()) {
-            Approximative_Solution(A_Hat, M->A_Hat_buffer, M, I->slen, J->slen,
-                                   mk_Hat, I, J, col, A->block_sizes[col],
-                                   M->indices_qr[col - M->my_start_idx], bk_Hat_key);
+            Approximative_Solution_Update(
+                A_Hat, M->A_Hat_buffer, M, I->slen, J->slen, mk_Hat, I, J, col,
+                A->block_sizes[col], M->indices_qr[col - M->my_start_idx], bk_Hat_key);
             memcpy(M->mk_Hat_buffer, mk_Hat, I->slen * A->block_sizes[col] * sizeof(T));
 
             o_sub.Get_Solution_Vals_Scalar(M->mk_Hat_buffer, mk_Hat, M, A, col, J, I->slen);
@@ -127,9 +125,6 @@ void Spai_Update_Block<T>::SPAI_Column(Matrix<T>* A,
 
         // Compute key from A_Hat
         hash_key = hash->Compute_Key(A_Hat, m * n);
-
-        // Create the unit vector
-        // Notice that the name is the solution name already.
 
         // Copy the right hand side vector.
         // This is used for computing the residual
@@ -209,53 +204,6 @@ void Spai_Update_Block<T>::Approximative_Solution(T* A_Hat_orig,
     std::pair<Key, HASH_DATA<T>> hp;
 
     typename hash_map<Key, HASH_DATA<T>, HASH_FUNCTION>::const_iterator h_it;
-
-    if (M->indices_qr[col - M->my_start_idx] != std::numeric_limits<Key>::max()) {
-        // Retrieve information from the hash table
-        hash_key = M->indices_qr[col - M->my_start_idx];
-        h_it = hash->Get_Hash_Map().find(hash_key);
-
-        // A_Hat was previously computed
-        hp = *h_it;
-        hd = hp.second;
-
-        m = hd.m;
-        n = hd.n;
-
-        // PetscPrintf(PETSC_COMM_WORLD, "Extract A, Col : %d\n", col);
-        work_qt = M->Work_qt_ptr;
-        work_qr = M->Work_qr_ptr;
-
-        o_sub.Init_Lapack_Vals(m, n, k, lda, lwork, &work_qr);
-
-        // Getting previously computed qr factorization of A_hat
-        memcpy(A_Hat, hd.A_Hat_qr, m * n * sizeof(T));
-
-        // Getting previously computed tau data
-        // memcpy(tau, hd.tau, k * sizeof(T));
-        tau = hd.tau;
-
-        // Preprocessing step:
-        // Get the optimal lwork value for fastest
-        // QT * vector multiplication. See lapack documentation for
-        // details.
-        lwork = o_sub.Opt_lwork_QTApply(SIDE, m, n, k, one, lda, A_Hat, tau, mk_Hat);
-
-        // Set new work array -> faster than realloc work_qr
-        memset(work_qt, 0, lwork * sizeof(T));
-
-        // Computing :   Q^T * e_k_hat
-        o_sub.QT_Apply(SIDE, TRANS, m, one, k, A_Hat, lda, tau, mk_Hat, work_qt, lwork, info);
-
-        // Getting the quadratic contingent of the matrix A_hat for
-        // both cases:   m x n and n x m
-        o_sub.Ectract_Quadratic_Content(A_Hat, m, n);
-
-        // Solving the triangular system:
-        // Computing :   R^-1 * (Q^T * e_k_hat)
-        o_sub.Solve_Tr_System_Block(UPLO, NCHAR, n, one, I->slen, A_Hat, mk_Hat, info);
-        return;
-    }
 
     // Testing hash for possible previously computed values:
     // Was this A_hat previously computed?
@@ -409,4 +357,85 @@ void Spai_Update_Block<T>::Approximative_Solution(T* A_Hat_orig,
                                bk_Hat_key, A_Hat_c, n, m);
         M->indices_qr[col - M->my_start_idx] = hash_key;
     }
+}
+
+template <class T>
+void Spai_Update_Block<T>::Approximative_Solution_Update(T* A_Hat_orig,
+                                                         T* A_Hat_of_M,
+                                                         Matrix<T>* M,
+                                                         int& m,
+                                                         int& n,
+                                                         T*& mk_Hat,
+                                                         const Index_Set* I,
+                                                         Index_Set* J,
+                                                         const int col,
+                                                         const int block_size_col,
+                                                         Key hash_key,
+                                                         Key bk_Hat_key)
+{
+    int lda = 0, k = 0, info = 0, lwork = 0, one = block_size_col;
+
+    bool in_hash = false;
+
+    T *A_Hat = NULL, *A_Hat_c = NULL, *A_Hat_qr = NULL, *tau = NULL,
+      *work_qr = NULL, *work_qt = NULL, *mk_Hat_cache = NULL, *tau_cache = NULL;
+
+    Spai_Sub<T> o_sub;
+
+    const char *SIDE = "L", *UPLO = "U", *TRANS = "",
+               *NCHAR = "N"; // upper triangular matrix not transposed
+
+    // Copy A_Hat because lapack routines change input
+    // and the original A_Hat is used later as well
+    A_Hat = A_Hat_of_M;
+
+    HASH_DATA<T> hd;
+
+    std::pair<Key, HASH_DATA<T>> hp;
+
+    typename hash_map<Key, HASH_DATA<T>, HASH_FUNCTION>::const_iterator h_it;
+
+    // Retrieve information from the hash table
+    hash_key = M->indices_qr[col - M->my_start_idx];
+    h_it = hash->Get_Hash_Map().find(hash_key);
+
+    // A_Hat was previously computed
+    hp = *h_it;
+    hd = hp.second;
+
+    m = hd.m;
+    n = hd.n;
+
+    // PetscPrintf(PETSC_COMM_WORLD, "Extract A, Col : %d\n", col);
+    work_qt = M->Work_qt_ptr;
+    work_qr = M->Work_qr_ptr;
+
+    o_sub.Init_Lapack_Vals(m, n, k, lda, lwork, &work_qr);
+
+    // Getting previously computed qr factorization of A_hat
+    memcpy(A_Hat, hd.A_Hat_qr, m * n * sizeof(T));
+
+    // Getting previously computed tau data
+    // memcpy(tau, hd.tau, k * sizeof(T));
+    tau = hd.tau;
+
+    // Preprocessing step:
+    // Get the optimal lwork value for fastest
+    // QT * vector multiplication. See lapack documentation for
+    // details.
+    lwork = o_sub.Opt_lwork_QTApply(SIDE, m, n, k, one, lda, A_Hat, tau, mk_Hat);
+
+    // Set new work array -> faster than realloc work_qr
+    memset(work_qt, 0, lwork * sizeof(T));
+
+    // Computing :   Q^T * e_k_hat
+    o_sub.QT_Apply(SIDE, TRANS, m, one, k, A_Hat, lda, tau, mk_Hat, work_qt, lwork, info);
+
+    // Getting the quadratic contingent of the matrix A_hat for
+    // both cases:   m x n and n x m
+    o_sub.Ectract_Quadratic_Content(A_Hat, m, n);
+
+    // Solving the triangular system:
+    // Computing :   R^-1 * (Q^T * e_k_hat)
+    o_sub.Solve_Tr_System_Block(UPLO, NCHAR, n, one, I->slen, A_Hat, mk_Hat, info);
 }
