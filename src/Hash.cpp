@@ -49,7 +49,7 @@ Key Hash<double>::Compute_Key(const double* vec, size_t size) const
     Key ret = 0;
     Key mix = Hash_Double(0.13);
     while (size--) {
-        ret = (ret * 31) + mix + Hash_Double(*vec);
+        ret = (ret * 31) + mix + (size*Hash_Double(*vec));
         vec++;
     }
     return ret;

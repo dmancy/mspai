@@ -81,6 +81,7 @@ Matrix<T>::Matrix(MPI_Comm world_m)
     ht_M = NULL;
 
     hash_qr_M = NULL;
+    indices_qr = NULL;
 }
 
 template <class T>
@@ -154,6 +155,8 @@ Matrix<T>::~Matrix()
         delete ht_M;
     if (hash_qr_M)
         delete hash_qr_M;
+    if (indices_qr)
+        delete [] indices_qr;
 }
 
 template <class T>
@@ -269,7 +272,8 @@ void Matrix<T>::Init_Preconditioner(Matrix<T>*& M,
 
     //Create new hash
     M->hash_qr_M = new Hash<T>();
-
+    M->indices_qr = new Key[M->my_nbr_cols];
+    std::fill(M->indices_qr, M->indices_qr + M->my_nbr_cols, std::numeric_limits<Key>::max());
 }
 
 template <class T>

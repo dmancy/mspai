@@ -206,7 +206,7 @@ public:
     ///    \return The complete unsigned 32 Bit hash value
     ///             for the vector
     ////////////////////////////////////////////////////////
-    U_Int32 Compute_Key(const T* vec, size_t size) const;
+    Key Compute_Key(const T* vec, size_t size) const;
 
     ////////////////////////////////////////////////////////
     ///     \brief   Computing a "unique" hash value for a double

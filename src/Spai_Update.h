@@ -39,6 +39,7 @@
 
 // A++ includings
 #include <iostream>
+#include <limits>
 
 /////////////////////////////////////////////////////////////
 ///     \class Spai_Hashing

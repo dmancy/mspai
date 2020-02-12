@@ -46,6 +46,7 @@
 #include <mkl.h>
 #include <mpi.h>
 #include <stdlib.h>
+#include <limits>
 
 // PETSc includings
 #include <petscksp.h>
@@ -241,6 +242,7 @@ public:
 
     // Hash to store QR factorisations
     Hash<T>*      hash_qr_M;
+    Key*          indices_qr;
 
     // Methods
     //================================================================
