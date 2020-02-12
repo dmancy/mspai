@@ -84,6 +84,7 @@ private:
                                 int& m,
                                 int& n,
                                 T*& mk_Hat,
+                                int col,
                                 const Index_Set* I,
                                 const int block_size_col);
 

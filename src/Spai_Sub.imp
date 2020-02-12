@@ -44,8 +44,7 @@ void Spai_Sub<T>::Init_Lapack_Vals(
 }
 
 template <class T>
-void Spai_Sub<T>::Init_Lapack_Vals(
-    const int m, const int n, int& k, int& lda, int& lwork, T** work)
+void Spai_Sub<T>::Init_Lapack_Vals(const int m, const int n, int& k, int& lda, int& lwork, T** work)
 {
     k = std::min(m, n);
     lda = std::max(m, 1);
@@ -88,6 +87,8 @@ Index_Set* Spai_Sub<T>::Get_I_Set(Index_Set* J,
 
     // I = new Index_Set(A->m);
     I = M->I_set;
+    // Reset I->slen
+    I->slen = 0;
 
     for (int j = 0; j < J->len; j++) {
         o_comm.Get_Col(A, M, B, P, UP, U_UP, J->idcs[j], col_len, row_len, col_idcs_buf,

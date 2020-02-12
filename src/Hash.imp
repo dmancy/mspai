@@ -74,22 +74,22 @@ void Hash<T>::Insert_Hash_Data(
 template <class T>
 void Hash<T>::Print_Specific_Hash_Data(Key kp)
 {
-  /*
-    struct HASH_DATA<T> hd = m_hash_map[kp];
+    /*
+      struct HASH_DATA<T> hd = m_hash_map[kp];
 
-    Spai_Sub<T> o_sub;
+      Spai_Sub<T> o_sub;
 
-    double* A_hat_qr = hd.A_hat_qr;
-    double* tau = hd.tau;
-    double* m_k_hat = hd.m_k_hat;
+      double* A_hat_qr = hd.A_hat_qr;
+      double* tau = hd.tau;
+      double* m_k_hat = hd.m_k_hat;
 
-    std::cout << "\t=========================" << std::endl;
-    std::cout << "\tKey: " << kp << std::endl;
-    o_sub.Print_A_Hat(hd.A_Hat, hd.n, hd.m);
-    o_sub.Print_A_Hat(hd.mk_Hat, hd.n, 1);
-    o_sub.Print_A_Hat(hd.A_Hat_qr, hd.n, hd.m);
-    std::cout << "" << std::endl;
-    */
+      std::cout << "\t=========================" << std::endl;
+      std::cout << "\tKey: " << kp << std::endl;
+      o_sub.Print_A_Hat(hd.A_Hat, hd.n, hd.m);
+      o_sub.Print_A_Hat(hd.mk_Hat, hd.n, 1);
+      o_sub.Print_A_Hat(hd.A_Hat_qr, hd.n, hd.m);
+      std::cout << "" << std::endl;
+      */
 }
 
 template <class T>

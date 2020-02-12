@@ -117,6 +117,7 @@ private:
                                 const Index_Set* I,
                                 Index_Set* J,
                                 const int col,
+                                const int block_size_col,
                                 Key hash_key,
                                 Key ek_Hat_key);
 

@@ -35,18 +35,18 @@
 
 // file includings
 #include "Compressed_Lines.h"
-#include "Hash_Table.h"
 #include "Hash.h"
+#include "Hash_Table.h"
 #include "Matrix_Base.h"
 #include "Pattern.h"
 #include "Timer.h"
 
 // C++ includings
 #include <cmath>
+#include <limits>
 #include <mkl.h>
 #include <mpi.h>
 #include <stdlib.h>
-#include <limits>
 
 // PETSc includings
 #include <petscksp.h>
@@ -241,8 +241,8 @@ public:
     Hash_Table<T>* ht_M;
 
     // Hash to store QR factorisations
-    Hash<T>*      hash_qr_M;
-    Key*          indices_qr;
+    Hash<T>* hash_qr_M;
+    Key* indices_qr;
 
     // Methods
     //================================================================

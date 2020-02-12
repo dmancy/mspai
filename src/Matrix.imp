@@ -156,7 +156,7 @@ Matrix<T>::~Matrix()
     if (hash_qr_M)
         delete hash_qr_M;
     if (indices_qr)
-        delete [] indices_qr;
+        delete[] indices_qr;
 }
 
 template <class T>
@@ -270,10 +270,11 @@ void Matrix<T>::Init_Preconditioner(Matrix<T>*& M,
     bitvec_size = (bitvec_size >> 5) + 1;
     M->bitvec = new unsigned int[bitvec_size];
 
-    //Create new hash
+    // Create new hash
     M->hash_qr_M = new Hash<T>();
     M->indices_qr = new Key[M->my_nbr_cols];
-    std::fill(M->indices_qr, M->indices_qr + M->my_nbr_cols, std::numeric_limits<Key>::max());
+    std::fill(M->indices_qr, M->indices_qr + M->my_nbr_cols,
+              std::numeric_limits<Key>::max());
 }
 
 template <class T>

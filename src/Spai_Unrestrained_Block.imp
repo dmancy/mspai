@@ -108,7 +108,7 @@ void Spai_Unrestrained_Block<T>::SPAI_Column(Matrix<T>* A,
         // Computing solution m_k which is stored within
         // mk_Hat.
 
-        Approximative_Solution(A_Hat, M->A_Hat_buffer, M, m, n, mk_Hat, I,
+        Approximative_Solution(A_Hat, M->A_Hat_buffer, M, m, n, mk_Hat, col, I,
                                A->block_sizes[col]);
 
         memcpy(M->mk_Hat_buffer, mk_Hat, I->slen * A->block_sizes[col] * sizeof(T));
@@ -146,6 +146,7 @@ void Spai_Unrestrained_Block<T>::Approximative_Solution(T* A_Hat_orig,
                                                         int& m,
                                                         int& n,
                                                         T*& mk_Hat,
+                                                        int col,
                                                         const Index_Set* I,
                                                         const int block_size_col)
 {
