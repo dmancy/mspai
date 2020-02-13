@@ -63,10 +63,11 @@ void Index_Set::Print_Index_Set(char* str) const
     std::cout << std::endl;
 }
 
-Index_Set* Index_Set::Copy_Index_Set(Index_Set* in)
+Index_Set* Index_Set::Copy_Index_Set(const Index_Set* in)
 {
     Index_Set* out = new Index_Set(in->len);
     memcpy(out->idcs, in->idcs, in->len * sizeof(int));
+    out->slen = in->slen;
     return out;
 }
 

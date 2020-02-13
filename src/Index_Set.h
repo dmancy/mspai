@@ -105,7 +105,7 @@ public:
     ///               made a copy of.
     ///     \return Index set copy of in
     ///////////////////////////////////////////////
-    Index_Set* Copy_Index_Set(Index_Set* in);
+    Index_Set* Copy_Index_Set(const Index_Set* in);
 
     ///////////////////////////////////////////////
     ///     \brief Returns a mathematical set

@@ -80,6 +80,13 @@ void Spai_Update<T>::SPAI_Column(Matrix<T>* A,
     // Initialize hash pointer of Spai_Update
     hash = M->hash_qr_M;
 
+        if (M->indices_qr[col - M->my_start_idx] != std::numeric_limits<Key>::max()) {
+            Approximative_Solution_Update(
+                A_Hat, M->A_Hat_buffer, M, m, n, mk_Hat, col,
+                M->indices_qr[col - M->my_start_idx], bk_Hat_key);
+        o_comm.Insert_Row_Solution(A, M, B, P, UP, col, mk_Hat, J);
+        }
+
     // J will be filled with the
     // new J values from pattern
     // and will be updated each augmenting
@@ -106,12 +113,6 @@ void Spai_Update<T>::SPAI_Column(Matrix<T>* A,
         mk_Hat = o_sub.Create_ek_Hat(I, M, I->len, col, unit_idx);
 
         // QR factorization already stored
-        if (M->indices_qr[col - M->my_start_idx] != std::numeric_limits<Key>::max()) {
-            Approximative_Solution_Update(
-                A_Hat, M->A_Hat_buffer, M, m, n, mk_Hat, I, J, col,
-                M->indices_qr[col - M->my_start_idx], bk_Hat_key);
-            break;
-        }
 
         // Create the submatrix A_Hat = A(I;J) and
         // update the index of the unit vector
@@ -180,6 +181,8 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
 
     T *A_Hat = NULL, *A_Hat_qr = NULL, *tau = NULL,
       *work_qr = NULL, *work_qt = NULL, *mk_Hat_cache = NULL, *tau_cache = NULL;
+
+    Index_Set *I_cache = NULL, *J_cache = NULL;
 
     Spai_Sub<T> o_sub;
 
@@ -279,6 +282,9 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
         A_Hat = A_Hat_of_M;
         memcpy(A_Hat, A_Hat_orig, m * n * sizeof(T));
 
+        I_cache = I_cache->Copy_Index_Set(I);
+        J_cache = J_cache->Copy_Index_Set(J);
+
         // Make a cache copy
         //A_Hat_c = o_sub.Copy_Vector(A_Hat_orig, m * n);
 
@@ -336,7 +342,7 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
         // Inserting the current computed data at the last
         // used position into cache.
         hash->Insert_Hash_Data(hash_key, A_Hat_qr, tau_cache, mk_Hat_cache,
-                               bk_Hat_key, n, m);
+                               bk_Hat_key, I_cache, J_cache, n, m);
         M->indices_qr[col - M->my_start_idx] = hash_key;
     //}
 }
@@ -348,18 +354,18 @@ void Spai_Update<T>::Approximative_Solution_Update(T* A_Hat_orig,
                                                    int& m,
                                                    int& n,
                                                    T*& mk_Hat,
-                                                   const Index_Set* I,
-                                                   Index_Set* J,
                                                    const int col,
                                                    Key hash_key,
                                                    Key bk_Hat_key)
 {
-    int lda = 0, k = 0, info = 0, lwork = 0, one = 1;
+    int lda = 0, k = 0, info = 0, lwork = 0, one = 1, unit_idx = -1;
 
     bool in_hash = false;
 
     T *A_Hat = NULL, *A_Hat_qr = NULL, *tau = NULL,
       *work_qr = NULL, *work_qt = NULL, *mk_Hat_cache = NULL, *tau_cache = NULL;
+
+    Index_Set *I = NULL, *J = NULL;
 
     Spai_Sub<T> o_sub;
 
@@ -386,6 +392,12 @@ void Spai_Update<T>::Approximative_Solution_Update(T* A_Hat_orig,
 
     m = hd.m;
     n = hd.n;
+
+    I = hd.I;
+    J = hd.J;
+
+    mk_Hat = o_sub.Create_ek_Hat(I, M, I->len, col, unit_idx);
+
     // PetscPrintf(PETSC_COMM_WORLD, "Extract A, Col : %d\n", col);
     work_qt = M->Work_qt_ptr;
     work_qr = M->Work_qr_ptr;

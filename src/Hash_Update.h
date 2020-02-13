@@ -36,6 +36,7 @@
 // file includings
 //#include "Matrix.h"
 //#include "Spai_Sub.h"
+#include "Index_Set.h"
 
 // C++/QT includings
 #include <iostream>
@@ -95,6 +96,10 @@ struct HASH_UPDATE_DATA {
     int m;
     /// Previous Residual
     T* residual;
+    // I set
+    Index_Set* I;
+    // J set
+    Index_Set* J;
 };
 
 ////////////////////////////////////////////////////////
@@ -144,7 +149,7 @@ public:
     ///     \param m Number of rows of A_Hat
     ////////////////////////////////////////////////////////
     void Insert_Hash_Data(
-        Key key, T* A_hat_qr, T* tau, T* m_k_hat, Key key_bk_Hat, int n, int m);
+        Key key, T* A_hat_qr, T* tau, T* m_k_hat, Key key_bk_Hat, Index_Set *I, Index_Set *J, int n, int m);
 
     ////////////////////////////////////////////////////////
     ///     \brief  Prints specific hash element
