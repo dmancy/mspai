@@ -88,11 +88,13 @@ struct HASH_UPDATE_DATA {
     ///  The key of the right hand side vector
     Key key_bk_Hat;
     /// A_Hat
-    T* A_Hat;
+    //T* A_Hat;
     /// number of columns of A_Hat (only for Print_Cache())
     int n;
     /// number of rows of A_Hat (only for Print_Cache())
     int m;
+    /// Previous Residual
+    T* residual;
 };
 
 ////////////////////////////////////////////////////////
@@ -142,7 +144,7 @@ public:
     ///     \param m Number of rows of A_Hat
     ////////////////////////////////////////////////////////
     void Insert_Hash_Data(
-        Key key, T* A_hat_qr, T* tau, T* m_k_hat, Key key_bk_Hat, T* A_Hat, int n, int m);
+        Key key, T* A_hat_qr, T* tau, T* m_k_hat, Key key_bk_Hat, int n, int m);
 
     ////////////////////////////////////////////////////////
     ///     \brief  Prints specific hash element

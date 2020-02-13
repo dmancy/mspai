@@ -124,7 +124,8 @@ void Spai_Update_Block<T>::SPAI_Column(Matrix<T>* A,
             A, M, B, P, UP, U_UP, J, I, col, m, n, ht, nnz, pre_k_param, pre_max_param);
 
         // Compute key from A_Hat
-        hash_key = hash->Compute_Key(A_Hat, m * n);
+        //hash_key = hash->Compute_Key(A_Hat, m * n);
+        hash_key = col;
 
         // Copy the right hand side vector.
         // This is used for computing the residual
@@ -186,7 +187,7 @@ void Spai_Update_Block<T>::Approximative_Solution(T* A_Hat_orig,
 
     bool in_hash = false;
 
-    T *A_Hat = NULL, *A_Hat_c = NULL, *A_Hat_qr = NULL, *tau = NULL,
+    T *A_Hat = NULL, *A_Hat_qr = NULL, *tau = NULL,
       *work_qr = NULL, *work_qt = NULL, *mk_Hat_cache = NULL, *tau_cache = NULL;
 
     Spai_Sub<T> o_sub;
@@ -213,6 +214,7 @@ void Spai_Update_Block<T>::Approximative_Solution(T* A_Hat_orig,
         in_hash = true;
 
     // 2nd Check if every element is equal
+    /*
     if (in_hash) {
         // A_Hat was previously computed
         hp = *h_it;
@@ -232,14 +234,17 @@ void Spai_Update_Block<T>::Approximative_Solution(T* A_Hat_orig,
             }
         }
     }
-
+    */
+/*
     if (in_hash) {
         // A_Hat was previously computed
+      std::cout << "Already computed\n" << std::endl;
         hp = *h_it;
         hd = hp.second;
 
         // Testing if even the whole spai iteration was done
         // and mk_Hat already computed
+        // */
         /*
         if (hd.key_bk_Hat == bk_Hat_key) // Best case
         {
@@ -253,7 +258,7 @@ void Spai_Update_Block<T>::Approximative_Solution(T* A_Hat_orig,
         else {*/
         // bk_hat is not the same - extract only A_hat and tau
         // and proceed further in computation with lapack routines
-
+/*
         // PetscPrintf(PETSC_COMM_WORLD, "Extract A, Col : %d\n", col);
         work_qt = M->Work_qt_ptr;
         work_qr = M->Work_qr_ptr;
@@ -293,6 +298,7 @@ void Spai_Update_Block<T>::Approximative_Solution(T* A_Hat_orig,
     }
     else // in_hash == -1 no A_Hat found     //Worst case
     {
+      */
         // PetscPrintf(PETSC_COMM_WORLD, "No stored, Col : %d\n", col);
         // Copy A_Hat because lapack routines change input
         // and the original A_Hat is used later as well
@@ -300,7 +306,7 @@ void Spai_Update_Block<T>::Approximative_Solution(T* A_Hat_orig,
         memcpy(A_Hat, A_Hat_orig, m * n * sizeof(T));
 
         // Make a cache copy
-        A_Hat_c = o_sub.Copy_Vector(A_Hat_orig, m * n);
+//        A_Hat_c = o_sub.Copy_Vector(A_Hat_orig, m * n);
 
         tau = M->Tau_ptr;
         work_qt = M->Work_qt_ptr;
@@ -354,9 +360,9 @@ void Spai_Update_Block<T>::Approximative_Solution(T* A_Hat_orig,
         // Inserting the current computed data at the last
         // used position into cache.
         hash->Insert_Hash_Data(hash_key, A_Hat_qr, tau_cache, mk_Hat_cache,
-                               bk_Hat_key, A_Hat_c, n, m);
+                               bk_Hat_key, n, m);
         M->indices_qr[col - M->my_start_idx] = hash_key;
-    }
+    //}
 }
 
 template <class T>

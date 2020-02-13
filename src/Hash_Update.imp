@@ -56,7 +56,6 @@ void Hash_Update<T>::Initialize()
         delete[] hd.A_Hat_qr;
         delete[] hd.mk_Hat;
         delete[] hd.tau;
-        delete[] hd.A_Hat;
     }
 
     m_hash_map.clear();
@@ -64,14 +63,13 @@ void Hash_Update<T>::Initialize()
 
 template <class T>
 void Hash_Update<T>::Insert_Hash_Data(
-    Key key, T* A_Hat_qr, T* tau, T* mk_Hat, Key key_bk_Hat, T* A_Hat, int n, int m)
+    Key key, T* A_Hat_qr, T* tau, T* mk_Hat, Key key_bk_Hat, int n, int m)
 {
     struct HASH_UPDATE_DATA<T> hd;
     hd.A_Hat_qr = A_Hat_qr;
     hd.tau = tau;
     hd.mk_Hat = mk_Hat;
     hd.key_bk_Hat = key_bk_Hat;
-    hd.A_Hat = A_Hat;
     hd.n = n;
     hd.m = m;
 

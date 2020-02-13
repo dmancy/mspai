@@ -77,8 +77,8 @@ void Spai<T>::SPAI_Algorithm(Matrix<T>* A,
     ht = M->ht_M;
 
     // Reset the QR Hash Table
-    if (count % 2 == 0 && count > 0)
-        M->Reset_Hash_QR();
+    //if (count % 2 == 0 && count > 0)
+    //    M->Reset_Hash_QR();
 
     // Initializing local preconditioner chunk
     if (verbose) {

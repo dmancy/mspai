@@ -119,7 +119,8 @@ void Spai_Update<T>::SPAI_Column(Matrix<T>* A,
                                             ht, nnz, pre_k_param, pre_max_param);
 
         // Compute key from A_Hat
-        hash_key = hash->Compute_Key(A_Hat, m * n);
+        //hash_key = hash->Compute_Key(A_Hat, m * n);
+        hash_key = col;
 
         // Create the unit vector
         // Notice that the name is the solution name already.
@@ -177,7 +178,7 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
 
     bool in_hash = false;
 
-    T *A_Hat = NULL, *A_Hat_c = NULL, *A_Hat_qr = NULL, *tau = NULL,
+    T *A_Hat = NULL, *A_Hat_qr = NULL, *tau = NULL,
       *work_qr = NULL, *work_qt = NULL, *mk_Hat_cache = NULL, *tau_cache = NULL;
 
     Spai_Sub<T> o_sub;
@@ -204,13 +205,14 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
         in_hash = true;
 
     // 2nd Check if every element is equal
-    if (in_hash) {
+   // if (in_hash) {
         // A_Hat was previously computed
-        hp = *h_it;
-        hd = hp.second;
+      //  hp = *h_it;
+      //  hd = hp.second;
 
         // Check if A_Hats are really equal - if not reset
         // cache element.
+        /*
         if (!o_sub.Compare_A_Hat(A_Hat_orig, hd.A_Hat, m * n)) {
             std::cout << "FALSE - ATTENTION!!!!!!!!!!!!!!!!!!!   col : " << col
                       << std::endl;
@@ -223,8 +225,9 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
                     in_hash = false;
             }
         }
-    }
-
+        */
+   // }
+/*
     if (in_hash) {
         // bk_hat is not the same - extract only A_hat and tau
         // and proceed further in computation with lapack routines
@@ -269,6 +272,7 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
     }
     else // in_hash == -1 no A_Hat found     //Worst case
     {
+    */
         //    PetscPrintf(PETSC_COMM_WORLD, "No stored, Col : %d\n", col);
         // Copy A_Hat because lapack routines change input
         // and the original A_Hat is used later as well
@@ -276,7 +280,7 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
         memcpy(A_Hat, A_Hat_orig, m * n * sizeof(T));
 
         // Make a cache copy
-        A_Hat_c = o_sub.Copy_Vector(A_Hat_orig, m * n);
+        //A_Hat_c = o_sub.Copy_Vector(A_Hat_orig, m * n);
 
         tau = M->Tau_ptr;
         work_qt = M->Work_qt_ptr;
@@ -332,9 +336,9 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
         // Inserting the current computed data at the last
         // used position into cache.
         hash->Insert_Hash_Data(hash_key, A_Hat_qr, tau_cache, mk_Hat_cache,
-                               bk_Hat_key, A_Hat_c, n, m);
+                               bk_Hat_key, n, m);
         M->indices_qr[col - M->my_start_idx] = hash_key;
-    }
+    //}
 }
 
 template <class T>
@@ -354,7 +358,7 @@ void Spai_Update<T>::Approximative_Solution_Update(T* A_Hat_orig,
 
     bool in_hash = false;
 
-    T *A_Hat = NULL, *A_Hat_c = NULL, *A_Hat_qr = NULL, *tau = NULL,
+    T *A_Hat = NULL, *A_Hat_qr = NULL, *tau = NULL,
       *work_qr = NULL, *work_qt = NULL, *mk_Hat_cache = NULL, *tau_cache = NULL;
 
     Spai_Sub<T> o_sub;
