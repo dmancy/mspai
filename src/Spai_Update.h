@@ -127,6 +127,8 @@ private:
                                        int& m,
                                        int& n,
                                        T*& mk_Hat,
+                                       Index_Set*& I,
+                                       Index_Set*& J,
                                        const int col,
                                        Key hash_key,
                                        Key ek_Hat_key);

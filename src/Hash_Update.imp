@@ -56,6 +56,7 @@ void Hash_Update<T>::Initialize()
         delete[] hd.A_Hat_qr;
         delete[] hd.mk_Hat;
         delete[] hd.tau;
+        delete[] hd.residual;
         delete hd.I;
         delete hd.J;
     }
