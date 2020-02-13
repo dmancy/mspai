@@ -110,8 +110,12 @@ public:
     /// Largest block size
     int max_block_size;
 
-    /// Size of evrery diagonal block
+    /// Size of every diagonal block
     int* block_sizes;
+
+    /// Global scalar column of the first scalar column of the global block
+    int* scalar_column;
+    
 };
 
 #endif

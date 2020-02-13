@@ -20,7 +20,7 @@ int main(int argc, char** args)
 {
     Vec x, b, u, *Ce = NULL,
                  solution; /* approx solution, RHS, exact solution */
-    Mat A;                 /* linear system matrix */
+    Mat A, A2;                 /* linear system matrix */
     KSP ksp;               /* linear solver context */
     PC pc;                 /* preconditioner context */
     PetscReal norm, *residual = NULL, time = 0; /* norm of solution error */
@@ -248,9 +248,18 @@ int main(int argc, char** args)
        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
     T = MPI_Wtime();
 
+    ierr = MatConvert(A, MATSAME, MAT_INITIAL_MATRIX, &A2);
+    ierr = MatZeroEntries(A2);
+
+    PC_MSPAI *context = NULL;
+
     for (int iteration = 0; iteration < 20; iteration++) {
         PetscPrintf(PETSC_COMM_WORLD, "######## Interation %d ########", iteration);
         ierr = KSPSolve(ksp, b, solution);
+
+        PCShellGetContext(pc, (void**)& context);
+        context->Delta = &A2;
+
         CHKERRQ(ierr);
         // MatTranspose(A,MAT_INPLACE_MATRIX,&A);
         MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
@@ -282,6 +291,8 @@ int main(int argc, char** args)
     ierr = VecDestroy(&b);
     CHKERRQ(ierr);
     ierr = MatDestroy(&A);
+    CHKERRQ(ierr);
+    ierr = MatDestroy(&A2);
     CHKERRQ(ierr);
 
     ierr = PetscFinalize();

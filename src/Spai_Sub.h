@@ -45,6 +45,7 @@
 #include <math.h>
 #include <mkl.h>
 #include <unistd.h>
+#include <petscksp.h>
 
 /// values smaller than null_eps will ar
 /// conciedered as 0. For doule-comparison
@@ -1187,6 +1188,11 @@ public:
     //////////////////////////////////////////////////////////////
     bool Compare_aij(COMPLEX c1, COMPLEX c2);
 
+    /* Add contribution of the former SPAI computation to the residual*/
+    void Add_Contribution_Update_Block(
+    Matrix<T>* M, Index_Set* I, int block_size_col, T* residual, int col);
+
+
 private:
     //////////////////////////////////////////////////////////////
     ///     \brief  Testing whether an integer is subset in
@@ -1226,6 +1232,8 @@ private:
     ///                      current used positions of bitvec.
     //////////////////////////////////////////////////////////////
     void Reset_bitvec(unsigned int*& bitvec, int reset_len, unsigned int* reset_vec);
+
+
 };
 
 #include "Spai_Sub.imp"

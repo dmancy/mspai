@@ -245,6 +245,9 @@ public:
     Hash_Update<T>* hash_qr_M;
     Key* indices_qr;
 
+    // Delta Matrix
+    Mat* Delta;
+
     // Methods
     //================================================================
     //========== Template specifications for double matrices =========
