@@ -121,6 +121,9 @@ public:
     /// The empty constructor
     Hash_Update(){};
 
+    /// The empty constructor
+    Hash_Update(int size);
+
     /// The destructor
     ~Hash_Update();
 
@@ -148,15 +151,8 @@ public:
     ///     \param n Number of columns of A_Hat
     ///     \param m Number of rows of A_Hat
     ////////////////////////////////////////////////////////
-    void Insert_Hash_Data(Key key,
-                          T* A_hat_qr,
-                          T* tau,
-                          T* m_k_hat,
-                          Key key_bk_Hat,
-                          Index_Set* I,
-                          Index_Set* J,
-                          int n,
-                          int m);
+    void Insert_Vec_Data(
+        int pos, T* A_hat_qr, T* tau, T* m_k_hat, Index_Set* I, Index_Set* J, int n, int m);
 
     ////////////////////////////////////////////////////////
     ///     \brief  Prints specific hash element
@@ -168,7 +164,7 @@ public:
     ///     \param kp The Key for the element which has to
     ///                 be printed.
     ////////////////////////////////////////////////////////
-    void Print_Specific_Hash_Data(Key kp);
+    // void Print_Specific_Hash_Data(Key kp);
 
     ////////////////////////////////////////////////////////
     ///     \brief  Print all elements within the hash
@@ -178,7 +174,7 @@ public:
     ///     the method Print_Specific_Hash_Data will be
     ///     invoked.
     ////////////////////////////////////////////////////////
-    void Print_Full_Hash();
+    // void Print_Full_Hash();
 
     ////////////////////////////////////////////////////////
     ///     \brief   Interface function to the hash map
@@ -188,7 +184,7 @@ public:
     ///
     ///     \return The hash map
     ////////////////////////////////////////////////////////
-    const hash_map<Key, HASH_UPDATE_DATA<T>, HASH_UPDATE_FUNCTION>& Get_Hash_Map() const;
+    const std::vector<HASH_UPDATE_DATA<T>*>& Get_Vec() const;
 
     ////////////////////////////////////////////////////////
     ///     \brief   Returning the number of elements within the hash
@@ -198,7 +194,7 @@ public:
     ///
     ///     \return The number of elements within the hash.
     ////////////////////////////////////////////////////////
-    int Get_Hash_Size();
+    // int Get_Hash_Size();
 
     ////////////////////////////////////////////////////////
     ///     \brief   The hash function to compute the hash key
@@ -220,7 +216,7 @@ public:
     ///    \return The complete unsigned 32 Bit hash value
     ///             for the vector
     ////////////////////////////////////////////////////////
-    Key Compute_Key(const T* vec, size_t size) const;
+    // Key Compute_Key(const T* vec, size_t size) const;
 
     ////////////////////////////////////////////////////////
     ///     \brief   Computing a "unique" hash value for a double
@@ -234,13 +230,13 @@ public:
     ///                 value for
     ///     \return The unsigned 32 Bit hash value
     ////////////////////////////////////////////////////////
-    static inline Key Hash_Double(double x);
+    // static inline Key Hash_Double(double x);
 
     void Initialize();
 
-private:
+    // private:
     /// the hash map containing the desired data
-    hash_map<Key, HASH_UPDATE_DATA<T>, HASH_UPDATE_FUNCTION> m_hash_map;
+    std::vector<HASH_UPDATE_DATA<T>*> m_vector;
 };
 
 #include "Hash_Update.imp"

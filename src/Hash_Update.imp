@@ -43,49 +43,68 @@ Hash_Update<T>::~Hash_Update()
 }
 
 template <class T>
-void Hash_Update<T>::Initialize()
+Hash_Update<T>::Hash_Update(int size)
 {
-    typename hash_map<Key, HASH_UPDATE_DATA<T>, HASH_UPDATE_FUNCTION>::iterator it;
-
-    std::pair<Key, HASH_UPDATE_DATA<T>> hp;
-    HASH_UPDATE_DATA<T> hd;
-    for (it = m_hash_map.begin(); it != m_hash_map.end(); it++) {
-        hp = *it;
-        hd = hp.second;
-
-        delete[] hd.A_Hat_qr;
-        delete[] hd.mk_Hat;
-        delete[] hd.tau;
-        delete[] hd.residual;
-        delete hd.I;
-        delete hd.J;
-    }
-
-    m_hash_map.clear();
+    m_vector.reserve(size);
 }
 
 template <class T>
-void Hash_Update<T>::Insert_Hash_Data(
-    Key key, T* A_Hat_qr, T* tau, T* mk_Hat, Key key_bk_Hat, Index_Set* I, Index_Set* J, int n, int m)
+void Hash_Update<T>::Initialize()
 {
-    struct HASH_UPDATE_DATA<T> hd;
-    hd.A_Hat_qr = A_Hat_qr;
-    hd.tau = tau;
-    hd.mk_Hat = mk_Hat;
-    hd.key_bk_Hat = key_bk_Hat;
-    hd.n = n;
-    hd.m = m;
-    hd.I = I;
-    hd.J = J;
+    HASH_UPDATE_DATA<T>* hd;
+    for (int i = 0; i < m_vector.capacity(); i++) {
+        hd = m_vector[i];
+        if (hd) {
+            delete[] hd->A_Hat_qr;
+            hd->A_Hat_qr = NULL;
 
-    const Key kp(key);
-    m_hash_map.insert(std::pair<Key, HASH_UPDATE_DATA<T>>(kp, hd));
+            delete[] hd->mk_Hat;
+            hd->mk_Hat = NULL;
+
+            delete[] hd->tau;
+            hd->tau = NULL;
+
+            delete hd->I;
+            hd->I = NULL;
+
+            delete hd->J;
+            hd->J = NULL;
+
+            if (hd->residual)
+                delete[] hd->residual;
+            hd->residual = NULL;
+
+            delete hd;
+
+            m_vector[i] = NULL;
+        }
+    }
+
+    //    m_vector.clear();
 }
 
+template <class T>
+void Hash_Update<T>::Insert_Vec_Data(
+    int pos, T* A_Hat_qr, T* tau, T* mk_Hat, Index_Set* I, Index_Set* J, int n, int m)
+{
+    struct HASH_UPDATE_DATA<T>* hd = new HASH_UPDATE_DATA<T>;
+    hd->A_Hat_qr = A_Hat_qr;
+    hd->tau = tau;
+    hd->mk_Hat = mk_Hat;
+    hd->key_bk_Hat = 0;
+    hd->n = n;
+    hd->m = m;
+    hd->I = I;
+    hd->J = J;
+    hd->residual = NULL;
+
+    m_vector[pos] = hd;
+}
+
+/*
 template <class T>
 void Hash_Update<T>::Print_Specific_Hash_Data(Key kp)
 {
-    /*
       struct HASH_DATA<T> hd = m_hash_map[kp];
 
       Spai_Sub<T> o_sub;
@@ -100,13 +119,13 @@ void Hash_Update<T>::Print_Specific_Hash_Data(Key kp)
       o_sub.Print_A_Hat(hd.mk_Hat, hd.n, 1);
       o_sub.Print_A_Hat(hd.A_Hat_qr, hd.n, hd.m);
       std::cout << "" << std::endl;
-      */
 }
 
 template <class T>
 void Hash_Update<T>::Print_Full_Hash()
 {
-    typename hash_map<Key, HASH_UPDATE_DATA<T>, HASH_UPDATE_FUNCTION>::iterator it;
+    typename hash_map<Key, HASH_UPDATE_DATA<T>, HASH_UPDATE_FUNCTION>::iterator
+it;
 
     std::cout << "\tPRINTING NEW HASH             " << std::endl;
     std::cout << "\tHashsize: " << m_hash_map.size() << "\n" << std::endl;
@@ -114,13 +133,14 @@ void Hash_Update<T>::Print_Full_Hash()
     for (it = m_hash_map.begin(); it != m_hash_map.end(); it++)
         Print_Specific_Hash_Data(it->first);
 }
-
+i*/
 template <class T>
-const hash_map<Key, HASH_UPDATE_DATA<T>, HASH_UPDATE_FUNCTION>& Hash_Update<T>::Get_Hash_Map() const
+const std::vector<HASH_UPDATE_DATA<T>*>& Hash_Update<T>::Get_Vec() const
 {
-    return m_hash_map;
+    return m_vector;
 }
 
+/*
 template <class T>
 int Hash_Update<T>::Get_Hash_Size()
 {
@@ -142,3 +162,4 @@ inline Key Hash_Update<T>::Hash_Double(double x)
     memcpy(p, &x, sizeof p);
     return p[0] ^ p[1];
 }
+*/

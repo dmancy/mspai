@@ -70,8 +70,8 @@ public:
     Matrix<double>* M_REAL_SCALAR;
     Matrix<double>* C_REAL;
 
-    Mat* A;  /* the PETSc matrix system */
-    Mat* PM; /* the approximate inverse PETSc format */
+    Mat* A;     /* the PETSc matrix system */
+    Mat* PM;    /* the approximate inverse PETSc format */
     Mat* Delta; /*Matrix delta to add to the residual (Update)*/
 
     Pattern* P_Memory; /* Potential reused of the last pattern */

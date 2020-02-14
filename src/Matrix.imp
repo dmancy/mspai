@@ -82,7 +82,6 @@ Matrix<T>::Matrix(MPI_Comm world_m)
     ht_M = NULL;
 
     hash_qr_M = NULL;
-    indices_qr = NULL;
     Delta = NULL;
 }
 
@@ -159,8 +158,6 @@ Matrix<T>::~Matrix()
         delete ht_M;
     if (hash_qr_M)
         delete hash_qr_M;
-    if (indices_qr)
-        delete[] indices_qr;
 }
 
 template <class T>
@@ -238,13 +235,11 @@ void Matrix<T>::Init_Preconditioner(Matrix<T>*& M,
 
     memcpy(M->block_sizes, block_sizes, n * sizeof(int));
 
-
-    if (M->block_size != 1)
-    {
+    if (M->block_size != 1) {
         M->scalar_column = new int[n];
         M->scalar_column[0] = 0;
         for (int i = 1; i < n; i++)
-            M->scalar_column[i] = M->scalar_column[i-1] + M->block_sizes[i-1];
+            M->scalar_column[i] = M->scalar_column[i - 1] + M->block_sizes[i - 1];
     }
 
     M->I_set = new Index_Set(max_arg);
@@ -284,10 +279,7 @@ void Matrix<T>::Init_Preconditioner(Matrix<T>*& M,
     M->bitvec = new unsigned int[bitvec_size];
 
     // Create new hash
-    M->hash_qr_M = new Hash_Update<T>();
-    M->indices_qr = new Key[M->my_nbr_cols];
-    std::fill(M->indices_qr, M->indices_qr + M->my_nbr_cols,
-              std::numeric_limits<Key>::max());
+    M->hash_qr_M = new Hash_Update<T>(M->my_nbr_cols);
 }
 
 template <class T>
@@ -3041,8 +3033,6 @@ void Matrix<T>::Reset_Hash_QR()
 {
     if (hash_qr_M)
         hash_qr_M->Initialize();
-    if (indices_qr)
-        std::fill(indices_qr, indices_qr + my_nbr_cols, std::numeric_limits<Key>::max());
 }
 
 inline int comp(const void* elem1, const void* elem2)

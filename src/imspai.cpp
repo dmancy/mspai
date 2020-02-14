@@ -656,10 +656,9 @@ int PC_MSPAI::bspai(void)
     if (count > 0)
         MatDestroy(PM);
 
-    //Point towards Delta A
+    // Point towards Delta A
     if (count > 0)
         M_REAL->Delta = Delta;
-
 
     if (!(count % restart == 0)) {
         // Renitialize the pattern next column

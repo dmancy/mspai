@@ -1464,7 +1464,7 @@ RHO_IDX* Spai_Sub<T>::Compute_Rhos_Block(Matrix<T>* A,
     return rhos;
 }
 
-//Add the contribution \delta A * m_k to the residual
+// Add the contribution \delta A * m_k to the residual
 template <class T>
 void Spai_Sub<T>::Add_Contribution_Update_Block(
     Matrix<T>* M, Index_Set* I, int block_size_col, T* residual, int col)
@@ -1472,31 +1472,25 @@ void Spai_Sub<T>::Add_Contribution_Update_Block(
     PetscErrorCode ierr;
     int i = 0, index_residual = 0, row_residual, index_delta_A;
     int ncols;
-    const int *cols = NULL;
-    const double *vals = NULL;
-    
-    
-    for (int j = 0; j < block_size_col; j++)
-    {
+    const int* cols = NULL;
+    const double* vals = NULL;
+
+    for (int j = 0; j < block_size_col; j++) {
         i = 0;
         index_delta_A = 0;
 
         ierr = MatGetRow(*(M->Delta), M->my_start_idx + col + j, &ncols, &cols, &vals);
 
-        while (i < I->len)
-        {
-            for (int i_block = 0; i_block < M->block_sizes[I->idcs[i]]; i_block++)
-            { 
+        while (i < I->len) {
+            for (int i_block = 0; i_block < M->block_sizes[I->idcs[i]]; i_block++) {
                 index_residual++;
                 row_residual = M->scalar_column[I->idcs[i]] + i_block;
 
-                while (cols[index_delta_A] < row_residual)
-                {
+                while (cols[index_delta_A] < row_residual) {
                     index_delta_A++;
                 }
-                
-                if (cols[index_delta_A] == row_residual)
-                {
+
+                if (cols[index_delta_A] == row_residual) {
                     residual[index_residual] += vals[index_delta_A];
                 }
             }
@@ -1506,5 +1500,4 @@ void Spai_Sub<T>::Add_Contribution_Update_Block(
 
         ierr = MatRestoreRow(*(M->Delta), M->my_start_idx + col + j, &ncols, &cols, &vals);
     }
-    
 }

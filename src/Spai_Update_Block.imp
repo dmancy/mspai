@@ -71,11 +71,7 @@ void Spai_Update_Block<T>::SPAI_Column(Matrix<T>* A,
       *residual_cache = NULL;
     T* residual_vals_b = M->residual_vals_b_buffer;
 
-    HASH_UPDATE_DATA<T> hd;
-
-    std::pair<Key, HASH_UPDATE_DATA<T>> hp;
-
-    typename hash_map<Key, HASH_UPDATE_DATA<T>, HASH_UPDATE_FUNCTION>::const_iterator h_it;
+    HASH_UPDATE_DATA<T>* hd;
 
     Spai_Sub<T> o_sub;
 
@@ -90,12 +86,12 @@ void Spai_Update_Block<T>::SPAI_Column(Matrix<T>* A,
     // Initialize hash pointer of Spai_Update_Block
     hash = M->hash_qr_M;
 
-    // QR factorization already stored
-    if (M->indices_qr[col - M->my_start_idx] != std::numeric_limits<Key>::max()) {
+    hd = hash->m_vector[col - M->my_start_idx];
 
-        Approximative_Solution_Update(
-            A_Hat, M->A_Hat_buffer, M, mk_Hat, I, J, col, A->block_sizes[col],
-            M->indices_qr[col - M->my_start_idx], bk_Hat_key);
+    // QR factorization already stored
+    if (hd) {
+        Approximative_Solution_Update(A_Hat, M->A_Hat_buffer, M, mk_Hat, I, J,
+                                      col, A->block_sizes[col], col, bk_Hat_key);
         memcpy(M->mk_Hat_buffer, mk_Hat, I->slen * A->block_sizes[col] * sizeof(T));
 
         o_sub.Get_Solution_Vals_Scalar(M->mk_Hat_buffer, mk_Hat, M, A, col, J, I->slen);
@@ -145,7 +141,8 @@ void Spai_Update_Block<T>::SPAI_Column(Matrix<T>* A,
         memcpy(bk_Hat, mk_Hat, I->slen * A->block_sizes[col] * sizeof(double));
 
         // Compute right hand side key
-        bk_Hat_key = hash->Compute_Key(mk_Hat, I->slen * A->block_sizes[col]);
+        // bk_Hat_key = hash->Compute_Key(mk_Hat, I->slen *
+        // A->block_sizes[col]);
 
         // Computing solution m_k which is stored within
         // mk_Hat.
@@ -164,10 +161,8 @@ void Spai_Update_Block<T>::SPAI_Column(Matrix<T>* A,
         residual_cache = o_sub.Copy_Vector(residual_vals, m * A->block_sizes[col]);
 
         // Store it in the Hash Table
-        h_it = hash->Get_Hash_Map().find(hash_key);
-        hp = *h_it;
-        hd = hp.second;
-        hd.residual = residual_cache;
+        hd = hash->m_vector[col - M->my_start_idx];
+        hd->residual = residual_cache;
 
         o_sub.Convert_To_Block(M, I, col, residual_vals, residual_vals_b);
 
@@ -218,106 +213,7 @@ void Spai_Update_Block<T>::Approximative_Solution(T* A_Hat_orig,
     // Copy A_Hat because lapack routines change input
     // and the original A_Hat is used later as well
     A_Hat = A_Hat_of_M;
-    //    memcpy(A_Hat, A_Hat_orig, m * n * sizeof(T));
 
-    HASH_UPDATE_DATA<T> hd;
-
-    std::pair<Key, HASH_UPDATE_DATA<T>> hp;
-
-    typename hash_map<Key, HASH_UPDATE_DATA<T>, HASH_UPDATE_FUNCTION>::const_iterator h_it;
-
-    // Testing hash for possible previously computed values:
-    // Was this A_hat previously computed?
-
-    // 2nd Check if every element is equal
-    /*
-    if (in_hash) {
-        // A_Hat was previously computed
-        hp = *h_it;
-        hd = hp.second;
-
-        // Check if A_Hats are really equal - if not reset
-        // cache element.
-        if (!o_sub.Compare_A_Hat(A_Hat_orig, hd.A_Hat, m * n)) {
-            std::cout << "FALSE - ATTENTION!!!!!!!!!!!!!!!!!!!1\n" << std::endl;
-            while (in_hash) {
-                hash_key++;
-                h_it = hash->Get_Hash_Map().find(hash_key);
-                if (h_it != hash->Get_Hash_Map().end())
-                    in_hash = true;
-                else
-                    in_hash = false;
-            }
-        }
-    }
-    */
-    /*
-        if (in_hash) {
-            // A_Hat was previously computed
-          std::cout << "Already computed\n" << std::endl;
-            hp = *h_it;
-            hd = hp.second;
-
-            // Testing if even the whole spai iteration was done
-            // and mk_Hat already computed
-            // */
-    /*
-    if (hd.key_bk_Hat == bk_Hat_key) // Best case
-    {
-        // A_Hat is identically as well as bk_Hat
-        // -> extract mk_Hat and finish iteration
-        memcpy(mk_Hat, hd.mk_Hat, J->len * sizeof(T));
-        //PetscPrintf(PETSC_COMM_WORLD, "Best Case, Col : %d\n", col);
-
-        return;
-    }
-    else {*/
-    // bk_hat is not the same - extract only A_hat and tau
-    // and proceed further in computation with lapack routines
-    /*
-            // PetscPrintf(PETSC_COMM_WORLD, "Extract A, Col : %d\n", col);
-            work_qt = M->Work_qt_ptr;
-            work_qr = M->Work_qr_ptr;
-
-            o_sub.Init_Lapack_Vals(m, n, k, lda, lwork, &work_qr);
-
-            // Getting previously computed qr factorization of A_hat
-            memcpy(A_Hat, hd.A_Hat_qr, m * n * sizeof(T));
-
-            // Getting previously computed tau data
-            // memcpy(tau, hd.tau, k * sizeof(T));
-            tau = hd.tau;
-
-            // Preprocessing step:
-            // Get the optimal lwork value for fastest
-            // QT * vector multiplication. See lapack documentation for
-            // details.
-            lwork = o_sub.Opt_lwork_QTApply(SIDE, m, n, k, one, lda, A_Hat, tau,
-       mk_Hat);
-
-            // Set new work array -> faster than realloc work_qr
-            memset(work_qt, 0, lwork * sizeof(T));
-
-            // Computing :   Q^T * e_k_hat
-            o_sub.QT_Apply(SIDE, TRANS, m, one, k, A_Hat, lda, tau, mk_Hat,
-       work_qt, lwork, info);
-
-            // Getting the quadratic contingent of the matrix A_hat for
-            // both cases:   m x n and n x m
-            o_sub.Ectract_Quadratic_Content(A_Hat, m, n);
-
-            // Solving the triangular system:
-            // Computing :   R^-1 * (Q^T * e_k_hat)
-            o_sub.Solve_Tr_System_Block(UPLO, NCHAR, n, one, I->slen, A_Hat,
-       mk_Hat, info);
-
-            // mk_Hat = o_sub.Get_Solution_Vals(mk_Hat, J);
-            //}
-            M->indices_qr[col - M->my_start_idx] = hash_key;
-        }
-        else // in_hash == -1 no A_Hat found     //Worst case
-        {
-          */
     // PetscPrintf(PETSC_COMM_WORLD, "No stored, Col : %d\n", col);
     // Copy A_Hat because lapack routines change input
     // and the original A_Hat is used later as well
@@ -381,9 +277,8 @@ void Spai_Update_Block<T>::Approximative_Solution(T* A_Hat_orig,
 
     // Inserting the current computed data at the last
     // used position into cache.
-    hash->Insert_Hash_Data(hash_key, A_Hat_qr, tau_cache, mk_Hat_cache,
-                           bk_Hat_key, I_cache, J_cache, n, m);
-    M->indices_qr[col - M->my_start_idx] = hash_key;
+    hash->Insert_Vec_Data(hash_key, A_Hat_qr, tau_cache, mk_Hat_cache, I_cache,
+                          J_cache, n, m);
 
     return;
 }
@@ -417,31 +312,26 @@ void Spai_Update_Block<T>::Approximative_Solution_Update(T* A_Hat_orig,
     // and the original A_Hat is used later as well
     A_Hat = A_Hat_of_M;
 
-    HASH_UPDATE_DATA<T> hd;
-
-    std::pair<Key, HASH_UPDATE_DATA<T>> hp;
-
-    typename hash_map<Key, HASH_UPDATE_DATA<T>, HASH_UPDATE_FUNCTION>::const_iterator h_it;
+    HASH_UPDATE_DATA<T>* hd;
 
     // Retrieve information from the hash table
-    hash_key = M->indices_qr[col - M->my_start_idx];
-    h_it = hash->Get_Hash_Map().find(hash_key);
+    hash_key = col;
 
     // A_Hat was previously computed
-    hp = *h_it;
-    hd = hp.second;
+    hd = hash->m_vector[col - M->my_start_idx];
 
-    I = hd.I;
-    J = hd.J;
+    I = hd->I;
+    J = hd->J;
 
     m = I->slen;
     n = J->slen;
 
     mk_Hat = M->mk_Hat;
-    memcpy(mk_Hat, hd.residual, m * block_size_col * sizeof(T));
+    memcpy(mk_Hat, hd->residual, m * block_size_col * sizeof(T));
 
-    //Add the contribution of delta_A * m_k in the RHS (SPAI Update)
-    //o_sub.Add_Contribution_Update_Block(M, I, block_size_col, hd.residual, col);
+    // Add the contribution of delta_A * m_k in the RHS (SPAI Update)
+    // o_sub.Add_Contribution_Update_Block(M, I, block_size_col, hd.residual,
+    // col);
 
     mk_Hat = o_sub.Create_ek_Hat_Block(I, M, I->slen * block_size_col, col, unit_idx);
 
@@ -452,11 +342,11 @@ void Spai_Update_Block<T>::Approximative_Solution_Update(T* A_Hat_orig,
     o_sub.Init_Lapack_Vals(m, n, k, lda, lwork, &work_qr);
 
     // Getting previously computed qr factorization of A_hat
-    memcpy(A_Hat, hd.A_Hat_qr, m * n * sizeof(T));
+    memcpy(A_Hat, hd->A_Hat_qr, m * n * sizeof(T));
 
     // Getting previously computed tau data
     // memcpy(tau, hd.tau, k * sizeof(T));
-    tau = hd.tau;
+    tau = hd->tau;
 
     // Preprocessing step:
     // Get the optimal lwork value for fastest

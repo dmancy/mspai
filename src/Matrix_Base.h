@@ -115,7 +115,6 @@ public:
 
     /// Global scalar column of the first scalar column of the global block
     int* scalar_column;
-    
 };
 
 #endif
