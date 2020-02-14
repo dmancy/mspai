@@ -52,7 +52,7 @@ template <class T>
 void Hash_Update<T>::Initialize()
 {
     HASH_UPDATE_DATA<T>* hd;
-    for (int i = 0; i < m_vector.capacity(); i++) {
+    for (unsigned int i = 0; i < m_vector.capacity(); i++) {
         hd = m_vector[i];
         if (hd) {
             delete[] hd->A_Hat_qr;
@@ -79,8 +79,6 @@ void Hash_Update<T>::Initialize()
             m_vector[i] = NULL;
         }
     }
-
-    //    m_vector.clear();
 }
 
 template <class T>
@@ -101,65 +99,8 @@ void Hash_Update<T>::Insert_Vec_Data(
     m_vector[pos] = hd;
 }
 
-/*
-template <class T>
-void Hash_Update<T>::Print_Specific_Hash_Data(Key kp)
-{
-      struct HASH_DATA<T> hd = m_hash_map[kp];
-
-      Spai_Sub<T> o_sub;
-
-      double* A_hat_qr = hd.A_hat_qr;
-      double* tau = hd.tau;
-      double* m_k_hat = hd.m_k_hat;
-
-      std::cout << "\t=========================" << std::endl;
-      std::cout << "\tKey: " << kp << std::endl;
-      o_sub.Print_A_Hat(hd.A_Hat, hd.n, hd.m);
-      o_sub.Print_A_Hat(hd.mk_Hat, hd.n, 1);
-      o_sub.Print_A_Hat(hd.A_Hat_qr, hd.n, hd.m);
-      std::cout << "" << std::endl;
-}
-
-template <class T>
-void Hash_Update<T>::Print_Full_Hash()
-{
-    typename hash_map<Key, HASH_UPDATE_DATA<T>, HASH_UPDATE_FUNCTION>::iterator
-it;
-
-    std::cout << "\tPRINTING NEW HASH             " << std::endl;
-    std::cout << "\tHashsize: " << m_hash_map.size() << "\n" << std::endl;
-
-    for (it = m_hash_map.begin(); it != m_hash_map.end(); it++)
-        Print_Specific_Hash_Data(it->first);
-}
-i*/
 template <class T>
 const std::vector<HASH_UPDATE_DATA<T>*>& Hash_Update<T>::Get_Vec() const
 {
     return m_vector;
 }
-
-/*
-template <class T>
-int Hash_Update<T>::Get_Hash_Size()
-{
-    return m_hash_map.size();
-}
-
-template <class T>
-inline Key Hash_Update<T>::Hash_Double(double x)
-{
-    // Take care: Reinterpret casting very dangerously!
-    // In my case under gcc 3.4 this was ok - test your
-    // compiler if problems will occur.
-    //  U_Int64* p = reinterpret_cast< U_Int64* > (&x);
-    //  return *p ^ (*p >> 32);
-
-    // Under gcc 4.1.3 the above code does not work any more.
-    // This one should do the same.
-    Key p[2];
-    memcpy(p, &x, sizeof p);
-    return p[0] ^ p[1];
-}
-*/

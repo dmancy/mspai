@@ -117,9 +117,7 @@ private:
                                 T*& mk_Hat,
                                 const Index_Set* I,
                                 Index_Set* J,
-                                const int col,
-                                Key hash_key,
-                                Key ek_Hat_key);
+                                const int col);
 
     void Approximative_Solution_Update(T* A_Hat_orig,
                                        T* A_Hat_of_M,
@@ -129,9 +127,7 @@ private:
                                        T*& mk_Hat,
                                        Index_Set*& I,
                                        Index_Set*& J,
-                                       const int col,
-                                       Key hash_key,
-                                       Key ek_Hat_key);
+                                       const int col);
 
 protected:
     ///////////////////////////////////////////////////////////

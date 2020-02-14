@@ -82,15 +82,12 @@ void Spai_Update<T>::SPAI_Column(Matrix<T>* A,
 
     Index_Set *J = NULL, *I = NULL;
 
-    Key hash_key, bk_Hat_key;
-
     // Initialize hash pointer of Spai_Update
     hash = M->hash_qr_M;
     hd = hash->m_vector[col - M->my_start_idx];
 
     if (hd) {
-        Approximative_Solution_Update(A_Hat, M->A_Hat_buffer, M, m, n, mk_Hat,
-                                      I, J, col, col, bk_Hat_key);
+        Approximative_Solution_Update(A_Hat, M->A_Hat_buffer, M, m, n, mk_Hat, I, J, col);
         o_comm.Insert_Row_Solution(A, M, B, P, UP, col, mk_Hat, J);
     }
 
@@ -108,69 +105,46 @@ void Spai_Update<T>::SPAI_Column(Matrix<T>* A,
 
     // step is -1 because the first improvement step is
     // only the static SPAI
-    for (int step = -1; step < max_impr_steps; step++) {
-        // Drive on communication between pes
-        o_comm.Communicate(A, M, B, P, UP);
+    // Drive on communication between pes
+    o_comm.Communicate(A, M, B, P, UP);
 
-        // Get those row indices where at least one nnz
-        // is available in row. Create Index Set I
-        I = o_sub.Get_I_Set(J, A, M, B, P, UP, U_UP, ht, pre_k_param,
-                            pre_max_param, bitvec, reset_vec);
+    // Get those row indices where at least one nnz
+    // is available in row. Create Index Set I
+    I = o_sub.Get_I_Set(J, A, M, B, P, UP, U_UP, ht, pre_k_param, pre_max_param,
+                        bitvec, reset_vec);
 
-        mk_Hat = o_sub.Create_ek_Hat(I, M, I->len, col, unit_idx);
+    mk_Hat = o_sub.Create_ek_Hat(I, M, I->len, col, unit_idx);
 
-        // QR factorization already stored
+    // QR factorization already stored
 
-        // Create the submatrix A_Hat = A(I;J) and
-        // update the index of the unit vector
-        A_Hat = o_sub.Create_Submatrix_AHat(A, M, B, P, UP, U_UP, J, I, m, n,
-                                            ht, nnz, pre_k_param, pre_max_param);
+    // Create the submatrix A_Hat = A(I;J) and
+    // update the index of the unit vector
+    A_Hat = o_sub.Create_Submatrix_AHat(A, M, B, P, UP, U_UP, J, I, m, n, ht,
+                                        nnz, pre_k_param, pre_max_param);
 
-        // Compute key from A_Hat
-        // hash_key = hash->Compute_Key(A_Hat, m * n);
-        hash_key = col;
+    // Create the unit vector
+    // Notice that the name is the solution name already.
 
-        // Create the unit vector
-        // Notice that the name is the solution name already.
+    // Copy the right hand side vector.
+    // This is used for computing the residual
+    // vector later
+    bk_Hat = M->bk_Hat;
+    memcpy(bk_Hat, mk_Hat, I->len * sizeof(T));
 
-        // Copy the right hand side vector.
-        // This is used for computing the residual
-        // vector later
-        bk_Hat = M->bk_Hat;
-        memcpy(bk_Hat, mk_Hat, I->len * sizeof(T));
+    // Computing solution m_k which is stored within
+    // mk_Hat.
+    Approximative_Solution(A_Hat, M->A_Hat_buffer, M, m, n, mk_Hat, I, J, col);
 
-        // Compute right hand side key
-        //        bk_Hat_key = hash->Compute_Key(mk_Hat, I->len);
+    // Computing the residual vector
+    // and the frobenius norm of it
+    residual_norm = o_sub.Residual_Norm(A_Hat, m, n, mk_Hat, bk_Hat, residual_vals);
 
-        // Computing solution m_k which is stored within
-        // mk_Hat.
-        Approximative_Solution(A_Hat, M->A_Hat_buffer, M, m, n, mk_Hat, I, J,
-                               col, hash_key, bk_Hat_key);
+    // Create Residual cache for the hash table
+    residual_cache = o_sub.Copy_Vector(residual_vals, m * A->block_sizes[col]);
 
-        // Computing the residual vector
-        // and the frobenius norm of it
-        residual_norm = o_sub.Residual_Norm(A_Hat, m, n, mk_Hat, bk_Hat, residual_vals);
-
-        // Create Residual cache for the hash table
-        residual_cache = o_sub.Copy_Vector(residual_vals, m * A->block_sizes[col]);
-
-        // Store it in the Hash Table
-        hd = hash->m_vector[col - M->my_start_idx];
-        hd->residual = residual_cache;
-
-        // Finishing conditions
-        if ((residual_norm <= epsilon_param)  // residual good enough
-            || (step == (max_impr_steps - 1)) // Don't delete solution,
-            )                                 // Don't augment sparsity
-            break;
-
-        // Solution is not good enough - augmenting
-        // Finish augmenting if no new candidates found
-        if (!o_sub.Augment_Sparsity(A, M, B, P, I, J, UP, U_UP, col, residual_norm,
-                                    residual_vals, maxnew_param, ht, use_mean,
-                                    pre_k_param, pre_max_param, bitvec, reset_vec))
-            break;
-    }
+    // Store it in the Hash Table
+    hd = hash->m_vector[col - M->my_start_idx];
+    hd->residual = residual_cache;
 
     // Inserting solution row into preconditioner
     o_comm.Insert_Row_Solution(A, M, B, P, UP, col, mk_Hat, J);
@@ -185,9 +159,7 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
                                             T*& mk_Hat,
                                             const Index_Set* I,
                                             Index_Set* J,
-                                            const int col,
-                                            Key hash_key,
-                                            Key bk_Hat_key)
+                                            const int col)
 {
     int lda = 0, k = 0, info = 0, lwork = 0, one = 1;
 
@@ -272,8 +244,7 @@ void Spai_Update<T>::Approximative_Solution(T* A_Hat_orig,
 
     // Inserting the current computed data at the last
     // used position into cache.
-    hash->Insert_Vec_Data(hash_key, A_Hat_qr, tau_cache, mk_Hat_cache, I_cache,
-                          J_cache, n, m);
+    hash->Insert_Vec_Data(col, A_Hat_qr, tau_cache, mk_Hat_cache, I_cache, J_cache, n, m);
 }
 
 template <class T>
@@ -285,9 +256,8 @@ void Spai_Update<T>::Approximative_Solution_Update(T* A_Hat_orig,
                                                    T*& mk_Hat,
                                                    Index_Set*& I,
                                                    Index_Set*& J,
-                                                   const int col,
-                                                   Key hash_key,
-                                                   Key bk_Hat_key)
+                                                   const int col)
+
 {
     int lda = 0, k = 0, info = 0, lwork = 0, one = 1, unit_idx = -1;
 
